@@ -186,6 +186,13 @@ class Uint128Test extends TestCase
         $this->assertSame(0.0, $floatVal);
     }
 
+    public function testToFloatPrecisionLoss(): void
+    {
+        $val = Uint128::fromString('9007199254740993');
+        $asFloat = $val->toFloat();
+        $this->assertNotSame('9007199254740993', (string) $asFloat);
+    }
+
     public function testToString(): void
     {
         $this->assertSame('0', Uint128::zero()->toString());
@@ -196,6 +203,26 @@ class Uint128Test extends TestCase
         $this->assertSame('340282366920938463463374607431768211455', $max->toString());
 
         $this->assertSame('18446744073709551615', Uint128::fromParts(-1, 0)->toString());
+    }
+
+    public function testToStringNeverThrows(): void
+    {
+        $values = [
+            Uint128::zero(),
+            Uint128::fromInt(1),
+            Uint128::fromInt(\PHP_INT_MAX),
+            Uint128::fromParts(-1, 0),
+            Uint128::fromParts(0, 1),
+            Uint128::fromParts(-1, -1),
+            Uint128::fromParts(12345, 67890),
+            Uint128::fromString('123456789012345678901234567890123456789'),
+        ];
+
+        foreach ($values as $val) {
+            $str = $val->toString();
+            $this->assertNotSame('', $str, 'toString should never return empty string');
+            $this->assertMatchesRegularExpression('/^\d+$/', $str);
+        }
     }
 
     public function testToHex(): void
