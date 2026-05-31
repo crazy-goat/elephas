@@ -1,0 +1,65 @@
+{
+    "name": "crazy-goat/elephas",
+    "description": "PHP client for TigerBeetle – financial transactions database",
+    "keywords": [
+        "tigerbeetle",
+        "database",
+        "financial",
+        "transactions",
+        "oltp",
+        "double-entry"
+    ],
+    "homepage": "https://github.com/crazy-goat/elephas",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Piotr Halas",
+            "email": "halaspiotr@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "ext-ffi": "*"
+    },
+    "require-dev": {
+        "php-cs-fixer/shim": "^3.75",
+        "phpunit/phpunit": "^11.0",
+        "phpstan/phpstan": "^2.0",
+        "rector/rector": "^2.0"
+    },
+    "suggest": {
+        "ext-gmp": "For faster 128-bit arithmetic and string conversion"
+    },
+    "autoload": {
+        "psr-4": {
+            "CrazyGoat\\Elephas\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CrazyGoat\\Elephas\\Test\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "audit": {
+            "block-insecure": true,
+            "abandoned": "report"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test:functional": "vendor/bin/phpunit --testsuite=functional",
+        "test:unit": "vendor/bin/phpunit --testsuite=unit",
+        "lint": [
+            "vendor/bin/php-cs-fixer fix -v --dry-run",
+            "vendor/bin/phpstan analyse",
+            "vendor/bin/rector process --dry-run"
+        ],
+        "lint-fix": [
+            "vendor/bin/php-cs-fixer fix -v",
+            "vendor/bin/rector process"
+        ]
+    }
+}
