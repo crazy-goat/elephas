@@ -9,23 +9,15 @@ namespace CrazyGoat\Elephas;
  *
  * Maps to TB_OPERATION enum in tb_client.h.
  */
-final class Operation
+enum Operation: int
 {
-    public const PULSE = 128;
-
-    public const CREATE_ACCOUNTS = 146;
-
-    public const CREATE_TRANSFERS = 147;
-
-    public const LOOKUP_ACCOUNTS = 148;
-
-    public const LOOKUP_TRANSFERS = 149;
-
-    public const GET_ACCOUNT_TRANSFERS = 150;
-
-    public const GET_ACCOUNT_BALANCES = 151;
-
-    public const QUERY_ACCOUNTS = 152;
-
-    public const QUERY_TRANSFERS = 153;
+    case PULSE = 128;
+    case CREATE_ACCOUNTS = 146;
+    case CREATE_TRANSFERS = 147;
+    case LOOKUP_ACCOUNTS = 148;
+    case LOOKUP_TRANSFERS = 149;
+    case GET_ACCOUNT_TRANSFERS = 150;
+    case GET_ACCOUNT_BALANCES = 151;
+    case QUERY_ACCOUNTS = 152;
+    case QUERY_TRANSFERS = 153;
 }

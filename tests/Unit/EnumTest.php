@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Test\Unit;
 
 use CrazyGoat\Elephas\AccountFilterFlags;
+use CrazyGoat\Elephas\AccountFlags;
 use CrazyGoat\Elephas\ClientStatus;
 use CrazyGoat\Elephas\CreateAccountStatus;
 use CrazyGoat\Elephas\CreateTransferStatus;
 use CrazyGoat\Elephas\InitStatus;
+use CrazyGoat\Elephas\Operation;
 use CrazyGoat\Elephas\PacketStatus;
 use CrazyGoat\Elephas\QueryFilterFlags;
+use CrazyGoat\Elephas\TransferFlags;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -253,5 +256,235 @@ final class EnumTest extends TestCase
     public function queryFilterFlagsNone(): void
     {
         $this->assertSame(0, QueryFilterFlags::NONE);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Operation
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function operationCases(): void
+    {
+        $cases = Operation::cases();
+        $this->assertCount(9, $cases);
+        $expected = [
+            'PULSE',
+            'CREATE_ACCOUNTS',
+            'CREATE_TRANSFERS',
+            'LOOKUP_ACCOUNTS',
+            'LOOKUP_TRANSFERS',
+            'GET_ACCOUNT_TRANSFERS',
+            'GET_ACCOUNT_BALANCES',
+            'QUERY_ACCOUNTS',
+            'QUERY_TRANSFERS',
+        ];
+        foreach ($expected as $name) {
+            $this->assertTrue(\defined(Operation::class . "::{$name}"), "Operation case {$name} should exist");
+        }
+    }
+
+    #[Test]
+    public function operationValues(): void
+    {
+        $this->assertSame(128, Operation::PULSE->value);
+        $this->assertSame(146, Operation::CREATE_ACCOUNTS->value);
+        $this->assertSame(147, Operation::CREATE_TRANSFERS->value);
+        $this->assertSame(148, Operation::LOOKUP_ACCOUNTS->value);
+        $this->assertSame(149, Operation::LOOKUP_TRANSFERS->value);
+        $this->assertSame(150, Operation::GET_ACCOUNT_TRANSFERS->value);
+        $this->assertSame(151, Operation::GET_ACCOUNT_BALANCES->value);
+        $this->assertSame(152, Operation::QUERY_ACCOUNTS->value);
+        $this->assertSame(153, Operation::QUERY_TRANSFERS->value);
+    }
+
+    #[Test]
+    public function operationFromBackedValue(): void
+    {
+        $this->assertSame(Operation::PULSE, Operation::from(128));
+        $this->assertSame(Operation::CREATE_ACCOUNTS, Operation::from(146));
+        $this->assertSame(Operation::QUERY_TRANSFERS, Operation::from(153));
+    }
+
+    #[Test]
+    public function operationIsEnum(): void
+    {
+        $this->assertTrue((new \ReflectionClass(Operation::class))->isEnum());
+    }
+
+    // ──────────────────────────────────────────────
+    //  AccountFlags
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function accountFlagsConstants(): void
+    {
+        $this->assertSame(0, AccountFlags::NONE);
+        $this->assertSame(1, AccountFlags::LINKED);
+        $this->assertSame(2, AccountFlags::DEBITS_MUST_NOT_EXCEED_CREDITS);
+        $this->assertSame(4, AccountFlags::CREDITS_MUST_NOT_EXCEED_DEBITS);
+        $this->assertSame(8, AccountFlags::HISTORY);
+        $this->assertSame(16, AccountFlags::IMPORTED);
+        $this->assertSame(32, AccountFlags::CLOSED);
+        $this->assertSame(64, AccountFlags::ZERO_VALUE_TRANSFERS);
+    }
+
+    #[Test]
+    public function accountFlagsLinked(): void
+    {
+        $this->assertSame(1, AccountFlags::LINKED);
+    }
+
+    #[Test]
+    public function accountFlagsDebitsMustNotExceedCredits(): void
+    {
+        $this->assertSame(2, AccountFlags::DEBITS_MUST_NOT_EXCEED_CREDITS);
+    }
+
+    #[Test]
+    public function accountFlagsCreditsMustNotExceedDebits(): void
+    {
+        $this->assertSame(4, AccountFlags::CREDITS_MUST_NOT_EXCEED_DEBITS);
+    }
+
+    #[Test]
+    public function accountFlagsHistory(): void
+    {
+        $this->assertSame(8, AccountFlags::HISTORY);
+    }
+
+    #[Test]
+    public function accountFlagsImported(): void
+    {
+        $this->assertSame(16, AccountFlags::IMPORTED);
+    }
+
+    #[Test]
+    public function accountFlagsClosed(): void
+    {
+        $this->assertSame(32, AccountFlags::CLOSED);
+    }
+
+    #[Test]
+    public function accountFlagsZeroValueTransfers(): void
+    {
+        $this->assertSame(64, AccountFlags::ZERO_VALUE_TRANSFERS);
+    }
+
+    #[Test]
+    public function accountFlagsCombine(): void
+    {
+        $combined = AccountFlags::combine(AccountFlags::LINKED, AccountFlags::HISTORY, AccountFlags::CLOSED);
+        $this->assertSame(41, $combined); // 1 | 8 | 32 = 41
+    }
+
+    #[Test]
+    public function accountFlagsCombineNone(): void
+    {
+        $this->assertSame(0, AccountFlags::combine());
+    }
+
+    #[Test]
+    public function accountFlagsNone(): void
+    {
+        $this->assertSame(0, AccountFlags::NONE);
+    }
+
+    // ──────────────────────────────────────────────
+    //  TransferFlags
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function transferFlagsConstants(): void
+    {
+        $this->assertSame(0, TransferFlags::NONE);
+        $this->assertSame(1, TransferFlags::LINKED);
+        $this->assertSame(2, TransferFlags::PENDING);
+        $this->assertSame(4, TransferFlags::POST_PENDING_TRANSFER);
+        $this->assertSame(8, TransferFlags::VOID_PENDING_TRANSFER);
+        $this->assertSame(16, TransferFlags::BALANCING_DEBIT);
+        $this->assertSame(32, TransferFlags::BALANCING_CREDIT);
+        $this->assertSame(64, TransferFlags::CLOSING_DEBIT);
+        $this->assertSame(128, TransferFlags::CLOSING_CREDIT);
+        $this->assertSame(256, TransferFlags::IMPORTED);
+        $this->assertSame(512, TransferFlags::ZERO_VALUE_TRANSFERS);
+    }
+
+    #[Test]
+    public function transferFlagsLinked(): void
+    {
+        $this->assertSame(1, TransferFlags::LINKED);
+    }
+
+    #[Test]
+    public function transferFlagsPending(): void
+    {
+        $this->assertSame(2, TransferFlags::PENDING);
+    }
+
+    #[Test]
+    public function transferFlagsPostPendingTransfer(): void
+    {
+        $this->assertSame(4, TransferFlags::POST_PENDING_TRANSFER);
+    }
+
+    #[Test]
+    public function transferFlagsVoidPendingTransfer(): void
+    {
+        $this->assertSame(8, TransferFlags::VOID_PENDING_TRANSFER);
+    }
+
+    #[Test]
+    public function transferFlagsBalancingDebit(): void
+    {
+        $this->assertSame(16, TransferFlags::BALANCING_DEBIT);
+    }
+
+    #[Test]
+    public function transferFlagsBalancingCredit(): void
+    {
+        $this->assertSame(32, TransferFlags::BALANCING_CREDIT);
+    }
+
+    #[Test]
+    public function transferFlagsClosingDebit(): void
+    {
+        $this->assertSame(64, TransferFlags::CLOSING_DEBIT);
+    }
+
+    #[Test]
+    public function transferFlagsClosingCredit(): void
+    {
+        $this->assertSame(128, TransferFlags::CLOSING_CREDIT);
+    }
+
+    #[Test]
+    public function transferFlagsImported(): void
+    {
+        $this->assertSame(256, TransferFlags::IMPORTED);
+    }
+
+    #[Test]
+    public function transferFlagsZeroValueTransfers(): void
+    {
+        $this->assertSame(512, TransferFlags::ZERO_VALUE_TRANSFERS);
+    }
+
+    #[Test]
+    public function transferFlagsCombine(): void
+    {
+        $combined = TransferFlags::combine(TransferFlags::LINKED, TransferFlags::PENDING, TransferFlags::IMPORTED);
+        $this->assertSame(259, $combined); // 1 | 2 | 256 = 259
+    }
+
+    #[Test]
+    public function transferFlagsCombineNone(): void
+    {
+        $this->assertSame(0, TransferFlags::combine());
+    }
+
+    #[Test]
+    public function transferFlagsNone(): void
+    {
+        $this->assertSame(0, TransferFlags::NONE);
     }
 }
