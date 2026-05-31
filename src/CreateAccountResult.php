@@ -18,7 +18,7 @@ final readonly class CreateAccountResult
      */
     public function __construct(
         private Uint128 $id,
-        private int $status = CreateAccountStatus::OK,
+        private CreateAccountStatus $status = CreateAccountStatus::CREATED,
     ) {
     }
 
@@ -27,13 +27,13 @@ final readonly class CreateAccountResult
         return $this->id;
     }
 
-    public function getStatus(): int
+    public function getStatus(): CreateAccountStatus
     {
         return $this->status;
     }
 
-    public function isOk(): bool
+    public function isCreated(): bool
     {
-        return $this->status === CreateAccountStatus::OK;
+        return $this->status === CreateAccountStatus::CREATED;
     }
 }

@@ -9,9 +9,10 @@ namespace CrazyGoat\Elephas;
  *
  * Maps to TB_CLIENT_STATUS enum in tb_client.h.
  */
-final class ClientStatus
+enum ClientStatus: int
 {
-    public const OK = 0;
-
-    public const INVALID = 1;
+    case OK = 0;
+    case INVALID = 1;
+    case TOO_MUCH_DATA = 2;
+    case CONCURRENCY_MAX_EXCEEDED = 3;
 }

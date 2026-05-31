@@ -18,7 +18,7 @@ final readonly class CreateTransferResult
      */
     public function __construct(
         private Uint128 $id,
-        private int $status = CreateTransferStatus::OK,
+        private CreateTransferStatus $status = CreateTransferStatus::CREATED,
     ) {
     }
 
@@ -27,13 +27,13 @@ final readonly class CreateTransferResult
         return $this->id;
     }
 
-    public function getStatus(): int
+    public function getStatus(): CreateTransferStatus
     {
         return $this->status;
     }
 
-    public function isOk(): bool
+    public function isCreated(): bool
     {
-        return $this->status === CreateTransferStatus::OK;
+        return $this->status === CreateTransferStatus::CREATED;
     }
 }

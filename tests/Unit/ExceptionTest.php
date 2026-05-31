@@ -186,11 +186,12 @@ final class ExceptionTest extends TestCase
     }
 
     #[Test]
-    public function initializationExceptionFromStatusUnknown(): void
+    public function initializationExceptionFromStatusInvalidAddress(): void
     {
-        $e = InitializationException::fromStatus(999);
+        $e = InitializationException::fromStatus(InitStatus::INVALID_ADDRESS);
 
-        $this->assertStringContainsString('Unknown status', $e->getMessage());
+        $this->assertInstanceOf(InitializationException::class, $e);
+        $this->assertStringContainsString('Invalid cluster address', $e->getMessage());
     }
 
     #[Test]
