@@ -33,7 +33,7 @@ final class ExceptionTest extends TestCase
         $interfaces = \class_implements(ElephasExceptionInterface::class);
 
         $this->assertIsArray($interfaces);
-        $this->assertArrayHasKey(\Throwable::class, $interfaces ?: []);
+        $this->assertArrayHasKey(\Throwable::class, $interfaces);
     }
 
     // ──────────────────────────────────────────────
