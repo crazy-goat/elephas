@@ -12,6 +12,8 @@ namespace CrazyGoat\Elephas;
  */
 final class AccountFlags
 {
+    public const NONE = 0;
+
     public const LINKED = 1 << 0;
 
     public const DEBITS_MUST_NOT_EXCEED_CREDITS = 1 << 1;
@@ -21,4 +23,13 @@ final class AccountFlags
     public const HISTORY = 1 << 3;
 
     public const IMPORTED = 1 << 4;
+
+    public const CLOSED = 1 << 5;
+
+    public const ZERO_VALUE_TRANSFERS = 1 << 6;
+
+    public static function combine(int ...$flags): int
+    {
+        return array_reduce($flags, fn(int $carry, int $flag): int => $carry | $flag, 0);
+    }
 }
