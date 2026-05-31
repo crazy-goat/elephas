@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas;
 
+use CrazyGoat\Elephas\Uint128\Uint128;
+
 /**
  * Query filter for account and transfer queries.
  *
@@ -15,9 +17,9 @@ final readonly class QueryFilter
      * TODO: implement
      */
     public function __construct(
-        private int $UserData128 = 0,
-        private int $UserData64 = 0,
-        private int $UserData32 = 0,
+        private Uint128 $userData128,
+        private int $userData64 = 0,
+        private int $userData32 = 0,
         private int $ID = 0,
         private int $IDMax = 0,
         private int $IDMin = 0,
@@ -27,19 +29,19 @@ final readonly class QueryFilter
     ) {
     }
 
-    public function getUserData128(): int
+    public function getUserData128(): Uint128
     {
-        return $this->UserData128;
+        return $this->userData128;
     }
 
     public function getUserData64(): int
     {
-        return $this->UserData64;
+        return $this->userData64;
     }
 
     public function getUserData32(): int
     {
-        return $this->UserData32;
+        return $this->userData32;
     }
 
     public function getID(): int

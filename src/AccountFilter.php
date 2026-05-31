@@ -18,9 +18,9 @@ final readonly class AccountFilter
      */
     public function __construct(
         private Uint128 $accountId,
-        private int $UserData128 = 0,
-        private int $UserData64 = 0,
-        private int $UserData32 = 0,
+        private Uint128 $userData128,
+        private int $userData64 = 0,
+        private int $userData32 = 0,
         private int $timestampMin = 0,
         private int $timestampMax = 0,
         private int $limit = 0,
@@ -33,19 +33,19 @@ final readonly class AccountFilter
         return $this->accountId;
     }
 
-    public function getUserData128(): int
+    public function getUserData128(): Uint128
     {
-        return $this->UserData128;
+        return $this->userData128;
     }
 
     public function getUserData64(): int
     {
-        return $this->UserData64;
+        return $this->userData64;
     }
 
     public function getUserData32(): int
     {
-        return $this->UserData32;
+        return $this->userData32;
     }
 
     public function getTimestampMin(): int

@@ -11,7 +11,7 @@ namespace CrazyGoat\Elephas\Backend;
  */
 class NativeClient
 {
-    private \FFI $ffi;
+    private readonly \FFI $ffi;
 
     /**
      * Initialize the native client.
@@ -24,9 +24,7 @@ class NativeClient
     public function __construct()
     {
         $this->ffi = \FFI::cdef('');
-
         // TODO: implement
-        throw new \RuntimeException('Not implemented');
     }
 
     /**

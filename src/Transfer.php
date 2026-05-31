@@ -20,11 +20,11 @@ final readonly class Transfer
         private Uint128 $id,
         private Uint128 $debitAccountId,
         private Uint128 $creditAccountId,
+        private Uint128 $pendingId,
+        private Uint128 $userData128,
         private int $amount = 0,
-        private int $pendingId = 0,
-        private int $UserData128 = 0,
-        private int $UserData64 = 0,
-        private int $UserData32 = 0,
+        private int $userData64 = 0,
+        private int $userData32 = 0,
         private int $timeout = 0,
         private int $ledger = 0,
         private int $code = 0,
@@ -53,24 +53,24 @@ final readonly class Transfer
         return $this->amount;
     }
 
-    public function getPendingId(): int
+    public function getPendingId(): Uint128
     {
         return $this->pendingId;
     }
 
-    public function getUserData128(): int
+    public function getUserData128(): Uint128
     {
-        return $this->UserData128;
+        return $this->userData128;
     }
 
     public function getUserData64(): int
     {
-        return $this->UserData64;
+        return $this->userData64;
     }
 
     public function getUserData32(): int
     {
-        return $this->UserData32;
+        return $this->userData32;
     }
 
     public function getTimeout(): int

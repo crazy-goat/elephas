@@ -65,14 +65,26 @@ class TransferBatch extends AbstractBatch
         return 0;
     }
 
-    public function setPendingId(Uint128 $id): void
+    public function setPendingId(Uint128 $pendingId): void
     {
         // TODO: implement
     }
 
-    public function setUserData128(Uint128 $value): void
+    public function getPendingId(): Uint128
     {
         // TODO: implement
+        return Uint128::zero();
+    }
+
+    public function setUserData128(Uint128 $userData128): void
+    {
+        // TODO: implement
+    }
+
+    public function getUserData128(): Uint128
+    {
+        // TODO: implement
+        return Uint128::zero();
     }
 
     public function setUserData64(int $value): void

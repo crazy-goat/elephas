@@ -17,20 +17,20 @@ final readonly class AccountBalance
      * TODO: implement
      */
     public function __construct(
-        private Uint128 $accountID,
-        private Uint128 $UserData128,
+        private Uint128 $accountId,
+        private Uint128 $userData128,
         private int $debitsPending = 0,
         private int $creditsPending = 0,
         private int $debitsPosted = 0,
         private int $creditsPosted = 0,
-        private int $UserData64 = 0,
-        private int $UserData32 = 0,
+        private int $userData64 = 0,
+        private int $userData32 = 0,
     ) {
     }
 
     public function getAccountId(): Uint128
     {
-        return $this->accountID;
+        return $this->accountId;
     }
 
     public function getDebitsPending(): int
@@ -55,16 +55,16 @@ final readonly class AccountBalance
 
     public function getUserData128(): Uint128
     {
-        return $this->UserData128;
+        return $this->userData128;
     }
 
     public function getUserData64(): int
     {
-        return $this->UserData64;
+        return $this->userData64;
     }
 
     public function getUserData32(): int
     {
-        return $this->UserData32;
+        return $this->userData32;
     }
 }
