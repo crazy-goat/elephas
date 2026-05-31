@@ -41,10 +41,17 @@ jobs:
     services:
       tigerbeetle:
         image: ghcr.io/tigerbeetle/tigerbeetle:0.17.4
-        options: >
-          --entrypoint sh --
-          -c "tigerbeetle format --cluster=0 --replica=0 --replica-count=1 --development /data/0_0.tigerbeetle &&
-              tigerbeetle start --addresses=3000 --development /data/0_0.tigerbeetle"
+        ports:
+          - 3000:3000
+        options: >-
+          --health-cmd "true"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+          --entrypoint ""
+          start
+          --addresses=3000
+          --development
 
     steps:
       - name: Checkout
@@ -59,6 +66,17 @@ jobs:
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
+
+      - name: Wait for TigerBeetle
+        run: |
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "TigerBeetle is ready"
+              break
+            fi
+            echo "Waiting for TigerBeetle... ($i/30)"
+            sleep 1
+          done
 
       - name: Run unit tests
         run: composer test:unit
