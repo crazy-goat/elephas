@@ -1,11 +1,13 @@
 {
     "name": "crazy-goat/elephas",
-    "description": "PHP client for TigerBeetle – financial transactions database",
+    "description": "PHP client for TigerBeetle – high-performance financial transactions database",
     "keywords": [
         "tigerbeetle",
         "database",
         "financial",
         "transactions",
+        "client",
+        "ffi",
         "oltp",
         "double-entry"
     ],
@@ -29,7 +31,8 @@
         "rector/rector": "^2.0"
     },
     "suggest": {
-        "ext-gmp": "For faster 128-bit arithmetic and string conversion"
+        "ext-gmp": "For faster 128-bit arithmetic and string conversion",
+        "ext-bcmath": "For 128-bit arithmetic operations"
     },
     "autoload": {
         "psr-4": {
