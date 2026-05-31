@@ -13,7 +13,6 @@ use CrazyGoat\Elephas\Exception\IntegerOverflowException;
 use CrazyGoat\Elephas\Exception\RequestException;
 use CrazyGoat\Elephas\Exception\TooMuchDataException;
 use CrazyGoat\Elephas\InitStatus;
-use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
