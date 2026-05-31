@@ -30,14 +30,13 @@ jobs:
       - name: Run code style checks
         run: composer lint
 
-  tests:
-    name: tests
-    runs-on: ubuntu-latest
+  test-matrix:
     strategy:
       matrix:
         php: ['8.2', '8.3', '8.4']
       fail-fast: false
 
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,13 +77,13 @@ jobs:
         if: always()
         run: docker stop tigerbeetle || true
 
-  ci:
-    name: ci
-    needs: [lint, tests]
+  tests:
+    name: tests
+    needs: [lint, test-matrix]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check test results
         run: |
           if [ "${{ needs.lint.result }}" != "success" ]; then exit 1; fi
-          if [ "${{ needs.tests.result }}" != "success" ]; then exit 1; fi
+          if [ "${{ needs.test-matrix.result }}" != "success" ]; then exit 1; fi
