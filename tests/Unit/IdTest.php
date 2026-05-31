@@ -6,13 +6,10 @@ namespace CrazyGoat\Elephas\Test\Unit;
 
 use CrazyGoat\Elephas\Id;
 use CrazyGoat\Elephas\Uint128\Uint128;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Tests for Id (ULID generator) class.
- *
- * @covers \CrazyGoat\Elephas\Id
- */
+#[CoversClass(Id::class)]
 final class IdTest extends TestCase
 {
     protected function setUp(): void
@@ -149,23 +146,20 @@ final class IdTest extends TestCase
         }
 
         $idCount = \count($ids);
-        // Verify strict byte-by-byte ordering
+        // Verify strict ordering using numeric comparison
         for ($i = 1; $i < $idCount; ++$i) {
-            $prevBytes = $ids[$i - 1]->toBytes();
-            $currBytes = $ids[$i]->toBytes();
+            $prev = $ids[$i - 1];
+            $curr = $ids[$i];
 
-            // Compare lexicographically as little-endian bytes
-            // For monotonic IDs, the full 16-byte value must increase
-            $result = \strcmp($currBytes, $prevBytes);
             $this->assertGreaterThan(
                 0,
-                $result,
+                $curr->compareTo($prev),
                 \sprintf(
-                    'Raw byte value at position %d must be strictly greater than previous. '
+                    'ID at position %d must be strictly greater than previous. '
                     . 'Prev hex: %s, Curr hex: %s',
                     $i,
-                    $ids[$i - 1]->toHex(),
-                    $ids[$i]->toHex(),
+                    $prev->toHex(),
+                    $curr->toHex(),
                 ),
             );
         }
@@ -294,6 +288,269 @@ final class IdTest extends TestCase
         $ts = Id::extractTimestamp($id);
         $this->assertGreaterThanOrEqual($before - 1, $ts);
         $this->assertLessThanOrEqual($after + 1, $ts);
+    }
+
+    // ──────────────────────────────────────────────
+    //  toString() – Crockford Base32 encoding
+    // ──────────────────────────────────────────────
+
+    public function testToStringReturns26Characters(): void
+    {
+        $id = Id::generate();
+        $str = Id::toString($id);
+
+        $this->assertSame(26, \strlen($str), 'ULID string must be exactly 26 characters');
+    }
+
+    public function testToStringUsesOnlyValidCrockfordChars(): void
+    {
+        $id = Id::generate();
+        $str = Id::toString($id);
+
+        $validChars = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+        for ($i = 0; $i < 26; ++$i) {
+            $this->assertStringContainsString(
+                $str[$i],
+                $validChars,
+                \sprintf('Character at position %d is not a valid Crockford Base32 char: %s', $i, $str[$i]),
+            );
+        }
+    }
+
+    public function testToStringStartsWithZeroForRecentTimestamp(): void
+    {
+        // Given the current timestamp (~2026), the first Crockford char
+        // (most significant 5 bits of the 48-bit timestamp) should be '0' or '1'
+        $id = Id::generate();
+        $str = Id::toString($id);
+
+        // Timestamp is ~1.78 trillion ms = ~0x19E, first 5 bits = 0
+        $this->assertSame('0', $str[0], 'First character should be 0 for current timestamps');
+    }
+
+    public function testToStringZero(): void
+    {
+        $zero = Uint128::zero();
+        $str = Id::toString($zero);
+
+        $this->assertSame(26, \strlen($str));
+        $this->assertSame('00000000000000000000000000', $str);
+    }
+
+    public function testToStringMaxValue(): void
+    {
+        $max = Uint128::fromParts(-1, -1);
+        $str = Id::toString($max);
+
+        // 2^128-1 in Crockford Base32:
+        // 130 bits: 00 | 11111111 ... 11111111 (128 ones)
+        // Char 0: 00111 = 7 = '7'
+        // Chars 1-25: 11111 = 31 = 'Z'
+        $this->assertSame(26, \strlen($str));
+        $this->assertSame('7ZZZZZZZZZZZZZZZZZZZZZZZZZ', $str);
+    }
+
+    public function testToStringKnownValues(): void
+    {
+        // Test with a known value:
+        // Timestamp = 0, random = 0 => 128-bit value = 0 => "00000000000000000000000000"
+        $zero = Uint128::zero();
+        $this->assertSame('00000000000000000000000000', Id::toString($zero));
+
+        // Single bit set at position 127 (MSB): value = 2^127
+        // BE bytes: [0x80, 0x00, 0x00, ...]
+        // 130-bit stream: 00 | 10000000 00000000 ...
+        // Char 0: 00100 = 4 = '4'
+        // Chars 1-25: 00000 = 0 = '0'
+        $msbValue = Uint128::fromBytes(
+            "\x00\x00\x00\x00\x00\x00\x00\x00"   // low (LE) = 0
+            . "\x00\x00\x00\x00\x00\x00\x00\x80",    // high (LE) = 2^63 => 2^127
+        );
+        $this->assertSame('40000000000000000000000000', Id::toString($msbValue));
+    }
+
+    // ──────────────────────────────────────────────
+    //  fromString() – Crockford Base32 decoding
+    // ──────────────────────────────────────────────
+
+    public function testFromStringZero(): void
+    {
+        $id = Id::fromString('00000000000000000000000000');
+        $this->assertTrue($id->isZero());
+    }
+
+    public function testFromStringRoundtrip(): void
+    {
+        // Generate a random ID and verify roundtrip
+        $original = Id::generate();
+        $str = Id::toString($original);
+        $decoded = Id::fromString($str);
+
+        $this->assertTrue($original->equals($decoded), 'Roundtrip toString → fromString must return the same value');
+    }
+
+    public function testFromStringRoundtripMultiple(): void
+    {
+        for ($i = 0; $i < 100; ++$i) {
+            $original = Id::generate();
+            $str = Id::toString($original);
+            $decoded = Id::fromString($str);
+
+            $this->assertTrue(
+                $original->equals($decoded),
+                \sprintf('Roundtrip failed for ID %s (iteration %d)', $original->toHex(), $i),
+            );
+        }
+    }
+
+    public function testFromStringCaseInsensitive(): void
+    {
+        $original = Id::generate();
+        $str = Id::toString($original);
+        $lower = \strtolower($str);
+        $decoded = Id::fromString($lower);
+
+        $this->assertTrue($original->equals($decoded), 'Lowercase ULID string must decode correctly');
+    }
+
+    public function testFromStringWithSubstitutions(): void
+    {
+        // Test common Crockford substitutions: I→1, L→1, O→0, U→0
+        // Build a ULID string that contains '1' then try 'I' and 'L'
+        // Build a ULID string that contains '0' then try 'O' and 'U'
+
+        $original = Id::generate();
+        $str = Id::toString($original);
+
+        // Substitute I for 1, O for 0, etc.
+        $substituted = \str_replace(['1', '0'], ['I', 'O'], $str);
+        $decoded = Id::fromString($substituted);
+        $this->assertTrue($original->equals($decoded), 'Substituted characters (I→1, O→0) must decode correctly');
+
+        $substituted2 = \str_replace(['1', '0'], ['L', 'U'], $str);
+        $decoded2 = Id::fromString($substituted2);
+        $this->assertTrue($original->equals($decoded2), 'Substituted characters (L→1, U→0) must decode correctly');
+    }
+
+    public function testFromStringInvalidLength(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('exactly 26 characters');
+        Id::fromString('TOO_SHORT');
+    }
+
+    public function testFromStringInvalidLengthTooLong(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('exactly 26 characters');
+        Id::fromString('000000000000000000000000000');
+    }
+
+    public function testFromStringInvalidCharacter(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid Crockford Base32 character');
+        Id::fromString('0000000000000000000000000!'); // 25 zeros + ! = 26 chars
+    }
+
+    public function testFromStringInvalidCharacterExcluded(): void
+    {
+        // '@' is not a valid Crockford character
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid Crockford Base32 character');
+        Id::fromString('00000000000000000@00000000'); // 17 zeros + @ + 8 zeros = 26 chars
+    }
+
+    public function testFromStringWithNonZeroPaddingBits(): void
+    {
+        // The top 2 padding bits must be 0 for 128-bit values.
+        // Character '8' = 8 = 0b01000 -> bits: 0 1 0 0 0
+        //   absPos 0 (bit 4) = 0 ✓
+        //   absPos 1 (bit 3) = 1 ✗ -> padding bit is 1 -> invalid!
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('padding bits');
+        Id::fromString('80000000000000000000000000'); // 26 chars
+    }
+
+    // ──────────────────────────────────────────────
+    //  Crockford encoding/decoding consistency
+    // ──────────────────────────────────────────────
+
+    public function testEncodeDecodeConsistencyForRange(): void
+    {
+        // Test a variety of edge-case values
+        $values = [
+            Uint128::zero(),
+            Uint128::fromInt(1),
+            Uint128::fromInt(255),
+            Uint128::fromInt(\PHP_INT_MAX),
+            Uint128::fromParts(-1, 0), // 2^64-1
+            Uint128::fromParts(0, 1), // 2^64
+            Uint128::fromParts(-1, -1), // 2^128-1
+            Uint128::fromString('12345678901234567890'),
+            Uint128::fromHex('ffffffffffffffffffffffffffffffff'),
+            Uint128::fromHex('80000000000000000000000000000000'), // 2^127
+            Uint128::fromHex('00000000000000000000000000000001'),
+        ];
+
+        foreach ($values as $value) {
+            $str = Id::toString($value);
+            $this->assertSame(26, \strlen($str), \sprintf('toString(%s) must be 26 chars', $value->toHex()));
+
+            $decoded = Id::fromString($str);
+            $this->assertTrue(
+                $value->equals($decoded),
+                \sprintf('Roundtrip failed for value %s: encoded=%s', $value->toHex(), $str),
+            );
+        }
+    }
+
+    public function testLexicographicOrderMatchesNumericOrder(): void
+    {
+        // String ordering of ULIDs should match numeric ordering of Uint128 values
+        $values = [
+            Uint128::zero(),
+            Uint128::fromInt(1),
+            Uint128::fromInt(255),
+            Uint128::fromParts(-1, 0), // 2^64-1
+            Uint128::fromParts(0, 1), // 2^64
+            Uint128::fromParts(-1, -1), // 2^128-1
+        ];
+
+        $strings = \array_map(Id::toString(...), $values);
+        $counter = \count($strings);
+
+        for ($i = 1; $i < $counter; ++$i) {
+            $this->assertGreaterThan(
+                $strings[$i - 1],
+                $strings[$i],
+                \sprintf(
+                    'ULID string order must match numeric order: %s >= %s',
+                    $strings[$i - 1],
+                    $strings[$i],
+                ),
+            );
+        }
+    }
+
+    public function testGeneratedIdsHaveCorrectStringOrder(): void
+    {
+        // Generated IDs must have monotonically increasing string representations
+        $ids = [];
+        for ($i = 0; $i < 50; ++$i) {
+            $ids[] = Id::generate();
+        }
+
+        $strings = \array_map(Id::toString(...), $ids);
+        $counter = \count($strings);
+
+        for ($i = 1; $i < $counter; ++$i) {
+            $this->assertGreaterThan(
+                $strings[$i - 1],
+                $strings[$i],
+                \sprintf('Generated ID string at position %d must be greater than previous', $i),
+            );
+        }
     }
 
     // ──────────────────────────────────────────────
