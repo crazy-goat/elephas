@@ -12,9 +12,16 @@ namespace CrazyGoat\Elephas;
  */
 final class AccountFilterFlags
 {
+    public const NONE = 0;
+
     public const DEBITS = 1 << 0;
 
     public const CREDITS = 1 << 1;
 
     public const REVERSED = 1 << 2;
+
+    public static function combine(int ...$flags): int
+    {
+        return array_reduce($flags, fn(int $carry, int $flag): int => $carry | $flag, 0);
+    }
 }

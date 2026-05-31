@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas\Test\Unit;
 
+use CrazyGoat\Elephas\AccountFilterFlags;
 use CrazyGoat\Elephas\ClientStatus;
 use CrazyGoat\Elephas\CreateAccountStatus;
 use CrazyGoat\Elephas\CreateTransferStatus;
 use CrazyGoat\Elephas\InitStatus;
 use CrazyGoat\Elephas\PacketStatus;
+use CrazyGoat\Elephas\QueryFilterFlags;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -184,5 +186,72 @@ final class EnumTest extends TestCase
     public function clientStatusIsEnum(): void
     {
         $this->assertTrue((new \ReflectionClass(ClientStatus::class))->isEnum());
+    }
+
+    // ──────────────────────────────────────────────
+    //  AccountFilterFlags
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function accountFilterFlagsConstants(): void
+    {
+        $this->assertSame(0, AccountFilterFlags::NONE);
+        $this->assertSame(1, AccountFilterFlags::DEBITS);
+        $this->assertSame(2, AccountFilterFlags::CREDITS);
+        $this->assertSame(4, AccountFilterFlags::REVERSED);
+    }
+
+    #[Test]
+    public function accountFilterFlagsDebits(): void
+    {
+        $this->assertSame(1, AccountFilterFlags::DEBITS);
+    }
+
+    #[Test]
+    public function accountFilterFlagsCredits(): void
+    {
+        $this->assertSame(2, AccountFilterFlags::CREDITS);
+    }
+
+    #[Test]
+    public function accountFilterFlagsReversed(): void
+    {
+        $this->assertSame(4, AccountFilterFlags::REVERSED);
+    }
+
+    #[Test]
+    public function accountFilterFlagsCombine(): void
+    {
+        $combined = AccountFilterFlags::combine(AccountFilterFlags::DEBITS, AccountFilterFlags::CREDITS);
+        $this->assertSame(3, $combined);
+    }
+
+    #[Test]
+    public function accountFilterFlagsNone(): void
+    {
+        $this->assertSame(0, AccountFilterFlags::NONE);
+    }
+
+    // ──────────────────────────────────────────────
+    //  QueryFilterFlags
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function queryFilterFlagsConstants(): void
+    {
+        $this->assertSame(0, QueryFilterFlags::NONE);
+        $this->assertSame(1, QueryFilterFlags::REVERSED);
+    }
+
+    #[Test]
+    public function queryFilterFlagsReversed(): void
+    {
+        $this->assertSame(1, QueryFilterFlags::REVERSED);
+    }
+
+    #[Test]
+    public function queryFilterFlagsNone(): void
+    {
+        $this->assertSame(0, QueryFilterFlags::NONE);
     }
 }
