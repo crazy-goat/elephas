@@ -247,6 +247,48 @@ class Uint128Test extends TestCase
         $this->assertTrue($val->equals($val2));
     }
 
+    public function testToBytesZero(): void
+    {
+        $bytes = Uint128::zero()->toBytes();
+        $this->assertSame(16, \strlen($bytes));
+        $this->assertSame(\str_repeat("\x00", 16), $bytes);
+    }
+
+    public function testToBytesMaxUint128(): void
+    {
+        $bytes = Uint128::fromParts(-1, -1)->toBytes();
+        $this->assertSame(16, \strlen($bytes));
+        $this->assertSame(\str_repeat("\xff", 16), $bytes);
+    }
+
+    public function testToBytesCrosses64Bit(): void
+    {
+        // Value with both low and high non-zero: high=2, low=1 => 2*2^64 + 1
+        $val = Uint128::fromParts(1, 2);
+        $bytes = $val->toBytes();
+        $this->assertSame(16, \strlen($bytes));
+        // little-endian: low part (1) first 8 bytes, high part (2) last 8 bytes
+        $this->assertSame(\pack('P', 1) . \pack('P', 2), $bytes);
+
+        // Cross boundary: low = -1 (all low bits set), high = 1
+        $val2 = Uint128::fromParts(-1, 1);
+        $bytes2 = $val2->toBytes();
+        $this->assertSame(\pack('P', -1) . \pack('P', 1), $bytes2);
+    }
+
+    public function testToBytesLittleEndian(): void
+    {
+        // Verify byte order: Uint128(1) should have LSB=1 at byte 0
+        $bytes = Uint128::fromInt(1)->toBytes();
+        $this->assertSame(1, \ord($bytes[0]), 'Byte 0 should be 1 (LSB)');
+        $this->assertSame(0, \ord($bytes[1]), 'Byte 1 should be 0');
+
+        // 256 = 0x100, byte 0 should be 0, byte 1 should be 1
+        $bytes256 = Uint128::fromInt(256)->toBytes();
+        $this->assertSame(0, \ord($bytes256[0]));
+        $this->assertSame(1, \ord($bytes256[1]));
+    }
+
     public function testToArray(): void
     {
         $val = Uint128::fromParts(123, 456);
