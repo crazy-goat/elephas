@@ -12,5 +12,12 @@ namespace CrazyGoat\Elephas;
  */
 final class QueryFilterFlags
 {
+    public const NONE = 0;
+
     public const REVERSED = 1 << 0;
+
+    public static function combine(int ...$flags): int
+    {
+        return array_reduce($flags, fn(int $carry, int $flag): int => $carry | $flag, 0);
+    }
 }
