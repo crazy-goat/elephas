@@ -107,6 +107,25 @@ class Uint128Test extends TestCase
         $this->assertSame('36893488147419103233', $val->toString());
     }
 
+    public function testFromPartsMax(): void
+    {
+        $val = Uint128::fromParts(\PHP_INT_MAX, \PHP_INT_MAX);
+        $this->assertSame(\PHP_INT_MAX, $val->toArray()['low']);
+        $this->assertSame(\PHP_INT_MAX, $val->toArray()['high']);
+        $this->assertSame('7fffffffffffffff7fffffffffffffff', $val->toHex());
+        $this->assertSame('170141183460469231722463931679029329919', $val->toString());
+    }
+
+    public function testImmutability(): void
+    {
+        $this->assertNotSame(Uint128::zero(), Uint128::zero());
+        $this->assertNotSame(Uint128::fromInt(0), Uint128::fromInt(0));
+        $this->assertNotSame(Uint128::fromString('0'), Uint128::fromString('0'));
+        $this->assertNotSame(Uint128::fromBytes(\str_repeat("\x00", 16)), Uint128::fromBytes(\str_repeat("\x00", 16)));
+        $this->assertNotSame(Uint128::fromParts(0, 0), Uint128::fromParts(0, 0));
+        $this->assertNotSame(Uint128::fromHex('00'), Uint128::fromHex('00'));
+    }
+
     public function testFromBytes(): void
     {
         $bytes = \pack('P', 1) . \pack('P', 2); // low=1, high=2 in LE
