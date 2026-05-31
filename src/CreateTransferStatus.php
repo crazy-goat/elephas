@@ -1,0 +1,123 @@
+<?php
+
+declare(strict_types=1);
+
+namespace CrazyGoat\Elephas;
+
+/**
+ * TigerBeetle create transfer status codes.
+ *
+ * Maps to TB_CREATE_TRANSFER_STATUS in tb_client.h.
+ */
+final class CreateTransferStatus
+{
+    public const OK = 0;
+
+    public const LINKED_EVENT_FAILED = 1;
+
+    public const LINKED_EVENT_CHAIN_BROKEN = 2;
+
+    public const DEBIT_AMOUNT_MUST_NOT_EXCEED_CREDIT_LIMIT = 3;
+
+    public const CREDIT_AMOUNT_MUST_NOT_EXCEED_DEBIT_LIMIT = 4;
+
+    public const DEBIT_AMOUNT_MUST_BE_ZERO = 5;
+
+    public const CREDIT_AMOUNT_MUST_BE_ZERO = 6;
+
+    public const DEBIT_NOT_PENDING_TRANSFER = 7;
+
+    public const CREDIT_NOT_PENDING_TRANSFER = 8;
+
+    public const PENDING_TRANSFER_DEBIT_AMOUNT_MUST_NOT_EXCEED_CREDIT_LIMIT = 9;
+
+    public const PENDING_TRANSFER_CREDIT_AMOUNT_MUST_NOT_EXCEED_DEBIT_LIMIT = 10;
+
+    public const OVERFLOWS_DEBITS_PENDING = 11;
+
+    public const OVERFLOWS_CREDITS_PENDING = 12;
+
+    public const OVERFLOWS_DEBITS_POSTED = 13;
+
+    public const OVERFLOWS_CREDITS_POSTED = 14;
+
+    public const OVERFLOWS_DEBITS = 15;
+
+    public const OVERFLOWS_CREDITS = 16;
+
+    public const OVERFLOWS_TIMESTAMP = 17;
+
+    public const RESERVED_FIELD = 18;
+
+    public const RESERVED_FLAG = 19;
+
+    public const IMPORTED_FIELD_EXPECTS_DEBIT = 20;
+
+    public const IMPORTED_FIELD_EXPECTS_CREDIT = 21;
+
+    public const IMPORTED_EVENT_FAILED = 22;
+
+    public const IMPORTED_EVENT_CHAIN_BROKEN = 23;
+
+    public const EXISTING = 24;
+
+    public const ID_RESERVED_AS_INSERTED = 25;
+
+    public const ID_ALREADY_FAILED_VALIDATION = 26;
+
+    public const CONFLICTING_FIELDS = 27;
+
+    public const CONFLICT_DEBIT_ACCOUNT_NOT_DEBITABLE = 28;
+
+    public const CONFLICT_CREDIT_ACCOUNT_NOT_CREDITABLE = 29;
+
+    public const CONFLICT_EXISTS_WITH_DIFFERENT_FLAGS = 30;
+
+    public const CONFLICT_EXISTS_WITH_DIFFERENT_PARTS = 31;
+
+    public const CONFLICT_EXISTS_WITH_DIFFERENTUserData128 = 32;
+
+    public const CONFLICT_EXISTS_WITH_DIFFERENTUserData64 = 33;
+
+    public const CONFLICT_EXISTS_WITH_DIFFERENTUserData32 = 34;
+
+    public const CONFLICT_EXISTS_WITH_DIFFERENTLedger = 35;
+
+    public const CONFLICT_EXISTS_WITH_DIFFERENTCode = 36;
+
+    public const CONFLICT_EXISTS_WITH_DIFFERENTAmount = 37;
+
+    public const CONFLICT_EXISTS_WITH_PENDING_TRANSFER = 38;
+
+    public const CONFLICT_EXISTS_NOT_PENDING_TRANSFER = 39;
+
+    public const CONFLICT_PENDING_TRANSFER_HAS_DIFFERENT_DEBIT_ACCOUNT_ID = 40;
+
+    public const CONFLICT_PENDING_TRANSFER_HAS_DIFFERENT_CREDIT_ACCOUNT_ID = 41;
+
+    public const CONFLICT_PENDING_TRANSFER_HAS_DIFFERENT_FLAGS = 42;
+
+    public const CONFLICT_PENDING_TRANSFER_HAS_DIFFERENT_CODE = 43;
+
+    public const CONFLICT_PENDING_TRANSFER_HAS_DIFFERENT_AMOUNT = 44;
+
+    public const PENDING_TRANSFER_NOT_FOUND = 45;
+
+    public const PENDING_TRANSFER_NOT_PENDING = 46;
+
+    public const PENDING_TRANSFER_ID_MUST_NOT_BE_ZERO = 47;
+
+    public const PENDING_TRANSFER_DEBIT_ACCOUNT_ID_MUST_NOT_BE_ZERO = 48;
+
+    public const PENDING_TRANSFER_CREDIT_ACCOUNT_ID_MUST_NOT_BE_ZERO = 49;
+
+    public const PENDING_TRANSFER_DEBIT_ACCOUNT_ID_MUST_NOT_BE_INT_MAX = 50;
+
+    public const PENDING_TRANSFER_CREDIT_ACCOUNT_ID_MUST_NOT_BE_INT_MAX = 51;
+
+    public const PENDING_TRANSFER_AMOUNT_MUST_NOT_BE_ZERO = 52;
+
+    public const PENDING_TRANSFER_AMOUNT_MUST_NOT_BE_INT_MAX = 53;
+
+    public const PENDING_TRANSFER_AMOUNT_MUST_BE_ZERO = 54;
+}

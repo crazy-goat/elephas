@@ -38,14 +38,6 @@ jobs:
       matrix:
         php: ['8.2', '8.3', '8.4']
 
-    services:
-      tigerbeetle:
-        image: ghcr.io/tigerbeetle/tigerbeetle:0.17.4
-        options: >
-          --entrypoint sh --
-          -c "tigerbeetle format --cluster=0 --replica=0 --replica-count=1 --development /data/0_0.tigerbeetle &&
-              tigerbeetle start --addresses=3000 --development /data/0_0.tigerbeetle"
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,6 +52,20 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
 
+      - name: Start TigerBeetle
+        run: |
+          docker run -d --name tigerbeetle --rm -p 3000:3000 \
+            ghcr.io/tigerbeetle/tigerbeetle:0.17.4 \
+            start --addresses=3000 --development
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "TigerBeetle is ready"
+              break
+            fi
+            echo "Waiting for TigerBeetle... ($i/30)"
+            sleep 1
+          done
+
       - name: Run unit tests
         run: composer test:unit
 
@@ -67,6 +73,10 @@ jobs:
         run: composer test:functional
         env:
           TB_ADDRESS: localhost:3000
+
+      - name: Stop TigerBeetle
+        if: always()
+        run: docker stop tigerbeetle || true
 
   ci:
     name: CI
