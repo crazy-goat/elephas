@@ -6,16 +6,17 @@ namespace CrazyGoat\Elephas\Uint128;
 
 use CrazyGoat\Elephas\Exception\IntegerOverflowException;
 
-final class Uint128
+final readonly class Uint128
 {
     /**
      * @param int $low  Least significant 64 bits (unsigned, stored as signed int64)
      * @param int $high Most significant 64 bits (unsigned, stored as signed int64)
      */
     private function __construct(
-        private readonly int $low,
-        private readonly int $high,
-    ) {}
+        private int $low,
+        private int $high,
+    ) {
+    }
 
     // ──────────────────────────────────────────────
     //  Factory methods
@@ -100,6 +101,7 @@ final class Uint128
         }
 
         $parts = \unpack('Plow/Phigh', $bytes);
+        \assert(\is_array($parts), 'unpack should return an array for valid input');
 
         return new self($parts['low'], $parts['high']);
     }
@@ -120,6 +122,7 @@ final class Uint128
         }
 
         $bytes = \hex2bin($hex);
+        \assert(\is_string($bytes), 'hex2bin should return a string for valid hex input');
         // hex string is big-endian, reverse to little-endian
         $bytes = \strrev($bytes);
 
@@ -167,8 +170,8 @@ final class Uint128
         }
 
         $bytes = \array_merge(
-            self::uint64ToBytes($this->low),
-            self::uint64ToBytes($this->high),
+            $this->uint64ToBytes($this->low),
+            $this->uint64ToBytes($this->high),
         );
 
         $result = '';
@@ -238,7 +241,7 @@ final class Uint128
      * @param int $value Signed int64 representing unsigned value
      * @return int[] Array of 8 bytes (0-255)
      */
-    private static function uint64ToBytes(int $value): array
+    private function uint64ToBytes(int $value): array
     {
         $bytes = [];
         for ($i = 0; $i < 8; ++$i) {
