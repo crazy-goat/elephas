@@ -5,7 +5,7 @@ on:
 
 jobs:
   lint:
-    name: Lint
+    name: lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,12 +31,12 @@ jobs:
         run: composer lint
 
   tests:
-    name: Tests (PHP ${{ matrix.php }})
+    name: tests
     runs-on: ubuntu-latest
-    needs: lint
     strategy:
       matrix:
         php: ['8.2', '8.3', '8.4']
+      fail-fast: false
 
     steps:
       - name: Checkout
@@ -79,7 +79,7 @@ jobs:
         run: docker stop tigerbeetle || true
 
   ci:
-    name: CI
+    name: ci
     needs: [lint, tests]
     runs-on: ubuntu-latest
     if: always()
