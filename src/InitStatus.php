@@ -9,15 +9,12 @@ namespace CrazyGoat\Elephas;
  *
  * Maps to TB_INIT_STATUS enum in tb_client.h.
  */
-final class InitStatus
+enum InitStatus: int
 {
-    public const SUCCESS = 0;
-
-    public const UNEXPECTED = 1;
-
-    public const OUT_OF_MEMORY = 2;
-
-    public const SYSTEM_RESOURCES = 3;
-
-    public const NETWORK_SUBSYSTEM = 4;
+    case SUCCESS = 0;
+    case UNEXPECTED = 1;
+    case OUT_OF_MEMORY = 2;
+    case INVALID_ADDRESS = 3;
+    case SYSTEM_RESOURCES = 4;
+    case NETWORK_SUBSYSTEM = 5;
 }

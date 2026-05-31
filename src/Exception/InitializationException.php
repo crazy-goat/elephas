@@ -23,23 +23,22 @@ final class InitializationException extends \RuntimeException implements Elephas
 
     /**
      * Create exception from initialization status code.
-     *
-     * @param int $status One of the InitStatus::* constants.
      */
-    public static function fromStatus(int $status): self
+    public static function fromStatus(InitStatus $status): self
     {
         $messages = [
-            InitStatus::SUCCESS => 'Success',
-            InitStatus::UNEXPECTED => 'Unexpected error during initialization',
-            InitStatus::OUT_OF_MEMORY => 'Out of memory during initialization',
-            InitStatus::SYSTEM_RESOURCES => 'Insufficient system resources',
-            InitStatus::NETWORK_SUBSYSTEM => 'Network subsystem error',
+            InitStatus::SUCCESS->value => 'Success',
+            InitStatus::UNEXPECTED->value => 'Unexpected error during initialization',
+            InitStatus::OUT_OF_MEMORY->value => 'Out of memory during initialization',
+            InitStatus::INVALID_ADDRESS->value => 'Invalid cluster address',
+            InitStatus::SYSTEM_RESOURCES->value => 'Insufficient system resources',
+            InitStatus::NETWORK_SUBSYSTEM->value => 'Network subsystem error',
         ];
 
         return new self(
             \sprintf(
                 'TigerBeetle client initialization failed: %s',
-                $messages[$status] ?? \sprintf('Unknown status %d', $status),
+                $messages[$status->value] ?? \sprintf('Unknown status %d', $status->value),
             ),
         );
     }

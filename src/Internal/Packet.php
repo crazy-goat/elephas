@@ -14,7 +14,7 @@ use CrazyGoat\Elephas\PacketStatus;
  */
 class Packet
 {
-    private int $status = PacketStatus::OK;
+    private PacketStatus $status = PacketStatus::OK;
 
     private string $data = '';
 
@@ -39,12 +39,12 @@ class Packet
         return $this->payload;
     }
 
-    public function getStatus(): int
+    public function getStatus(): PacketStatus
     {
         return $this->status;
     }
 
-    public function setStatus(int $status): void
+    public function setStatus(PacketStatus $status): void
     {
         $this->status = $status;
     }
