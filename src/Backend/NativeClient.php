@@ -120,7 +120,7 @@ CPROG;
         /** @phpstan-ignore property.notFound */
         $cPacket->data_size = \strlen($data);
         /** @phpstan-ignore property.notFound */
-        $cPacket->data = (new \FFI())->cast('uint8_t*', $this->createDataBuffer($data));
+        $cPacket->data = $this->ffi->cast('uint8_t*', $this->createDataBuffer($data));
         /** @phpstan-ignore property.notFound */
         $cPacket->callback_context = 0;
 
@@ -189,6 +189,11 @@ CPROG;
     {
         return match ($statusCode) {
             1 => TooMuchDataException::create(1024 * 1024, $dataSize),
+            2 => RequestException::create($statusCode, 'Invalid operation'),
+            3 => RequestException::create($statusCode, 'Invalid data size'),
+            4 => RequestException::create($statusCode, 'Zero address'),
+            5 => RequestException::create($statusCode, 'Zero cluster ID'),
+            6 => RequestException::create($statusCode, 'Concurrency max exceeded'),
             default => RequestException::create($statusCode),
         };
     }
