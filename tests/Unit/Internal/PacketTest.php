@@ -19,20 +19,6 @@ class PacketTest extends TestCase
         $this->assertSame('data', $packet->getPayload());
     }
 
-    public function testDefaultStatusIsOk(): void
-    {
-        $packet = new Packet(Operation::CREATE_ACCOUNTS, '');
-
-        $this->assertSame(PacketStatus::OK, $packet->getStatus());
-    }
-
-    public function testDefaultDataIsEmpty(): void
-    {
-        $packet = new Packet(Operation::CREATE_ACCOUNTS, '');
-
-        $this->assertSame('', $packet->getData());
-    }
-
     public function testDefaultNotCompleted(): void
     {
         $packet = new Packet(Operation::CREATE_ACCOUNTS, '');
@@ -40,7 +26,24 @@ class PacketTest extends TestCase
         $this->assertFalse($packet->isCompleted());
     }
 
-    public function testOnCompleteSetsDataAndStatus(): void
+    public function testDefaultDataIsNull(): void
+    {
+        $packet = new Packet(Operation::CREATE_ACCOUNTS, '');
+
+        $this->assertNull($packet->getData());
+    }
+
+    public function testGetStatusThrowsBeforeCompletion(): void
+    {
+        $packet = new Packet(Operation::CREATE_ACCOUNTS, '');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Packet status not available before completion');
+
+        $packet->getStatus();
+    }
+
+    public function testOnCompleteSetsStatusAndData(): void
     {
         $packet = new Packet(Operation::CREATE_ACCOUNTS, '');
 
@@ -55,10 +58,21 @@ class PacketTest extends TestCase
     {
         $packet = new Packet(Operation::CREATE_ACCOUNTS, '');
 
-        $packet->onComplete(PacketStatus::TOO_MUCH_DATA, '');
+        $packet->onComplete(PacketStatus::TOO_MUCH_DATA, null);
 
         $this->assertTrue($packet->isCompleted());
         $this->assertSame(PacketStatus::TOO_MUCH_DATA, $packet->getStatus());
+        $this->assertNull($packet->getData());
+    }
+
+    public function testOnCompleteWithNullData(): void
+    {
+        $packet = new Packet(Operation::CREATE_ACCOUNTS, '');
+
+        $packet->onComplete(PacketStatus::OK, null);
+
+        $this->assertTrue($packet->isCompleted());
+        $this->assertNull($packet->getData());
     }
 
     public function testWaitCompletesImmediatelyWhenAlreadyDone(): void
@@ -93,27 +107,5 @@ class PacketTest extends TestCase
         $this->expectExceptionMessage('Packet wait timeout');
 
         $packet->wait(100);
-    }
-
-    public function testSetStatusAndSetData(): void
-    {
-        $packet = new Packet(Operation::LOOKUP_ACCOUNTS, 'ids');
-
-        $packet->setStatus(PacketStatus::INVALID_OPERATION);
-        $packet->setData('error');
-
-        $this->assertSame(PacketStatus::INVALID_OPERATION, $packet->getStatus());
-        $this->assertSame('error', $packet->getData());
-    }
-
-    public function testComplete(): void
-    {
-        $packet = new Packet(Operation::CREATE_ACCOUNTS, '');
-
-        $this->assertFalse($packet->isCompleted());
-
-        $packet->complete();
-
-        $this->assertTrue($packet->isCompleted());
     }
 }
