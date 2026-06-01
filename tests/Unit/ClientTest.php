@@ -357,6 +357,106 @@ final class ClientTest extends TestCase
         $client->lookupAccounts(new IdBatch(1));
     }
 
+    public function testLookupTransfersSubmitsIdBatchBytesToBackend(): void
+    {
+        $ids = new IdBatch(2);
+        $ids->add();
+        $ids->setId(Uint128::fromInt(11));
+        $ids->add();
+        $ids->setId(Uint128::fromInt(22));
+
+        $expected = $ids->toBytes();
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::LOOKUP_TRANSFERS, $expected)
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->lookupTransfers($ids);
+
+        $this->assertInstanceOf(TransferBatch::class, $result);
+    }
+
+    public function testLookupTransfersReturnsParsedTransferBatch(): void
+    {
+        $buffer = \implode('', [
+            $this->packTransfer(11, 1, 1),
+            $this->packTransfer(22, 2, 7),
+        ]);
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn($buffer);
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->lookupTransfers(new IdBatch(2));
+
+        $this->assertSame(2, $result->getLength());
+
+        $result->rewind();
+        $this->assertTrue($result->getId()->equals(Uint128::fromInt(11)));
+        $this->assertSame(1, $result->getLedger());
+        $this->assertSame(1, $result->getCode());
+
+        $result->next();
+        $this->assertTrue($result->getId()->equals(Uint128::fromInt(22)));
+        $this->assertSame(2, $result->getLedger());
+        $this->assertSame(7, $result->getCode());
+    }
+
+    public function testLookupTransfersReturnsZeroedTransferForMissingId(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn(\str_repeat("\0", 128));
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->lookupTransfers(new IdBatch(1));
+
+        $this->assertSame(1, $result->getLength());
+        $result->rewind();
+        $this->assertTrue($result->getId()->equals(Uint128::zero()));
+        $this->assertTrue($result->getDebitAccountId()->equals(Uint128::zero()));
+        $this->assertTrue($result->getCreditAccountId()->equals(Uint128::zero()));
+        $this->assertTrue($result->getAmount()->equals(Uint128::zero()));
+        $this->assertTrue($result->getPendingId()->equals(Uint128::zero()));
+        $this->assertSame(0, $result->getLedger());
+        $this->assertSame(0, $result->getCode());
+        $this->assertSame(0, $result->getFlags());
+        $this->assertSame(0, $result->getTimestamp());
+    }
+
+    public function testLookupTransfersEmptyBatchProducesEmptyResult(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::LOOKUP_TRANSFERS, '')
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->lookupTransfers(new IdBatch(0));
+
+        $this->assertSame(0, $result->getLength());
+    }
+
+    public function testLookupTransfersPropagatesBackendException(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willThrowException(new \RuntimeException('boom'));
+
+        $client = Client::withBackend($backend);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('boom');
+
+        $client->lookupTransfers(new IdBatch(1));
+    }
+
     public function testLookupTransfersAfterCloseThrowsClientClosedException(): void
     {
         $client = $this->createClientWithMockBackend();
@@ -434,6 +534,25 @@ final class ClientTest extends TestCase
             'user_data_64' => 0,
             'user_data_32' => 0,
             'reserved' => 0,
+            'ledger' => $ledger,
+            'code' => $code,
+            'flags' => 0,
+            'timestamp' => 0,
+        ]);
+    }
+
+    private function packTransfer(int $id, int $ledger, int $code): string
+    {
+        return BinaryHelper::packTransfer([
+            'id' => Uint128::fromInt($id),
+            'debit_account_id' => Uint128::zero(),
+            'credit_account_id' => Uint128::zero(),
+            'amount' => Uint128::zero(),
+            'pending_id' => Uint128::zero(),
+            'user_data_128' => Uint128::zero(),
+            'user_data_64' => 0,
+            'user_data_32' => 0,
+            'timeout' => 0,
             'ledger' => $ledger,
             'code' => $code,
             'flags' => 0,

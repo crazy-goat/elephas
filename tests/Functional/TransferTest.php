@@ -8,6 +8,7 @@ use CrazyGoat\Elephas\AccountFlags;
 use CrazyGoat\Elephas\Backend\FfiBackend;
 use CrazyGoat\Elephas\Batch\AccountBatch;
 use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
+use CrazyGoat\Elephas\Batch\IdBatch;
 use CrazyGoat\Elephas\Batch\TransferBatch;
 use CrazyGoat\Elephas\Client;
 use CrazyGoat\Elephas\CreateTransferStatus;
@@ -567,6 +568,262 @@ class TransferTest extends TestCase
         $this->expectException(ClientClosedException::class);
 
         $client->createTransfers(new TransferBatch(1));
+    }
+
+    public function testLookupTransfersSingle(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+
+            $transferId = Id::generate();
+            $batch = new TransferBatch(1);
+            $batch->add();
+            $batch->setId($transferId);
+            $batch->setDebitAccountId($debit);
+            $batch->setCreditAccountId($credit);
+            $batch->setAmount(Uint128::fromInt(100));
+            $batch->setLedger(1);
+            $batch->setCode(1);
+            $client->createTransfers($batch);
+
+            $ids = new IdBatch(1);
+            $ids->add();
+            $ids->setId($transferId);
+
+            $transfers = $client->lookupTransfers($ids);
+
+            $this->assertSame(1, $transfers->getLength());
+            $transfers->rewind();
+            $this->assertTrue($transferId->equals($transfers->getId()));
+            $this->assertTrue($debit->equals($transfers->getDebitAccountId()));
+            $this->assertTrue($credit->equals($transfers->getCreditAccountId()));
+            $this->assertTrue($transfers->getAmount()->equals(Uint128::fromInt(100)));
+            $this->assertSame(1, $transfers->getLedger());
+            $this->assertSame(1, $transfers->getCode());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testLookupTransfersMultiple(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+
+            $count = 3;
+            $createBatch = new TransferBatch($count);
+            $expectedIds = [];
+            for ($i = 0; $i < $count; $i++) {
+                $id = Id::generate();
+                $expectedIds[] = $id;
+                $createBatch->add();
+                $createBatch->setId($id);
+                $createBatch->setDebitAccountId($debit);
+                $createBatch->setCreditAccountId($credit);
+                $createBatch->setAmount(Uint128::fromInt(10));
+                $createBatch->setLedger(1);
+                $createBatch->setCode(1);
+            }
+            $client->createTransfers($createBatch);
+
+            $ids = new IdBatch($count);
+            foreach ($expectedIds as $id) {
+                $ids->add();
+                $ids->setId($id);
+            }
+
+            $transfers = $client->lookupTransfers($ids);
+
+            $this->assertSame($count, $transfers->getLength());
+            $transfers->rewind();
+            for ($i = 0; $i < $count; $i++) {
+                $this->assertTrue(
+                    $expectedIds[$i]->equals($transfers->getId()),
+                    \sprintf('Transfer #%d must match expected ID', $i),
+                );
+                if ($i < $count - 1) {
+                    $transfers->next();
+                }
+            }
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testLookupTransfersNonExisting(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $ids = new IdBatch(1);
+            $ids->add();
+            $ids->setId(Id::generate());
+
+            $transfers = $client->lookupTransfers($ids);
+
+            $this->assertSame(1, $transfers->getLength());
+            $transfers->rewind();
+            $this->assertTrue($transfers->getId()->equals(Uint128::zero()));
+            $this->assertTrue($transfers->getDebitAccountId()->equals(Uint128::zero()));
+            $this->assertTrue($transfers->getCreditAccountId()->equals(Uint128::zero()));
+            $this->assertTrue($transfers->getAmount()->equals(Uint128::zero()));
+            $this->assertSame(0, $transfers->getLedger());
+            $this->assertSame(0, $transfers->getCode());
+            $this->assertSame(0, $transfers->getTimestamp());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testLookupTransfersMixed(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+
+            $existingId = Id::generate();
+            $createBatch = new TransferBatch(1);
+            $createBatch->add();
+            $createBatch->setId($existingId);
+            $createBatch->setDebitAccountId($debit);
+            $createBatch->setCreditAccountId($credit);
+            $createBatch->setAmount(Uint128::fromInt(50));
+            $createBatch->setLedger(1);
+            $createBatch->setCode(1);
+            $client->createTransfers($createBatch);
+
+            $missingId = Id::generate();
+            $ids = new IdBatch(2);
+            $ids->add();
+            $ids->setId($existingId);
+            $ids->add();
+            $ids->setId($missingId);
+
+            $transfers = $client->lookupTransfers($ids);
+
+            $this->assertSame(2, $transfers->getLength());
+
+            $transfers->rewind();
+            $this->assertTrue($existingId->equals($transfers->getId()));
+            $this->assertTrue($transfers->getAmount()->equals(Uint128::fromInt(50)));
+
+            $transfers->next();
+            $this->assertTrue($transfers->getId()->equals(Uint128::zero()));
+            $this->assertTrue($transfers->getAmount()->equals(Uint128::zero()));
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testLookupTransfersEmptyBatch(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $transfers = $client->lookupTransfers(new IdBatch(0));
+
+            $this->assertSame(0, $transfers->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testLookupTransfersAfterCloseThrows(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        $client->close();
+
+        $this->expectException(ClientClosedException::class);
+
+        $client->lookupTransfers(new IdBatch(1));
+    }
+
+    public function testLookupTransfersVerifyFields(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+
+            $pendingId = Id::generate();
+            $pendingBatch = new TransferBatch(1);
+            $pendingBatch->add();
+            $pendingBatch->setId($pendingId);
+            $pendingBatch->setDebitAccountId($debit);
+            $pendingBatch->setCreditAccountId($credit);
+            $pendingBatch->setAmount(Uint128::fromInt(200));
+            $pendingBatch->setLedger(42);
+            $pendingBatch->setCode(7);
+            $pendingBatch->setFlags(TransferFlags::PENDING);
+            $client->createTransfers($pendingBatch);
+
+            $postId = Id::generate();
+            $userData128 = Uint128::fromInt(0xCAFEBABE);
+            $postBatch = new TransferBatch(1);
+            $postBatch->add();
+            $postBatch->setId($postId);
+            $postBatch->setDebitAccountId($debit);
+            $postBatch->setCreditAccountId($credit);
+            $postBatch->setAmount(Uint128::fromInt(200));
+            $postBatch->setPendingId($pendingId);
+            $postBatch->setUserData128($userData128);
+            $postBatch->setUserData64(0xDEADBEEF);
+            $postBatch->setUserData32(0x12345678);
+            $postBatch->setLedger(42);
+            $postBatch->setCode(7);
+            $postBatch->setFlags(TransferFlags::POST_PENDING_TRANSFER);
+            $client->createTransfers($postBatch);
+
+            $ids = new IdBatch(1);
+            $ids->add();
+            $ids->setId($postId);
+
+            $transfers = $client->lookupTransfers($ids);
+
+            $this->assertSame(1, $transfers->getLength());
+            $transfers->rewind();
+            $this->assertTrue($postId->equals($transfers->getId()));
+            $this->assertTrue($debit->equals($transfers->getDebitAccountId()));
+            $this->assertTrue($credit->equals($transfers->getCreditAccountId()));
+            $this->assertTrue($transfers->getAmount()->equals(Uint128::fromInt(200)));
+            $this->assertTrue($pendingId->equals($transfers->getPendingId()));
+            $this->assertTrue($userData128->equals($transfers->getUserData128()));
+            $this->assertSame(0xDEADBEEF, $transfers->getUserData64());
+            $this->assertSame(0x12345678, $transfers->getUserData32());
+            $this->assertSame(42, $transfers->getLedger());
+            $this->assertSame(7, $transfers->getCode());
+            $this->assertSame(TransferFlags::POST_PENDING_TRANSFER, $transfers->getFlags());
+            $this->assertGreaterThan(0, $transfers->getTimestamp());
+        } finally {
+            $client->close();
+        }
     }
 
     /**
