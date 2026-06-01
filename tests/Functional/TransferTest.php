@@ -7,6 +7,7 @@ namespace CrazyGoat\Elephas\Test\Functional;
 use CrazyGoat\Elephas\AccountFlags;
 use CrazyGoat\Elephas\Backend\FfiBackend;
 use CrazyGoat\Elephas\Batch\AccountBatch;
+use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
 use CrazyGoat\Elephas\Batch\TransferBatch;
 use CrazyGoat\Elephas\Client;
 use CrazyGoat\Elephas\CreateTransferStatus;
@@ -289,7 +290,7 @@ class TransferTest extends TestCase
         }
     }
 
-    public function testCreateTransferSameDebitCreditReturnsError(): void
+    public function testCreateTransferSameDebitCredit(): void
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
@@ -316,6 +317,151 @@ class TransferTest extends TestCase
                 CreateTransferStatus::CREATED,
                 $this->statusOrError($results),
                 'Transfer with identical debit and credit accounts must not be CREATED',
+            );
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testCreateTransferInvalidDebitAccount(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$credit] = $this->createAccounts($client, 1);
+
+            $batch = new TransferBatch(1);
+            $batch->add();
+            $batch->setId(Id::generate());
+            // Debit account was never created.
+            $batch->setDebitAccountId(Id::generate());
+            $batch->setCreditAccountId($credit);
+            $batch->setAmount(Uint128::fromInt(1));
+            $batch->setLedger(1);
+            $batch->setCode(1);
+
+            $results = $client->createTransfers($batch);
+
+            $this->assertSame(1, $results->getLength());
+            $results->rewind();
+            $this->assertNotSame(
+                CreateTransferStatus::CREATED,
+                $this->statusOrError($results),
+                'Transfer with a non-existent debit account must not be CREATED',
+            );
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testCreateTransferInvalidCreditAccount(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit] = $this->createAccounts($client, 1);
+
+            $batch = new TransferBatch(1);
+            $batch->add();
+            $batch->setId(Id::generate());
+            $batch->setDebitAccountId($debit);
+            // Credit account was never created.
+            $batch->setCreditAccountId(Id::generate());
+            $batch->setAmount(Uint128::fromInt(1));
+            $batch->setLedger(1);
+            $batch->setCode(1);
+
+            $results = $client->createTransfers($batch);
+
+            $this->assertSame(1, $results->getLength());
+            $results->rewind();
+            $this->assertNotSame(
+                CreateTransferStatus::CREATED,
+                $this->statusOrError($results),
+                'Transfer with a non-existent credit account must not be CREATED',
+            );
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testCreateTransferInsufficientBalance(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            // Debit account constrained: total debits MUST NOT exceed credits.
+            // With no incoming credits, any debit > 0 must be rejected.
+            [$debit] = $this->createAccounts(
+                $client,
+                1,
+                AccountFlags::DEBITS_MUST_NOT_EXCEED_CREDITS,
+            );
+            [$credit] = $this->createAccounts($client, 1);
+
+            $batch = new TransferBatch(1);
+            $batch->add();
+            $batch->setId(Id::generate());
+            $batch->setDebitAccountId($debit);
+            $batch->setCreditAccountId($credit);
+            $batch->setAmount(Uint128::fromInt(100));
+            $batch->setLedger(1);
+            $batch->setCode(1);
+
+            $results = $client->createTransfers($batch);
+
+            $this->assertSame(1, $results->getLength());
+            $results->rewind();
+            $this->assertNotSame(
+                CreateTransferStatus::CREATED,
+                $this->statusOrError($results),
+                'Transfer that would exceed the debit-side limit must not be CREATED',
+            );
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testCreateTransferBalancingDebit(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+
+            // BALANCING_DEBIT instructs TigerBeetle to cap the transfer amount
+            // at whatever the debit side can support. With no prior balance
+            // the resulting posted amount may be 0, but the request itself
+            // must still be accepted as CREATED.
+            $batch = new TransferBatch(1);
+            $batch->add();
+            $batch->setId(Id::generate());
+            $batch->setDebitAccountId($debit);
+            $batch->setCreditAccountId($credit);
+            $batch->setAmount(Uint128::fromInt(1000));
+            $batch->setLedger(1);
+            $batch->setCode(1);
+            $batch->setFlags(TransferFlags::BALANCING_DEBIT);
+
+            $results = $client->createTransfers($batch);
+
+            $this->assertSame(1, $results->getLength());
+            $results->rewind();
+            $this->assertSame(
+                CreateTransferStatus::CREATED,
+                $results->getResult()->getStatus(),
             );
         } finally {
             $client->close();
@@ -430,7 +576,7 @@ class TransferTest extends TestCase
      * Negative tests only check "not CREATED"; the precise error code mapping is
      * verified elsewhere as the enum is kept in sync with tb_client.h.
      */
-    private function statusOrError(\CrazyGoat\Elephas\Batch\CreateTransferResultBatch $results): CreateTransferStatus
+    private function statusOrError(CreateTransferResultBatch $results): CreateTransferStatus
     {
         try {
             return $results->getResult()->getStatus();
