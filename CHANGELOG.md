@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `BackendFactory` – auto-detect available backend implementation (#48)
+- `README.md` – installation guide, quickstart, API reference, and development docs (#51)
+- `LICENSE` – MIT license (#52)
 
 ## [0.3.0] – Client API – 2026-06-01
 
