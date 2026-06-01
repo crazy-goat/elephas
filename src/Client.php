@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas;
 
+use CrazyGoat\Elephas\Backend\BackendInterface;
+use CrazyGoat\Elephas\Backend\FfiBackend;
 use CrazyGoat\Elephas\Batch\AccountBalanceBatch;
 use CrazyGoat\Elephas\Batch\AccountBatch;
 use CrazyGoat\Elephas\Batch\CreateAccountResultBatch;
 use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
 use CrazyGoat\Elephas\Batch\IdBatch;
 use CrazyGoat\Elephas\Batch\TransferBatch;
+use CrazyGoat\Elephas\Exception\ClientClosedException;
 use CrazyGoat\Elephas\Uint128\Uint128;
 
 /**
@@ -18,68 +21,106 @@ use CrazyGoat\Elephas\Uint128\Uint128;
  * Provides synchronous API for creating accounts, transfers,
  * and querying data from TigerBeetle cluster.
  */
-final readonly class Client implements ClientInterface
+final class Client implements ClientInterface
 {
+    private readonly BackendInterface $backend;
+
+    private bool $closed = false;
+
     /** @var array<string> */
-    private array $replicaAddresses;
+    private readonly array $replicaAddresses;
 
     /**
      * @param Uint128 $clusterId the cluster ID
      * @param string ...$replicaAddresses the replica addresses
-     *
-     * TODO: implement
      */
     public function __construct(
-        private Uint128 $clusterId,
+        private readonly Uint128 $clusterId,
         string ...$replicaAddresses,
     ) {
         $this->replicaAddresses = $replicaAddresses;
+        $this->backend = new FfiBackend($clusterId, $replicaAddresses);
+    }
+
+    /**
+     * Create a Client instance with a custom backend (for testing/dependency injection).
+     *
+     * Uses reflection to bypass the public constructor and avoid creating an FfiBackend,
+     * since the provided backend replaces the default one.
+     */
+    public static function withBackend(BackendInterface $backend): self
+    {
+        $reflection = new \ReflectionClass(self::class);
+        /** @var self $client */
+        $client = $reflection->newInstanceWithoutConstructor();
+
+        $reflection->getProperty('clusterId')->setValue($client, Uint128::zero());
+        $reflection->getProperty('replicaAddresses')->setValue($client, []);
+        $reflection->getProperty('backend')->setValue($client, $backend);
+
+        return $client;
     }
 
     public function createAccounts(AccountBatch $batch): CreateAccountResultBatch
     {
-        // TODO: implement
+        $this->ensureNotClosed();
+
+        // TODO: implement in #42
         throw new \RuntimeException('Not implemented');
     }
 
     public function createTransfers(TransferBatch $batch): CreateTransferResultBatch
     {
-        // TODO: implement
+        $this->ensureNotClosed();
+
+        // TODO: implement in #43
         throw new \RuntimeException('Not implemented');
     }
 
     public function lookupAccounts(IdBatch $ids): AccountBatch
     {
-        // TODO: implement
+        $this->ensureNotClosed();
+
+        // TODO: implement in #44
         throw new \RuntimeException('Not implemented');
     }
 
     public function lookupTransfers(IdBatch $ids): TransferBatch
     {
-        // TODO: implement
+        $this->ensureNotClosed();
+
+        // TODO: implement in #45
         throw new \RuntimeException('Not implemented');
     }
 
     public function getAccountTransfers(AccountFilter $filter): TransferBatch
     {
-        // TODO: implement
+        $this->ensureNotClosed();
+
+        // TODO: implement in #46
         throw new \RuntimeException('Not implemented');
     }
 
     public function getAccountBalances(AccountFilter $filter): AccountBalanceBatch
     {
-        // TODO: implement
+        $this->ensureNotClosed();
+
+        // TODO: implement in #47
         throw new \RuntimeException('Not implemented');
     }
 
     public function queryAccounts(QueryFilter $filter): AccountBatch
     {
+        $this->ensureNotClosed();
+
         // TODO: implement
         throw new \RuntimeException('Not implemented');
     }
 
     public function queryTransfers(QueryFilter $filter): TransferBatch
     {
+        $this->ensureNotClosed();
+
         // TODO: implement
         throw new \RuntimeException('Not implemented');
     }
@@ -97,6 +138,18 @@ final readonly class Client implements ClientInterface
 
     public function close(): void
     {
-        // TODO: implement
+        if ($this->closed) {
+            return;
+        }
+
+        $this->backend->close();
+        $this->closed = true;
+    }
+
+    private function ensureNotClosed(): void
+    {
+        if ($this->closed) {
+            throw ClientClosedException::create();
+        }
     }
 }
