@@ -8,11 +8,13 @@ use CrazyGoat\Elephas\AccountFilter;
 use CrazyGoat\Elephas\Backend\BackendInterface;
 use CrazyGoat\Elephas\Batch\AccountBatch;
 use CrazyGoat\Elephas\Batch\CreateAccountResultBatch;
+use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
 use CrazyGoat\Elephas\Batch\IdBatch;
 use CrazyGoat\Elephas\Batch\TransferBatch;
 use CrazyGoat\Elephas\Client;
 use CrazyGoat\Elephas\ClientInterface;
 use CrazyGoat\Elephas\CreateAccountStatus;
+use CrazyGoat\Elephas\CreateTransferStatus;
 use CrazyGoat\Elephas\Exception\ClientClosedException;
 use CrazyGoat\Elephas\Operation;
 use CrazyGoat\Elephas\QueryFilter;
@@ -160,6 +162,83 @@ final class ClientTest extends TestCase
         $client->createAccounts(new AccountBatch(1));
     }
 
+    public function testCreateTransfersSubmitsBatchBytesToBackend(): void
+    {
+        $batch = new TransferBatch(1);
+        $batch->add();
+        $batch->setId(Uint128::fromInt(99));
+        $batch->setDebitAccountId(Uint128::fromInt(1));
+        $batch->setCreditAccountId(Uint128::fromInt(2));
+        $batch->setAmount(Uint128::fromInt(10));
+        $batch->setLedger(1);
+        $batch->setCode(1);
+
+        $expected = $batch->toBytes();
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::CREATE_TRANSFERS, $expected)
+            ->willReturn(\pack('PVV', 0, 0xFFFFFFFF, 0));
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->createTransfers($batch);
+
+        $this->assertInstanceOf(CreateTransferResultBatch::class, $result);
+    }
+
+    public function testCreateTransfersReturnsParsedResultBatch(): void
+    {
+        $buffer = \implode('', [
+            \pack('PVV', 100, 0xFFFFFFFF, 0),
+            \pack('PVV', 200, CreateTransferStatus::EXCEEDS_CREDITS->value, 0),
+        ]);
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn($buffer);
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->createTransfers(new TransferBatch(2));
+
+        $this->assertSame(2, $result->getLength());
+
+        $result->rewind();
+        $this->assertTrue($result->getResult()->isCreated());
+
+        $result->next();
+        $this->assertSame(CreateTransferStatus::EXCEEDS_CREDITS, $result->getResult()->getStatus());
+    }
+
+    public function testCreateTransfersEmptyBatchProducesEmptyResult(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::CREATE_TRANSFERS, '')
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->createTransfers(new TransferBatch(0));
+
+        $this->assertSame(0, $result->getLength());
+    }
+
+    public function testCreateTransfersPropagatesBackendException(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willThrowException(new \RuntimeException('boom'));
+
+        $client = Client::withBackend($backend);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('boom');
+
+        $client->createTransfers(new TransferBatch(1));
+    }
+
     public function testCreateTransfersAfterCloseThrowsClientClosedException(): void
     {
         $client = $this->createClientWithMockBackend();
@@ -228,16 +307,6 @@ final class ClientTest extends TestCase
         $this->expectException(ClientClosedException::class);
 
         $client->queryTransfers(new QueryFilter(Uint128::zero()));
-    }
-
-    public function testCreateTransfersBeforeCloseStillNotImplemented(): void
-    {
-        $client = $this->createClientWithMockBackend();
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Not implemented');
-
-        $client->createTransfers(new TransferBatch(1));
     }
 
     public function testIsFinal(): void

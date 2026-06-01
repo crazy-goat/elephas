@@ -79,8 +79,9 @@ final class Client implements ClientInterface
     {
         $this->ensureNotClosed();
 
-        // TODO: implement in #43
-        throw new \RuntimeException('Not implemented');
+        $response = $this->backend->submit(Operation::CREATE_TRANSFERS, $batch->toBytes());
+
+        return CreateTransferResultBatch::fromBuffer($response);
     }
 
     public function lookupAccounts(IdBatch $ids): AccountBatch
