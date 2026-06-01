@@ -41,18 +41,6 @@ jobs:
         php-version: ['8.2', '8.3', '8.4']
       fail-fast: false
 
-    services:
-      tigerbeetle:
-        image: ghcr.io/tigerbeetle/tigerbeetle:0.17.4
-        ports:
-          - 3000:3000
-        options: >-
-          --health-cmd "true"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-        cmd: ["start", "--addresses=3000", "--development"]
-
     steps:
       - uses: actions/checkout@v4
 
@@ -67,8 +55,11 @@ jobs:
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist
 
-      - name: Wait for TigerBeetle
+      - name: Start TigerBeetle
         run: |
+          docker run -d --name tigerbeetle --rm -p 3000:3000 \
+            ghcr.io/tigerbeetle/tigerbeetle:0.17.4 \
+            start --addresses=3000 --development
           for i in $(seq 1 30); do
             if curl -s http://localhost:3000 > /dev/null 2>&1; then
               echo "TigerBeetle is ready"
@@ -82,3 +73,7 @@ jobs:
         run: vendor/bin/phpunit
         env:
           TIGERBEETLE_ADDRESS: localhost:3000
+
+      - name: Stop TigerBeetle
+        if: always()
+        run: docker stop tigerbeetle || true
