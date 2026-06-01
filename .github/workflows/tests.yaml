@@ -88,10 +88,11 @@ jobs:
 
   tests:
     name: tests
-    needs: [test-matrix]
+    needs: [lint, test-matrix]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check test results
         run: |
+          if [ "${{ needs.lint.result }}" != "success" ]; then exit 1; fi
           if [ "${{ needs.test-matrix.result }}" != "success" ]; then exit 1; fi
