@@ -16,6 +16,7 @@ use CrazyGoat\Elephas\ClientInterface;
 use CrazyGoat\Elephas\CreateAccountStatus;
 use CrazyGoat\Elephas\CreateTransferStatus;
 use CrazyGoat\Elephas\Exception\ClientClosedException;
+use CrazyGoat\Elephas\Internal\BinaryHelper;
 use CrazyGoat\Elephas\Operation;
 use CrazyGoat\Elephas\QueryFilter;
 use CrazyGoat\Elephas\Uint128\Uint128;
@@ -249,6 +250,103 @@ final class ClientTest extends TestCase
         $client->createTransfers(new TransferBatch(1));
     }
 
+    public function testLookupAccountsSubmitsIdBatchBytesToBackend(): void
+    {
+        $ids = new IdBatch(2);
+        $ids->add();
+        $ids->setId(Uint128::fromInt(11));
+        $ids->add();
+        $ids->setId(Uint128::fromInt(22));
+
+        $expected = $ids->toBytes();
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::LOOKUP_ACCOUNTS, $expected)
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->lookupAccounts($ids);
+
+        $this->assertInstanceOf(AccountBatch::class, $result);
+    }
+
+    public function testLookupAccountsReturnsParsedAccountBatch(): void
+    {
+        $buffer = \implode('', [
+            $this->packAccount(11, 1, 1),
+            $this->packAccount(22, 2, 7),
+        ]);
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn($buffer);
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->lookupAccounts(new IdBatch(2));
+
+        $this->assertSame(2, $result->getLength());
+
+        $result->rewind();
+        $this->assertTrue($result->getId()->equals(Uint128::fromInt(11)));
+        $this->assertSame(1, $result->getLedger());
+        $this->assertSame(1, $result->getCode());
+
+        $result->next();
+        $this->assertTrue($result->getId()->equals(Uint128::fromInt(22)));
+        $this->assertSame(2, $result->getLedger());
+        $this->assertSame(7, $result->getCode());
+    }
+
+    public function testLookupAccountsReturnsZeroedAccountForMissingId(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn(\str_repeat("\0", 128));
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->lookupAccounts(new IdBatch(1));
+
+        $this->assertSame(1, $result->getLength());
+        $result->rewind();
+        $this->assertTrue($result->getId()->equals(Uint128::zero()));
+        $this->assertSame(0, $result->getLedger());
+        $this->assertSame(0, $result->getCode());
+        $this->assertSame(0, $result->getFlags());
+        $this->assertTrue($result->getDebitsPosted()->equals(Uint128::zero()));
+        $this->assertTrue($result->getCreditsPosted()->equals(Uint128::zero()));
+    }
+
+    public function testLookupAccountsEmptyBatchProducesEmptyResult(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::LOOKUP_ACCOUNTS, '')
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->lookupAccounts(new IdBatch(0));
+
+        $this->assertSame(0, $result->getLength());
+    }
+
+    public function testLookupAccountsPropagatesBackendException(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willThrowException(new \RuntimeException('boom'));
+
+        $client = Client::withBackend($backend);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('boom');
+
+        $client->lookupAccounts(new IdBatch(1));
+    }
+
     public function testLookupAccountsAfterCloseThrowsClientClosedException(): void
     {
         $client = $this->createClientWithMockBackend();
@@ -322,5 +420,24 @@ final class ClientTest extends TestCase
         $backend = $this->createMock(BackendInterface::class);
 
         return Client::withBackend($backend);
+    }
+
+    private function packAccount(int $id, int $ledger, int $code): string
+    {
+        return BinaryHelper::packAccount([
+            'id' => Uint128::fromInt($id),
+            'debits_pending' => Uint128::zero(),
+            'debits_posted' => Uint128::zero(),
+            'credits_pending' => Uint128::zero(),
+            'credits_posted' => Uint128::zero(),
+            'user_data_128' => Uint128::zero(),
+            'user_data_64' => 0,
+            'user_data_32' => 0,
+            'reserved' => 0,
+            'ledger' => $ledger,
+            'code' => $code,
+            'flags' => 0,
+            'timestamp' => 0,
+        ]);
     }
 }

@@ -7,6 +7,7 @@ namespace CrazyGoat\Elephas\Test\Functional;
 use CrazyGoat\Elephas\Backend\BackendInterface;
 use CrazyGoat\Elephas\Backend\FfiBackend;
 use CrazyGoat\Elephas\Batch\AccountBatch;
+use CrazyGoat\Elephas\Batch\IdBatch;
 use CrazyGoat\Elephas\Client;
 use CrazyGoat\Elephas\CreateAccountStatus;
 use CrazyGoat\Elephas\Exception\ClientClosedException;
@@ -355,5 +356,223 @@ class ClientTest extends TestCase
         $this->expectException(ClientClosedException::class);
 
         $client->createAccounts(new AccountBatch(1));
+    }
+
+    public function testLookupAccountsSingle(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $id = Id::generate();
+            $batch = new AccountBatch(1);
+            $batch->add();
+            $batch->setId($id);
+            $batch->setLedger(1);
+            $batch->setCode(1);
+            $client->createAccounts($batch);
+
+            $ids = new IdBatch(1);
+            $ids->add();
+            $ids->setId($id);
+
+            $accounts = $client->lookupAccounts($ids);
+
+            $this->assertSame(1, $accounts->getLength());
+            $accounts->rewind();
+            $this->assertTrue($id->equals($accounts->getId()));
+            $this->assertSame(1, $accounts->getLedger());
+            $this->assertSame(1, $accounts->getCode());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testLookupAccountsMultiple(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $count = 3;
+            $createBatch = new AccountBatch($count);
+            $expectedIds = [];
+            for ($i = 0; $i < $count; $i++) {
+                $id = Id::generate();
+                $expectedIds[] = $id;
+                $createBatch->add();
+                $createBatch->setId($id);
+                $createBatch->setLedger(1);
+                $createBatch->setCode(1);
+            }
+            $client->createAccounts($createBatch);
+
+            $ids = new IdBatch($count);
+            foreach ($expectedIds as $id) {
+                $ids->add();
+                $ids->setId($id);
+            }
+
+            $accounts = $client->lookupAccounts($ids);
+
+            $this->assertSame($count, $accounts->getLength());
+            $accounts->rewind();
+            for ($i = 0; $i < $count; $i++) {
+                $this->assertTrue(
+                    $expectedIds[$i]->equals($accounts->getId()),
+                    \sprintf('Account #%d must match expected ID', $i),
+                );
+                if ($i < $count - 1) {
+                    $accounts->next();
+                }
+            }
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testLookupAccountsNonExisting(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $ids = new IdBatch(1);
+            $ids->add();
+            $ids->setId(Id::generate());
+
+            $accounts = $client->lookupAccounts($ids);
+
+            $this->assertSame(1, $accounts->getLength());
+            $accounts->rewind();
+            $this->assertTrue($accounts->getId()->equals(Uint128::zero()));
+            $this->assertSame(0, $accounts->getLedger());
+            $this->assertSame(0, $accounts->getCode());
+            $this->assertSame(0, $accounts->getTimestamp());
+            $this->assertTrue($accounts->getDebitsPosted()->equals(Uint128::zero()));
+            $this->assertTrue($accounts->getCreditsPosted()->equals(Uint128::zero()));
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testLookupAccountsMixed(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $existingId = Id::generate();
+            $createBatch = new AccountBatch(1);
+            $createBatch->add();
+            $createBatch->setId($existingId);
+            $createBatch->setLedger(1);
+            $createBatch->setCode(1);
+            $client->createAccounts($createBatch);
+
+            $missingId = Id::generate();
+            $ids = new IdBatch(2);
+            $ids->add();
+            $ids->setId($existingId);
+            $ids->add();
+            $ids->setId($missingId);
+
+            $accounts = $client->lookupAccounts($ids);
+
+            $this->assertSame(2, $accounts->getLength());
+
+            $accounts->rewind();
+            $this->assertTrue($existingId->equals($accounts->getId()));
+            $this->assertSame(1, $accounts->getLedger());
+
+            $accounts->next();
+            $this->assertTrue($accounts->getId()->equals(Uint128::zero()));
+            $this->assertSame(0, $accounts->getLedger());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testLookupAccountsEmptyBatch(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $accounts = $client->lookupAccounts(new IdBatch(0));
+
+            $this->assertSame(0, $accounts->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testLookupAccountsAfterCloseThrows(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        $client->close();
+
+        $this->expectException(ClientClosedException::class);
+
+        $client->lookupAccounts(new IdBatch(1));
+    }
+
+    public function testLookupAccountsVerifyFields(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $id = Id::generate();
+            $userData128 = Uint128::fromInt(0xCAFEBABE);
+            $createBatch = new AccountBatch(1);
+            $createBatch->add();
+            $createBatch->setId($id);
+            $createBatch->setUserData128($userData128);
+            $createBatch->setUserData64(0xDEADBEEF);
+            $createBatch->setUserData32(0x12345678);
+            $createBatch->setLedger(42);
+            $createBatch->setCode(7);
+            $client->createAccounts($createBatch);
+
+            $ids = new IdBatch(1);
+            $ids->add();
+            $ids->setId($id);
+
+            $accounts = $client->lookupAccounts($ids);
+
+            $this->assertSame(1, $accounts->getLength());
+            $accounts->rewind();
+            $this->assertTrue($id->equals($accounts->getId()));
+            $this->assertTrue($userData128->equals($accounts->getUserData128()));
+            $this->assertSame(0xDEADBEEF, $accounts->getUserData64());
+            $this->assertSame(0x12345678, $accounts->getUserData32());
+            $this->assertSame(42, $accounts->getLedger());
+            $this->assertSame(7, $accounts->getCode());
+            $this->assertSame(0, $accounts->getFlags());
+            $this->assertTrue($accounts->getDebitsPending()->equals(Uint128::zero()));
+            $this->assertTrue($accounts->getDebitsPosted()->equals(Uint128::zero()));
+            $this->assertTrue($accounts->getCreditsPending()->equals(Uint128::zero()));
+            $this->assertTrue($accounts->getCreditsPosted()->equals(Uint128::zero()));
+            $this->assertGreaterThan(0, $accounts->getTimestamp());
+        } finally {
+            $client->close();
+        }
     }
 }
