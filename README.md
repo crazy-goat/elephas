@@ -53,8 +53,8 @@ use CrazyGoat\Elephas\Client;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use CrazyGoat\Elephas\Batch\AccountBatch;
 use CrazyGoat\Elephas\Batch\TransferBatch;
-use CrazyGoat\Elephas\AccountFlags;
-use CrazyGoat\Elephas\TransferFlags;
+use CrazyGoat\Elephas\Batch\IdBatch;
+use CrazyGoat\Elephas\Batch\AccountFilterBatch;
 
 // Connect to TigerBeetle
 $client = new Client(Uint128::zero(), '127.0.0.1:3000');
@@ -74,10 +74,12 @@ $accounts->setCode(1);
 $accountResults = $client->createAccounts($accounts);
 
 // Check results
-foreach ($accountResults as $result) {
+for ($i = 0, $count = count($accountResults); $i < $count; $i++) {
+    $result = $accountResults->getResult();
     if ($result->isCreated()) {
         echo "Account {$result->getId()} created\n";
     }
+    $accountResults->next();
 }
 
 // Create a transfer from account 1 to account 2
@@ -93,7 +95,7 @@ $transfers->setCode(1);
 $transferResults = $client->createTransfers($transfers);
 
 // Lookup accounts
-$ids = new \CrazyGoat\Elephas\Batch\IdBatch(2);
+$ids = new IdBatch(2);
 $ids->add();
 $ids->setId(Uint128::fromString('1'));
 $ids->add();
@@ -102,7 +104,7 @@ $ids->setId(Uint128::fromString('2'));
 $lookedUp = $client->lookupAccounts($ids);
 
 // Get account transfers
-$filters = new \CrazyGoat\Elephas\Batch\AccountFilterBatch(1);
+$filters = new AccountFilterBatch(1);
 $filters->add();
 $filters->setAccountId(Uint128::fromString('1'));
 
