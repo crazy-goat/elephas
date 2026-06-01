@@ -60,7 +60,7 @@ interface ClientInterface
      *
      * @throws ClientClosedException if the client has been closed
      */
-    public function getAccountBalances(AccountFilter $filter): AccountBalanceBatch;
+    public function getAccountBalances(AccountFilterBatch $filter): AccountBalanceBatch;
 
     /**
      * Query accounts with filters.
