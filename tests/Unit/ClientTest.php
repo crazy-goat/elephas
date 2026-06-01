@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas\Test\Unit;
 
-use CrazyGoat\Elephas\AccountFilter;
 use CrazyGoat\Elephas\AccountFilterFlags;
 use CrazyGoat\Elephas\Backend\BackendInterface;
+use CrazyGoat\Elephas\Batch\AccountBalanceBatch;
 use CrazyGoat\Elephas\Batch\AccountBatch;
 use CrazyGoat\Elephas\Batch\AccountFilterBatch;
 use CrazyGoat\Elephas\Batch\CreateAccountResultBatch;
@@ -577,6 +577,108 @@ final class ClientTest extends TestCase
         $client->getAccountTransfers(new AccountFilterBatch(1));
     }
 
+    public function testGetAccountBalancesSubmitsFilterBytesToBackend(): void
+    {
+        $accountId = Uint128::fromInt(42);
+        $filter = new AccountFilterBatch(1);
+        $filter->add();
+        $filter->setAccountId($accountId);
+        $filter->setFlags(AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS);
+
+        $expected = $filter->toBytes();
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::GET_ACCOUNT_BALANCES, $expected)
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->getAccountBalances($filter);
+
+        $this->assertInstanceOf(AccountBalanceBatch::class, $result);
+    }
+
+    public function testGetAccountBalancesReturnsParsedAccountBalanceBatch(): void
+    {
+        $buffer = \implode('', [
+            $this->packAccountBalance(1, 2, 3, 4, 1_700_000_000_000_000_000),
+            $this->packAccountBalance(10, 20, 30, 40, 1_700_000_000_000_000_001),
+        ]);
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn($buffer);
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->getAccountBalances(new AccountFilterBatch(1));
+
+        $this->assertSame(2, $result->getLength());
+
+        $result->rewind();
+        $balance = $result->getBalance();
+        $this->assertTrue($balance->getDebitsPending()->equals(Uint128::fromInt(1)));
+        $this->assertTrue($balance->getDebitsPosted()->equals(Uint128::fromInt(2)));
+        $this->assertTrue($balance->getCreditsPending()->equals(Uint128::fromInt(3)));
+        $this->assertTrue($balance->getCreditsPosted()->equals(Uint128::fromInt(4)));
+        $this->assertSame(1_700_000_000_000_000_000, $balance->getTimestamp());
+
+        $result->next();
+        $balance = $result->getBalance();
+        $this->assertTrue($balance->getDebitsPending()->equals(Uint128::fromInt(10)));
+        $this->assertTrue($balance->getCreditsPosted()->equals(Uint128::fromInt(40)));
+        $this->assertSame(1_700_000_000_000_000_001, $balance->getTimestamp());
+    }
+
+    public function testGetAccountBalancesPassesTimestampAndLimitFilters(): void
+    {
+        $filter = new AccountFilterBatch(1);
+        $filter->add();
+        $filter->setAccountId(Uint128::fromInt(1));
+        $filter->setTimestampMin(1_700_000_000_000_000_000);
+        $filter->setTimestampMax(1_800_000_000_000_000_000);
+        $filter->setLimit(10);
+        $filter->setFlags(AccountFilterFlags::REVERSED);
+
+        $expected = $filter->toBytes();
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::GET_ACCOUNT_BALANCES, $expected)
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $client->getAccountBalances($filter);
+    }
+
+    public function testGetAccountBalancesEmptyResponseProducesEmptyBatch(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->getAccountBalances(new AccountFilterBatch(1));
+
+        $this->assertSame(0, $result->getLength());
+    }
+
+    public function testGetAccountBalancesPropagatesBackendException(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willThrowException(new \RuntimeException('boom'));
+
+        $client = Client::withBackend($backend);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('boom');
+
+        $client->getAccountBalances(new AccountFilterBatch(1));
+    }
+
     public function testGetAccountBalancesAfterCloseThrowsClientClosedException(): void
     {
         $client = $this->createClientWithMockBackend();
@@ -584,7 +686,7 @@ final class ClientTest extends TestCase
 
         $this->expectException(ClientClosedException::class);
 
-        $client->getAccountBalances(new AccountFilter(Uint128::zero(), Uint128::zero()));
+        $client->getAccountBalances(new AccountFilterBatch(1));
     }
 
     public function testQueryAccountsAfterCloseThrowsClientClosedException(): void
@@ -657,6 +759,22 @@ final class ClientTest extends TestCase
             'code' => $code,
             'flags' => 0,
             'timestamp' => 0,
+        ]);
+    }
+
+    private function packAccountBalance(
+        int $debitsPending,
+        int $debitsPosted,
+        int $creditsPending,
+        int $creditsPosted,
+        int $timestamp,
+    ): string {
+        return BinaryHelper::packAccountBalance([
+            'debits_pending' => Uint128::fromInt($debitsPending),
+            'debits_posted' => Uint128::fromInt($debitsPosted),
+            'credits_pending' => Uint128::fromInt($creditsPending),
+            'credits_posted' => Uint128::fromInt($creditsPosted),
+            'timestamp' => $timestamp,
         ]);
     }
 }

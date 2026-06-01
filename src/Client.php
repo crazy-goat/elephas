@@ -112,12 +112,13 @@ final class Client implements ClientInterface
         return TransferBatch::fromBuffer($response);
     }
 
-    public function getAccountBalances(AccountFilter $filter): AccountBalanceBatch
+    public function getAccountBalances(AccountFilterBatch $filter): AccountBalanceBatch
     {
         $this->ensureNotClosed();
 
-        // TODO: implement in #47
-        throw new \RuntimeException('Not implemented');
+        $response = $this->backend->submit(Operation::GET_ACCOUNT_BALANCES, $filter->toBytes());
+
+        return AccountBalanceBatch::fromBuffer($response);
     }
 
     public function queryAccounts(QueryFilter $filter): AccountBatch

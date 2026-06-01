@@ -1132,4 +1132,246 @@ class TransferTest extends TestCase
 
         $client->getAccountTransfers(new AccountFilterBatch(1));
     }
+
+    public function testGetAccountBalancesSingle(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            // HISTORY flag is required for TigerBeetle to record balance snapshots.
+            [$debit, $credit] = $this->createAccounts($client, 2, AccountFlags::HISTORY);
+
+            $batch = new TransferBatch(1);
+            $batch->add();
+            $batch->setId(Id::generate());
+            $batch->setDebitAccountId($debit);
+            $batch->setCreditAccountId($credit);
+            $batch->setAmount(Uint128::fromInt(100));
+            $batch->setLedger(1);
+            $batch->setCode(1);
+            $client->createTransfers($batch);
+
+            $filter = $this->buildFilter(
+                $debit,
+                AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS,
+            );
+
+            $balances = $client->getAccountBalances($filter);
+
+            $this->assertSame(1, $balances->getLength());
+            $balances->rewind();
+            $balance = $balances->getBalance();
+            $this->assertTrue($balance->getDebitsPosted()->equals(Uint128::fromInt(100)));
+            $this->assertTrue($balance->getCreditsPosted()->equals(Uint128::zero()));
+            $this->assertTrue($balance->getDebitsPending()->equals(Uint128::zero()));
+            $this->assertTrue($balance->getCreditsPending()->equals(Uint128::zero()));
+            $this->assertGreaterThan(0, $balance->getTimestamp());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountBalancesMultiple(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2, AccountFlags::HISTORY);
+            $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            $filter = $this->buildFilter(
+                $debit,
+                AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS,
+            );
+
+            $balances = $client->getAccountBalances($filter);
+
+            $this->assertSame(3, $balances->getLength());
+            $balances->rewind();
+            $previousTimestamp = 0;
+            for ($i = 0; $i < 3; $i++) {
+                $balance = $balances->getBalance();
+                // Cumulative debits_posted grows with each transfer of amount 10.
+                $this->assertTrue(
+                    $balance->getDebitsPosted()->equals(Uint128::fromInt(10 * ($i + 1))),
+                    \sprintf('Balance #%d must have cumulative debits_posted = %d', $i, 10 * ($i + 1)),
+                );
+                $this->assertGreaterThan(
+                    $previousTimestamp,
+                    $balance->getTimestamp(),
+                    \sprintf('Balance #%d timestamp must be strictly increasing', $i),
+                );
+                $previousTimestamp = $balance->getTimestamp();
+                if ($i < 2) {
+                    $balances->next();
+                }
+            }
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountBalancesDebitsOnly(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2, AccountFlags::HISTORY);
+            $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            // Querying the debit account with DEBITS-only returns all 3 snapshots
+            // (account_id matches the debit side of every transfer).
+            $debitFilter = $this->buildFilter($debit, AccountFilterFlags::DEBITS);
+            $debitBalances = $client->getAccountBalances($debitFilter);
+            $this->assertSame(3, $debitBalances->getLength());
+
+            // Querying the credit account with DEBITS-only returns no snapshots.
+            $creditFilter = $this->buildFilter($credit, AccountFilterFlags::DEBITS);
+            $creditBalances = $client->getAccountBalances($creditFilter);
+            $this->assertSame(0, $creditBalances->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountBalancesCreditsOnly(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2, AccountFlags::HISTORY);
+            $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            // Querying the credit account with CREDITS-only returns all 3 snapshots.
+            $creditFilter = $this->buildFilter($credit, AccountFilterFlags::CREDITS);
+            $creditBalances = $client->getAccountBalances($creditFilter);
+            $this->assertSame(3, $creditBalances->getLength());
+
+            // Querying the debit account with CREDITS-only returns nothing.
+            $debitFilter = $this->buildFilter($debit, AccountFilterFlags::CREDITS);
+            $debitBalances = $client->getAccountBalances($debitFilter);
+            $this->assertSame(0, $debitBalances->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountBalancesReversed(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2, AccountFlags::HISTORY);
+            $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            $flags = AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS;
+
+            $forward = $client->getAccountBalances($this->buildFilter($debit, $flags));
+            $this->assertSame(3, $forward->getLength());
+            $forward->rewind();
+            $forwardTimestamps = [];
+            for ($i = 0; $i < 3; $i++) {
+                $forwardTimestamps[] = $forward->getBalance()->getTimestamp();
+                if ($i < 2) {
+                    $forward->next();
+                }
+            }
+
+            $reversed = $client->getAccountBalances(
+                $this->buildFilter($debit, $flags | AccountFilterFlags::REVERSED),
+            );
+            $this->assertSame(3, $reversed->getLength());
+            $reversed->rewind();
+            for ($i = 0; $i < 3; $i++) {
+                $this->assertSame(
+                    $forwardTimestamps[2 - $i],
+                    $reversed->getBalance()->getTimestamp(),
+                    \sprintf('Reversed snapshot #%d must equal forward snapshot #%d', $i, 2 - $i),
+                );
+                if ($i < 2) {
+                    $reversed->next();
+                }
+            }
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountBalancesEmpty(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$account] = $this->createAccounts($client, 1, AccountFlags::HISTORY);
+
+            $filter = $this->buildFilter(
+                $account,
+                AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS,
+            );
+
+            $balances = $client->getAccountBalances($filter);
+
+            $this->assertSame(0, $balances->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountBalancesAfterCloseThrows(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        $client->close();
+
+        $this->expectException(ClientClosedException::class);
+
+        $client->getAccountBalances(new AccountFilterBatch(1));
+    }
+
+    public function testGetAccountBalancesRequiresHistoryFlag(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            // No HISTORY flag – TigerBeetle does not retain balance snapshots
+            // even when transfers affect this account.
+            [$debit, $credit] = $this->createAccounts($client, 2);
+            $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            $filter = $this->buildFilter(
+                $debit,
+                AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS,
+            );
+
+            $balances = $client->getAccountBalances($filter);
+
+            $this->assertSame(0, $balances->getLength());
+        } finally {
+            $client->close();
+        }
+    }
 }
