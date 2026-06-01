@@ -4,212 +4,397 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas\Internal;
 
-use CrazyGoat\Elephas\Account;
-use CrazyGoat\Elephas\AccountBalance;
-use CrazyGoat\Elephas\AccountFilter;
-use CrazyGoat\Elephas\CreateAccountResult;
-use CrazyGoat\Elephas\CreateTransferResult;
-use CrazyGoat\Elephas\QueryFilter;
-use CrazyGoat\Elephas\Transfer;
 use CrazyGoat\Elephas\Uint128\Uint128;
 
-/**
- * Binary pack/unpack helper for TigerBeetle data structures.
- *
- * Provides static methods for converting between PHP objects
- * and binary representations compatible with tb_client.h.
- */
 final class BinaryHelper
 {
     public const ACCOUNT_SIZE = 128;
-
     public const TRANSFER_SIZE = 128;
-
     public const ACCOUNT_FILTER_SIZE = 128;
-
     public const ACCOUNT_BALANCE_SIZE = 128;
-
     public const QUERY_FILTER_SIZE = 64;
-
     public const CREATE_ACCOUNT_RESULT_SIZE = 16;
-
     public const CREATE_TRANSFER_RESULT_SIZE = 16;
-
     public const UINT128_SIZE = 16;
 
     /**
-     * Pack an Account to binary format.
-     *
-     * TODO: implement
+     * @param array{
+     *   id: Uint128|string,
+     *   debits_pending: Uint128|string,
+     *   debits_posted: Uint128|string,
+     *   credits_pending: Uint128|string,
+     *   credits_posted: Uint128|string,
+     *   user_data_128: Uint128|string,
+     *   user_data_64: int,
+     *   user_data_32: int,
+     *   reserved: int,
+     *   ledger: int,
+     *   code: int,
+     *   flags: int,
+     *   timestamp: int,
+     * } $fields
      */
-    public static function packAccount(): string
+    public static function packAccount(array $fields): string
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        return pack('P12PV3v2P', ...[
+            ...self::uint128Parts($fields['id']),
+            ...self::uint128Parts($fields['debits_pending']),
+            ...self::uint128Parts($fields['debits_posted']),
+            ...self::uint128Parts($fields['credits_pending']),
+            ...self::uint128Parts($fields['credits_posted']),
+            ...self::uint128Parts($fields['user_data_128']),
+            $fields['user_data_64'],
+            $fields['user_data_32'],
+            $fields['reserved'],
+            $fields['ledger'],
+            $fields['code'],
+            $fields['flags'],
+            $fields['timestamp'],
+        ]);
     }
 
     /**
-     * Unpack binary data to Account.
-     *
-     * TODO: implement
+     * @return array{
+     *   id: string,
+     *   debits_pending: string,
+     *   debits_posted: string,
+     *   credits_pending: string,
+     *   credits_posted: string,
+     *   user_data_128: string,
+     *   user_data_64: int,
+     *   user_data_32: int,
+     *   reserved: int,
+     *   ledger: int,
+     *   code: int,
+     *   flags: int,
+     *   timestamp: int,
+     * }
      */
-    public static function unpackAccount(): Account
+    public static function unpackAccount(string $bytes): array
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $raw = unpack('Pid_low/Pid_high/Pdp_low/Pdp_high/Pdo_low/Pdo_high/Pcp_low/Pcp_high/Pco_low/Pco_high/Pud128_low/Pud128_high/Pud64/Vud32/Vreserved/Vledger/vcode/vflags/Ptimestamp', $bytes);
+
+        \assert(\is_array($raw));
+
+        return [
+            'id' => self::fromRawParts($raw['id_low'], $raw['id_high']),
+            'debits_pending' => self::fromRawParts($raw['dp_low'], $raw['dp_high']),
+            'debits_posted' => self::fromRawParts($raw['do_low'], $raw['do_high']),
+            'credits_pending' => self::fromRawParts($raw['cp_low'], $raw['cp_high']),
+            'credits_posted' => self::fromRawParts($raw['co_low'], $raw['co_high']),
+            'user_data_128' => self::fromRawParts($raw['ud128_low'], $raw['ud128_high']),
+            'user_data_64' => $raw['ud64'],
+            'user_data_32' => $raw['ud32'],
+            'reserved' => $raw['reserved'],
+            'ledger' => $raw['ledger'],
+            'code' => $raw['code'],
+            'flags' => $raw['flags'],
+            'timestamp' => $raw['timestamp'],
+        ];
     }
 
     /**
-     * Pack a Transfer to binary format.
-     *
-     * TODO: implement
+     * @param array{
+     *   id: Uint128|string,
+     *   debit_account_id: Uint128|string,
+     *   credit_account_id: Uint128|string,
+     *   amount: Uint128|string,
+     *   pending_id: Uint128|string,
+     *   user_data_128: Uint128|string,
+     *   user_data_64: int,
+     *   user_data_32: int,
+     *   timeout: int,
+     *   ledger: int,
+     *   code: int,
+     *   flags: int,
+     *   timestamp: int,
+     * } $fields
      */
-    public static function packTransfer(): string
+    public static function packTransfer(array $fields): string
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        return pack('P12PV3v2P', ...[
+            ...self::uint128Parts($fields['id']),
+            ...self::uint128Parts($fields['debit_account_id']),
+            ...self::uint128Parts($fields['credit_account_id']),
+            ...self::uint128Parts($fields['amount']),
+            ...self::uint128Parts($fields['pending_id']),
+            ...self::uint128Parts($fields['user_data_128']),
+            $fields['user_data_64'],
+            $fields['user_data_32'],
+            $fields['timeout'],
+            $fields['ledger'],
+            $fields['code'],
+            $fields['flags'],
+            $fields['timestamp'],
+        ]);
     }
 
     /**
-     * Unpack binary data to Transfer.
-     *
-     * TODO: implement
+     * @return array{
+     *   id: string,
+     *   debit_account_id: string,
+     *   credit_account_id: string,
+     *   amount: string,
+     *   pending_id: string,
+     *   user_data_128: string,
+     *   user_data_64: int,
+     *   user_data_32: int,
+     *   timeout: int,
+     *   ledger: int,
+     *   code: int,
+     *   flags: int,
+     *   timestamp: int,
+     * }
      */
-    public static function unpackTransfer(): Transfer
+    public static function unpackTransfer(string $bytes): array
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $raw = unpack('Pid_low/Pid_high/Pda_low/Pda_high/Pca_low/Pca_high/Pamt_low/Pamt_high/Ppid_low/Ppid_high/Pud128_low/Pud128_high/Pud64/Vud32/Vtimeout/Vledger/vcode/vflags/Ptimestamp', $bytes);
+
+        \assert(\is_array($raw));
+
+        return [
+            'id' => self::fromRawParts($raw['id_low'], $raw['id_high']),
+            'debit_account_id' => self::fromRawParts($raw['da_low'], $raw['da_high']),
+            'credit_account_id' => self::fromRawParts($raw['ca_low'], $raw['ca_high']),
+            'amount' => self::fromRawParts($raw['amt_low'], $raw['amt_high']),
+            'pending_id' => self::fromRawParts($raw['pid_low'], $raw['pid_high']),
+            'user_data_128' => self::fromRawParts($raw['ud128_low'], $raw['ud128_high']),
+            'user_data_64' => $raw['ud64'],
+            'user_data_32' => $raw['ud32'],
+            'timeout' => $raw['timeout'],
+            'ledger' => $raw['ledger'],
+            'code' => $raw['code'],
+            'flags' => $raw['flags'],
+            'timestamp' => $raw['timestamp'],
+        ];
     }
 
     /**
-     * Pack an AccountFilter to binary format.
-     *
-     * TODO: implement
+     * @param array{
+     *   account_id: Uint128|string,
+     *   user_data_128: Uint128|string,
+     *   user_data_64: int,
+     *   user_data_32: int,
+     *   code: int,
+     *   timestamp_min: int,
+     *   timestamp_max: int,
+     *   limit: int,
+     *   flags: int,
+     * } $fields
      */
-    public static function packAccountFilter(): string
+    public static function packAccountFilter(array $fields): string
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        return pack('P5Vva58P2V2', ...[
+            ...self::uint128Parts($fields['account_id']),
+            ...self::uint128Parts($fields['user_data_128']),
+            $fields['user_data_64'],
+            $fields['user_data_32'],
+            $fields['code'],
+            str_repeat("\0", 58),
+            $fields['timestamp_min'],
+            $fields['timestamp_max'],
+            $fields['limit'],
+            $fields['flags'],
+        ]);
     }
 
     /**
-     * Unpack binary data to AccountFilter.
-     *
-     * TODO: implement
+     * @return array{
+     *   account_id: string,
+     *   user_data_128: string,
+     *   user_data_64: int,
+     *   user_data_32: int,
+     *   code: int,
+     *   timestamp_min: int,
+     *   timestamp_max: int,
+     *   limit: int,
+     *   flags: int,
+     * }
      */
-    public static function unpackAccountFilter(): AccountFilter
+    public static function unpackAccountFilter(string $bytes): array
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $raw = unpack('Paid_low/Paid_high/Pud128_low/Pud128_high/Pud64/Vud32/vcode/a58reserved/Ptimestamp_min/Ptimestamp_max/Vlimit/Vflags', $bytes);
+
+        \assert(\is_array($raw));
+
+        return [
+            'account_id' => self::fromRawParts($raw['aid_low'], $raw['aid_high']),
+            'user_data_128' => self::fromRawParts($raw['ud128_low'], $raw['ud128_high']),
+            'user_data_64' => $raw['ud64'],
+            'user_data_32' => $raw['ud32'],
+            'code' => $raw['code'],
+            'timestamp_min' => $raw['timestamp_min'],
+            'timestamp_max' => $raw['timestamp_max'],
+            'limit' => $raw['limit'],
+            'flags' => $raw['flags'],
+        ];
     }
 
     /**
-     * Pack an AccountBalance to binary format.
-     *
-     * TODO: implement
+     * @param array{
+     *   debits_pending: Uint128|string,
+     *   debits_posted: Uint128|string,
+     *   credits_pending: Uint128|string,
+     *   credits_posted: Uint128|string,
+     *   timestamp: int,
+     * } $fields
      */
-    public static function packAccountBalance(): string
+    public static function packAccountBalance(array $fields): string
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        return pack('P8Pa56', ...[
+            ...self::uint128Parts($fields['debits_pending']),
+            ...self::uint128Parts($fields['debits_posted']),
+            ...self::uint128Parts($fields['credits_pending']),
+            ...self::uint128Parts($fields['credits_posted']),
+            $fields['timestamp'],
+            str_repeat("\0", 56),
+        ]);
     }
 
     /**
-     * Unpack binary data to AccountBalance.
-     *
-     * TODO: implement
+     * @return array{
+     *   debits_pending: string,
+     *   debits_posted: string,
+     *   credits_pending: string,
+     *   credits_posted: string,
+     *   timestamp: int,
+     * }
      */
-    public static function unpackAccountBalance(): AccountBalance
+    public static function unpackAccountBalance(string $bytes): array
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $raw = unpack('Pdp_low/Pdp_high/Pdo_low/Pdo_high/Pcp_low/Pcp_high/Pco_low/Pco_high/Ptimestamp/a56reserved', $bytes);
+
+        \assert(\is_array($raw));
+
+        return [
+            'debits_pending' => self::fromRawParts($raw['dp_low'], $raw['dp_high']),
+            'debits_posted' => self::fromRawParts($raw['do_low'], $raw['do_high']),
+            'credits_pending' => self::fromRawParts($raw['cp_low'], $raw['cp_high']),
+            'credits_posted' => self::fromRawParts($raw['co_low'], $raw['co_high']),
+            'timestamp' => $raw['timestamp'],
+        ];
     }
 
     /**
-     * Pack a QueryFilter to binary format.
-     *
-     * TODO: implement
+     * @param array{
+     *   user_data_128: Uint128|string,
+     *   user_data_64: int,
+     *   user_data_32: int,
+     *   ledger: int,
+     *   code: int,
+     *   timestamp_min: int,
+     *   timestamp_max: int,
+     *   limit: int,
+     *   flags: int,
+     * } $fields
      */
-    public static function packQueryFilter(): string
+    public static function packQueryFilter(array $fields): string
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        return pack('P3VVva6PPVV', ...[
+            ...self::uint128Parts($fields['user_data_128']),
+            $fields['user_data_64'],
+            $fields['user_data_32'],
+            $fields['ledger'],
+            $fields['code'],
+            str_repeat("\0", 6),
+            $fields['timestamp_min'],
+            $fields['timestamp_max'],
+            $fields['limit'],
+            $fields['flags'],
+        ]);
     }
 
     /**
-     * Unpack binary data to QueryFilter.
-     *
-     * TODO: implement
+     * @return array{
+     *   user_data_128: string,
+     *   user_data_64: int,
+     *   user_data_32: int,
+     *   ledger: int,
+     *   code: int,
+     *   timestamp_min: int,
+     *   timestamp_max: int,
+     *   limit: int,
+     *   flags: int,
+     * }
      */
-    public static function unpackQueryFilter(): QueryFilter
+    public static function unpackQueryFilter(string $bytes): array
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $raw = unpack('Pud128_low/Pud128_high/Pud64/Vud32/Vledger/vcode/a6reserved/Ptimestamp_min/Ptimestamp_max/Vlimit/Vflags', $bytes);
+
+        \assert(\is_array($raw));
+
+        return [
+            'user_data_128' => self::fromRawParts($raw['ud128_low'], $raw['ud128_high']),
+            'user_data_64' => $raw['ud64'],
+            'user_data_32' => $raw['ud32'],
+            'ledger' => $raw['ledger'],
+            'code' => $raw['code'],
+            'timestamp_min' => $raw['timestamp_min'],
+            'timestamp_max' => $raw['timestamp_max'],
+            'limit' => $raw['limit'],
+            'flags' => $raw['flags'],
+        ];
     }
 
     /**
-     * Pack a CreateAccountResult to binary format.
-     *
-     * TODO: implement
+     * @return array{timestamp: int, status: int, reserved: int}
      */
-    public static function packCreateAccountResult(): string
+    public static function unpackCreateAccountResult(string $bytes): array
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $raw = unpack('Ptimestamp/Vstatus/Vreserved', $bytes);
+
+        \assert(\is_array($raw));
+
+        return [
+            'timestamp' => $raw['timestamp'],
+            'status' => $raw['status'],
+            'reserved' => $raw['reserved'],
+        ];
     }
 
     /**
-     * Unpack binary data to CreateAccountResult.
-     *
-     * TODO: implement
+     * @return array{timestamp: int, status: int, reserved: int}
      */
-    public static function unpackCreateAccountResult(): CreateAccountResult
+    public static function unpackCreateTransferResult(string $bytes): array
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $raw = unpack('Ptimestamp/Vstatus/Vreserved', $bytes);
+
+        \assert(\is_array($raw));
+
+        return [
+            'timestamp' => $raw['timestamp'],
+            'status' => $raw['status'],
+            'reserved' => $raw['reserved'],
+        ];
+    }
+
+    public static function packUint128(Uint128 $value): string
+    {
+        return $value->toBytes();
+    }
+
+    public static function unpackUint128(string $bytes): Uint128
+    {
+        return Uint128::fromBytes($bytes);
     }
 
     /**
-     * Pack a CreateTransferResult to binary format.
-     *
-     * TODO: implement
+     * @return array{int, int}
      */
-    public static function packCreateTransferResult(): string
+    private static function uint128Parts(Uint128|string $value): array
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        if ($value instanceof Uint128) {
+            $value = $value->toBytes();
+        }
+
+        /** @var array{1: int, 2: int} $parts */
+        $parts = unpack('P2', $value);
+
+        return [$parts[1], $parts[2]];
     }
 
-    /**
-     * Unpack binary data to CreateTransferResult.
-     *
-     * TODO: implement
-     */
-    public static function unpackCreateTransferResult(): CreateTransferResult
+    private static function fromRawParts(int $low, int $high): string
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
-    }
-
-    /**
-     * Pack a Uint128 to 16 bytes little-endian.
-     *
-     * TODO: implement
-     */
-    public static function packUint128(): string
-    {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
-    }
-
-    /**
-     * Unpack 16 bytes little-endian to Uint128.
-     *
-     * TODO: implement
-     */
-    public static function unpackUint128(): Uint128
-    {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        return pack('P', $low) . pack('P', $high);
     }
 }
