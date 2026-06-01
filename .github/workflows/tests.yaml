@@ -34,33 +34,42 @@ jobs:
         run: composer lint
 
   test-matrix:
+    name: Tests (PHP ${{ matrix.php-version }})
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        php: ['8.2', '8.3', '8.4']
+        php-version: ['8.2', '8.3', '8.4']
       fail-fast: false
 
-    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
+          php-version: ${{ matrix.php-version }}
           tools: composer:v2
           extensions: ffi, gmp, bcmath
+          coverage: none
 
       - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+        run: composer install --no-progress --prefer-dist
 
       - name: Start TigerBeetle
         run: |
-          docker run -d --name tigerbeetle --rm -p 3000:3000 \
+          docker run --rm --privileged \
+            -v /tmp/tb:/tmp/tb \
             ghcr.io/tigerbeetle/tigerbeetle:0.17.4 \
-            start --addresses=3000 --development
+            format --cluster=0 --replica=0 --replica-count=1 /tmp/tb/data
+
+          docker run -d --name tigerbeetle --rm --privileged \
+            -p 3000:3000 \
+            -v /tmp/tb:/tmp/tb \
+            ghcr.io/tigerbeetle/tigerbeetle:0.17.4 \
+            start --addresses=3000 --development /tmp/tb/data
+
           for i in $(seq 1 30); do
-            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+            if bash -c 'echo > /dev/tcp/localhost/3000' 2>/dev/null; then
               echo "TigerBeetle is ready"
               break
             fi
@@ -68,13 +77,10 @@ jobs:
             sleep 1
           done
 
-      - name: Run unit tests
-        run: composer test:unit
-
-      - name: Run functional tests
-        run: composer test:functional
+      - name: Run tests
+        run: vendor/bin/phpunit
         env:
-          TB_ADDRESS: localhost:3000
+          TIGERBEETLE_ADDRESS: localhost:3000
 
       - name: Stop TigerBeetle
         if: always()
@@ -82,11 +88,10 @@ jobs:
 
   tests:
     name: tests
-    needs: [lint, test-matrix]
-    runs-on: ubuntu-latest
+    needs: [test-matrix]
     if: always()
+    runs-on: ubuntu-latest
     steps:
       - name: Check test results
         run: |
-          if [ "${{ needs.lint.result }}" != "success" ]; then exit 1; fi
           if [ "${{ needs.test-matrix.result }}" != "success" ]; then exit 1; fi
