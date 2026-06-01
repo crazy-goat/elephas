@@ -26,8 +26,9 @@
     },
     "require-dev": {
         "php-cs-fixer/shim": "^3.75",
-        "phpunit/phpunit": "^11.0",
         "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpunit/phpunit": "^11.0",
         "rector/rector": "^2.0"
     },
     "suggest": {

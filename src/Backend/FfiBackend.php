@@ -5,21 +5,23 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Backend;
 
 use CrazyGoat\Elephas\Operation;
+use CrazyGoat\Elephas\Uint128\Uint128;
 
-/**
- * FFI backend for TigerBeetle communication.
- *
- * Uses PHP FFI to communicate with tb_client native library.
- */
 class FfiBackend extends AbstractBackend
 {
+    private readonly NativeClient $client;
+
     /**
      * @param array<string> $replicaAddresses
-     *
-     * TODO: implement
      */
-    public function __construct(private readonly string $clusterId, private readonly array $replicaAddresses)
-    {
+    public function __construct(
+        private readonly Uint128 $clusterId,
+        private readonly array $replicaAddresses,
+        ?NativeClient $nativeClient = null,
+        ?string $libPath = null,
+    ) {
+        $this->client = $nativeClient ?? new NativeClient($libPath);
+        $this->client->init($this->clusterId->toBytes(), $this->replicaAddresses);
     }
 
     public function submit(
@@ -28,11 +30,20 @@ class FfiBackend extends AbstractBackend
     ): string {
         $this->ensureNotClosed();
 
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        return $this->client->submit($operation, $data);
     }
 
-    public function getClusterId(): string
+    public function close(): void
+    {
+        if ($this->closed) {
+            return;
+        }
+
+        $this->client->deinit();
+        parent::close();
+    }
+
+    public function getClusterId(): Uint128
     {
         return $this->clusterId;
     }
@@ -41,11 +52,5 @@ class FfiBackend extends AbstractBackend
     public function getReplicaAddresses(): array
     {
         return $this->replicaAddresses;
-    }
-
-    public function close(): void
-    {
-        // TODO: implement
-        parent::close();
     }
 }
