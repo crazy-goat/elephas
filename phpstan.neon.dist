@@ -1,6 +1,11 @@
 parameters:
-	level: 8
-	treatPhpDocTypesAsCertain: false
-	paths:
-		- src
-		- tests
+  level: 8
+  treatPhpDocTypesAsCertain: false
+  paths:
+    - src
+    - tests
+  ignoreErrors:
+    -
+      message: '#never returns string so it can be removed from the return type#'
+      path: tests/
+      reportUnmatched: false
