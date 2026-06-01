@@ -5,3 +5,4 @@
 /.phpunit.cache/
 /.case/
 /package-lock.json
+/resources/lib/
