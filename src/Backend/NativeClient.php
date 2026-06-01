@@ -109,6 +109,7 @@ CPROG;
 
     public function submit(Operation $operation, string $data): string
     {
+        /** @phpstan-var \FFI\CData $cPacket */
         $cPacket = $this->ffi->new('tb_packet_t');
 
         /** @phpstan-ignore property.notFound */
@@ -146,6 +147,7 @@ CPROG;
 
     private function createDataBuffer(string $data): \FFI\CData
     {
+        /** @phpstan-var \FFI\CData $buffer */
         $buffer = $this->ffi->new('uint8_t[' . \strlen($data) . ']');
         \FFI::memcpy($buffer, $data, \strlen($data));
 
