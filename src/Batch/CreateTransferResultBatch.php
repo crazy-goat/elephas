@@ -5,17 +5,15 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Batch;
 
 use CrazyGoat\Elephas\CreateTransferResult;
+use CrazyGoat\Elephas\CreateTransferStatus;
+use CrazyGoat\Elephas\Internal\BinaryHelper;
+use CrazyGoat\Elephas\Uint128\Uint128;
 
-/**
- * Read-only batch of create transfer results.
- *
- * Contains the results of a createTransfers() operation.
- */
 class CreateTransferResultBatch extends AbstractBatch
 {
     protected function getStructSize(): int
     {
-        return \CrazyGoat\Elephas\Internal\BinaryHelper::CREATE_TRANSFER_RESULT_SIZE;
+        return BinaryHelper::CREATE_TRANSFER_RESULT_SIZE;
     }
 
     public function add(): void
@@ -28,9 +26,24 @@ class CreateTransferResultBatch extends AbstractBatch
         return true;
     }
 
+    public static function fromBuffer(string $buffer): self
+    {
+        $count = (int) \ceil(\strlen($buffer) / BinaryHelper::CREATE_TRANSFER_RESULT_SIZE);
+        $batch = new self($count);
+        $batch->buffer = $buffer;
+        $batch->length = $count;
+
+        return $batch;
+    }
+
     public function getResult(): CreateTransferResult
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $offset = $this->currentPosition * $this->getStructSize();
+        $data = \substr($this->buffer, $offset, $this->getStructSize());
+        $unpacked = BinaryHelper::unpackCreateTransferResult($data);
+
+        $id = Uint128::fromParts($unpacked['timestamp'], 0);
+
+        return new CreateTransferResult($id, CreateTransferStatus::from($unpacked['status']));
     }
 }

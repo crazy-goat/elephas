@@ -6,24 +6,16 @@ namespace CrazyGoat\Elephas;
 
 use CrazyGoat\Elephas\Uint128\Uint128;
 
-/**
- * Query filter for account and transfer queries.
- *
- * Used with queryAccounts() and queryTransfers() methods.
- */
 final readonly class QueryFilter
 {
-    /**
-     * TODO: implement
-     */
     public function __construct(
         private Uint128 $userData128,
         private int $userData64 = 0,
         private int $userData32 = 0,
-        private int $ID = 0,
-        private int $IDMax = 0,
-        private int $IDMin = 0,
-        private int $IDMaxInc = 0,
+        private int $ledger = 0,
+        private int $code = 0,
+        private int $timestampMin = 0,
+        private int $timestampMax = 0,
         private int $limit = 0,
         private int $flags = 0,
     ) {
@@ -44,24 +36,24 @@ final readonly class QueryFilter
         return $this->userData32;
     }
 
-    public function getID(): int
+    public function getLedger(): int
     {
-        return $this->ID;
+        return $this->ledger;
     }
 
-    public function getIDMax(): int
+    public function getCode(): int
     {
-        return $this->IDMax;
+        return $this->code;
     }
 
-    public function getIDMin(): int
+    public function getTimestampMin(): int
     {
-        return $this->IDMin;
+        return $this->timestampMin;
     }
 
-    public function getIDMaxInc(): int
+    public function getTimestampMax(): int
     {
-        return $this->IDMaxInc;
+        return $this->timestampMax;
     }
 
     public function getLimit(): int

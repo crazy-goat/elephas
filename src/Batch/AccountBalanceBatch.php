@@ -5,17 +5,14 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Batch;
 
 use CrazyGoat\Elephas\AccountBalance;
+use CrazyGoat\Elephas\Internal\BinaryHelper;
+use CrazyGoat\Elephas\Uint128\Uint128;
 
-/**
- * Read-only batch of account balances.
- *
- * Contains the results of a getAccountBalances() operation.
- */
 class AccountBalanceBatch extends AbstractBatch
 {
     protected function getStructSize(): int
     {
-        return \CrazyGoat\Elephas\Internal\BinaryHelper::ACCOUNT_BALANCE_SIZE;
+        return BinaryHelper::ACCOUNT_BALANCE_SIZE;
     }
 
     public function add(): void
@@ -28,9 +25,28 @@ class AccountBalanceBatch extends AbstractBatch
         return true;
     }
 
+    public static function fromBuffer(string $buffer): self
+    {
+        $count = (int) \ceil(\strlen($buffer) / BinaryHelper::ACCOUNT_BALANCE_SIZE);
+        $batch = new self($count);
+        $batch->buffer = $buffer;
+        $batch->length = $count;
+
+        return $batch;
+    }
+
     public function getBalance(): AccountBalance
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $offset = $this->currentPosition * $this->getStructSize();
+        $data = \substr($this->buffer, $offset, $this->getStructSize());
+        $unpacked = BinaryHelper::unpackAccountBalance($data);
+
+        return new AccountBalance(
+            Uint128::fromBytes($unpacked['debits_pending']),
+            Uint128::fromBytes($unpacked['debits_posted']),
+            Uint128::fromBytes($unpacked['credits_pending']),
+            Uint128::fromBytes($unpacked['credits_posted']),
+            $unpacked['timestamp'],
+        );
     }
 }
