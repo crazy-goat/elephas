@@ -83,7 +83,6 @@ elephas/
 │   ├── Transfer.php              # data class
 │   ├── CreateAccountResult.php   # data class
 │   ├── CreateTransferResult.php  # data class
-│   ├── AccountFilter.php         # data class
 │   ├── AccountBalance.php        # data class
 │   ├── QueryFilter.php           # data class
 │   │

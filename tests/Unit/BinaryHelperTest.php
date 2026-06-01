@@ -132,20 +132,6 @@ class BinaryHelperTest extends TestCase
         $this->assertSame(128, BinaryHelper::ACCOUNT_FILTER_SIZE);
     }
 
-    public function testPackAccountFilterReturns128Bytes(): void
-    {
-        $bytes = BinaryHelper::packAccountFilter($this->sampleAccountFilter());
-        $this->assertSame(128, \strlen($bytes));
-    }
-
-    public function testPackUnpackAccountFilterRoundtrip(): void
-    {
-        $fields = $this->sampleAccountFilter();
-        $bytes = BinaryHelper::packAccountFilter($fields);
-        $result = BinaryHelper::unpackAccountFilter($bytes);
-        $this->assertSame($fields, $result);
-    }
-
     public function testAccountBalanceSize(): void
     {
         $this->assertSame(128, BinaryHelper::ACCOUNT_BALANCE_SIZE);
@@ -377,28 +363,6 @@ class BinaryHelperTest extends TestCase
             'code' => 2,
             'flags' => 3,
             'timestamp' => 12345,
-        ];
-    }
-
-    /**
-     * @return array{
-     *   account_id: string, user_data_128: string,
-     *   user_data_64: int, user_data_32: int, code: int,
-     *   timestamp_min: int, timestamp_max: int, limit: int, flags: int,
-     * }
-     */
-    private function sampleAccountFilter(): array
-    {
-        return [
-            'account_id' => $this->uint128(1),
-            'user_data_128' => $this->uint128(2),
-            'user_data_64' => 42,
-            'user_data_32' => 100,
-            'code' => 255,
-            'timestamp_min' => 1000,
-            'timestamp_max' => 2000,
-            'limit' => 10,
-            'flags' => 0,
         ];
     }
 

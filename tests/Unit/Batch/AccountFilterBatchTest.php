@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\AccountFilterBatch;
-use CrazyGoat\Elephas\Internal\BinaryHelper;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\TestCase;
 
@@ -173,39 +172,5 @@ class AccountFilterBatchTest extends TestCase
         $this->assertTrue(
             Uint128::fromString('2000000000000000000000000000000')->equals($batch->getAccountId()),
         );
-    }
-
-    public function testBinaryHelperRoundtrip(): void
-    {
-        $batch = new AccountFilterBatch(10);
-        $batch->add();
-        $batch->setAccountId(Uint128::fromString('1000000000000000000000000000000'));
-        $batch->setUserData128(Uint128::fromString('2000000000000000000000000000000'));
-        $batch->setUserData64(0xDEADBEEF);
-        $batch->setUserData32(0xCAFEBABE);
-        $batch->setCode(100);
-        $batch->setTimestampMin(1111);
-        $batch->setTimestampMax(2222);
-        $batch->setLimit(50);
-        $batch->setFlags(0b1010);
-
-        $buffer = $batch->getBuffer();
-        $unpacked = BinaryHelper::unpackAccountFilter($buffer);
-
-        $this->assertSame(
-            '1000000000000000000000000000000',
-            Uint128::fromBytes($unpacked['account_id'])->toString(),
-        );
-        $this->assertSame(
-            '2000000000000000000000000000000',
-            Uint128::fromBytes($unpacked['user_data_128'])->toString(),
-        );
-        $this->assertSame(0xDEADBEEF, $unpacked['user_data_64']);
-        $this->assertSame(0xCAFEBABE, $unpacked['user_data_32']);
-        $this->assertSame(100, $unpacked['code']);
-        $this->assertSame(1111, $unpacked['timestamp_min']);
-        $this->assertSame(2222, $unpacked['timestamp_max']);
-        $this->assertSame(50, $unpacked['limit']);
-        $this->assertSame(0b1010, $unpacked['flags']);
     }
 }
