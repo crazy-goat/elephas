@@ -7,18 +7,13 @@ namespace CrazyGoat\Elephas\Internal;
 use CrazyGoat\Elephas\Operation;
 use CrazyGoat\Elephas\PacketStatus;
 
-/**
- * Packet wrapper for tb_client callback with synchronization.
- *
- * Manages the lifecycle of a single request/response cycle.
- */
-class Packet
+final class Packet
 {
-    private PacketStatus $status = PacketStatus::OK;
-
-    private string $data = '';
-
     private bool $completed = false;
+
+    private ?string $responseData = null;
+
+    private ?PacketStatus $status = null;
 
     public function __construct(
         private readonly Operation $operation,
@@ -26,20 +21,13 @@ class Packet
     ) {
     }
 
-    public function onComplete(PacketStatus $status, string $data): void
+    public function onComplete(PacketStatus $status, ?string $data): void
     {
         $this->status = $status;
-        $this->data = $data;
+        $this->responseData = $data;
         $this->completed = true;
     }
 
-    /**
-     * Wait for the packet to complete, with optional timeout in microseconds.
-     *
-     * @param int<0, max> $timeout maximum wait time in microseconds (0 = no timeout)
-     *
-     * @throws \RuntimeException if timeout is reached
-     */
     public function wait(int $timeout = 0): void
     {
         $elapsed = 0;
@@ -54,6 +42,25 @@ class Packet
         }
     }
 
+    public function isCompleted(): bool
+    {
+        return $this->completed;
+    }
+
+    public function getStatus(): PacketStatus
+    {
+        if (!$this->status instanceof \CrazyGoat\Elephas\PacketStatus) {
+            throw new \RuntimeException('Packet status not available before completion');
+        }
+
+        return $this->status;
+    }
+
+    public function getData(): ?string
+    {
+        return $this->responseData;
+    }
+
     public function getOperation(): Operation
     {
         return $this->operation;
@@ -62,35 +69,5 @@ class Packet
     public function getPayload(): string
     {
         return $this->payload;
-    }
-
-    public function getStatus(): PacketStatus
-    {
-        return $this->status;
-    }
-
-    public function setStatus(PacketStatus $status): void
-    {
-        $this->status = $status;
-    }
-
-    public function getData(): string
-    {
-        return $this->data;
-    }
-
-    public function setData(string $data): void
-    {
-        $this->data = $data;
-    }
-
-    public function isCompleted(): bool
-    {
-        return $this->completed;
-    }
-
-    public function complete(): void
-    {
-        $this->completed = true;
     }
 }
