@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `README.md` – installation guide, quickstart, API reference, and development docs (#51)
 - `LICENSE` – MIT license (#52)
 - `bin/build-tb-client.sh` – build script that compiles the `tb_client` native shared library for the host platform using Zig 0.14.1 and TigerBeetle 0.17.4 (#49)
+- CI/CD release workflow – builds `tb_client` for linux/amd64, linux/arm64, macos/amd64, macos/arm64 on tag push `v*` and attaches the shared libraries to a GitHub Release (#50)
 
 ## [0.3.0] – Client API – 2026-06-01
 

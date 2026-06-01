@@ -9,8 +9,55 @@ permissions:
   contents: write
 
 jobs:
+  build-libs:
+    name: Build tb_client (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-amd64
+            ext: so
+            asset-name: libtb_client-x86_64-linux-gnu.so
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64
+            ext: so
+            asset-name: libtb_client-aarch64-linux-gnu.so
+          - os: macos-15-intel
+            platform: macos-amd64
+            ext: dylib
+            asset-name: libtb_client-x86_64-darwin.dylib
+          - os: macos-latest
+            platform: macos-arm64
+            ext: dylib
+            asset-name: libtb_client-aarch64-darwin.dylib
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build tb_client
+        run: bash bin/build-tb-client.sh
+
+      - name: Stage release asset
+        run: cp "resources/lib/${{ matrix.platform }}/libtb_client.${{ matrix.ext }}" "${{ matrix.asset-name }}"
+
+      - name: Verify staged asset
+        run: |
+          set -euo pipefail
+          ls -la "${{ matrix.asset-name }}"
+          file "${{ matrix.asset-name }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tb_client-${{ matrix.platform }}
+          path: ${{ matrix.asset-name }}
+          if-no-files-found: error
+
   release:
     name: Create Release
+    needs: build-libs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,9 +65,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          pattern: tb_client-*
+          merge-multiple: true
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          files: |
+            artifacts/libtb_client-x86_64-linux-gnu.so
+            artifacts/libtb_client-aarch64-linux-gnu.so
+            artifacts/libtb_client-x86_64-darwin.dylib
+            artifacts/libtb_client-aarch64-darwin.dylib
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
