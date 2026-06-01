@@ -127,6 +127,8 @@ final class ReleaseWorkflowTest extends TestCase
         $jobBlock = $this->extractJob($content, 'release:');
 
         $this->assertStringContainsString('actions/download-artifact@v4', $jobBlock, 'release job must download artifacts via actions/download-artifact@v4');
+        $this->assertStringContainsString('merge-multiple: true', $jobBlock, 'release job must set merge-multiple: true so all build artifacts land flat in the destination directory');
+        $this->assertStringContainsString('pattern: tb_client-*', $jobBlock, 'release job must filter artifacts to the tb_client-* pattern so unrelated artifacts are not pulled into the release');
     }
 
     public function testReleaseJobUsesGhReleaseAction(): void
@@ -136,6 +138,27 @@ final class ReleaseWorkflowTest extends TestCase
 
         $this->assertStringContainsString('softprops/action-gh-release@v2', $jobBlock, 'release job must use softprops/action-gh-release@v2');
         $this->assertStringContainsString('generate_release_notes: true', $jobBlock, 'release job must auto-generate release notes');
+    }
+
+    public function testReleaseJobListsAllExpectedAssetFiles(): void
+    {
+        $content = $this->getContent();
+        $jobBlock = $this->extractJob($content, 'release:');
+
+        $expectedAssets = [
+            'artifacts/libtb_client-x86_64-linux-gnu.so',
+            'artifacts/libtb_client-aarch64-linux-gnu.so',
+            'artifacts/libtb_client-x86_64-darwin.dylib',
+            'artifacts/libtb_client-aarch64-darwin.dylib',
+        ];
+
+        foreach ($expectedAssets as $asset) {
+            $this->assertStringContainsString(
+                $asset,
+                $jobBlock,
+                "release job must list {$asset} as a release asset",
+            );
+        }
     }
 
     public function testNoTrailingWhitespace(): void
