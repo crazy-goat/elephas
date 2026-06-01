@@ -43,7 +43,7 @@ class FfiBackendTest extends TestCase
         );
     }
 
-    public function testConstructorWithLibPathPassesToNativeClient(): void
+    public function testConstructorAcceptsLibPathParameter(): void
     {
         $nativeClient = $this->createMock(NativeClient::class);
         $nativeClient
