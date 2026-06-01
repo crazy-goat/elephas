@@ -24,23 +24,14 @@ class FfiBackend extends AbstractBackend
         $this->client->init($this->clusterId->toBytes(), $this->replicaAddresses);
     }
 
-    public function submit(
-        Operation $operation,
-        string $data,
-    ): string {
-        $this->ensureNotClosed();
-
+    protected function doSubmit(Operation $operation, string $data): string
+    {
         return $this->client->submit($operation, $data);
     }
 
-    public function close(): void
+    protected function doClose(): void
     {
-        if ($this->closed) {
-            return;
-        }
-
         $this->client->deinit();
-        parent::close();
     }
 
     public function getClusterId(): Uint128

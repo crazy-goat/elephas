@@ -82,8 +82,7 @@ class FfiBackendTest extends TestCase
 
         $this->backend->close();
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Backend is closed');
+        $this->expectException(\CrazyGoat\Elephas\Exception\ClientClosedException::class);
 
         $this->backend->submit(Operation::CREATE_ACCOUNTS, '');
     }
