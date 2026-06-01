@@ -6,8 +6,12 @@ namespace CrazyGoat\Elephas\Test\Functional;
 
 use CrazyGoat\Elephas\Backend\BackendInterface;
 use CrazyGoat\Elephas\Backend\FfiBackend;
+use CrazyGoat\Elephas\Batch\AccountBatch;
 use CrazyGoat\Elephas\Client;
+use CrazyGoat\Elephas\CreateAccountStatus;
+use CrazyGoat\Elephas\Exception\ClientClosedException;
 use CrazyGoat\Elephas\Exception\InitializationException;
+use CrazyGoat\Elephas\Id;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\TestCase;
 
@@ -155,5 +159,201 @@ class ClientTest extends TestCase
 
         $client = Client::withBackend($backend);
         $client->close();
+    }
+
+    public function testCreateAccountsSingle(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $batch = new AccountBatch(1);
+            $batch->add();
+            $batch->setId(Id::generate());
+            $batch->setLedger(1);
+            $batch->setCode(1);
+
+            $results = $client->createAccounts($batch);
+
+            $this->assertSame(1, $results->getLength());
+            $results->rewind();
+            $this->assertSame(
+                CreateAccountStatus::CREATED,
+                $results->getResult()->getStatus(),
+            );
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testCreateAccountsMultiple(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $count = 5;
+            $batch = new AccountBatch($count);
+            for ($i = 0; $i < $count; $i++) {
+                $batch->add();
+                $batch->setId(Id::generate());
+                $batch->setLedger(1);
+                $batch->setCode(1);
+            }
+
+            $results = $client->createAccounts($batch);
+
+            $this->assertSame($count, $results->getLength());
+            $results->rewind();
+            for ($i = 0; $i < $count; $i++) {
+                $this->assertSame(
+                    CreateAccountStatus::CREATED,
+                    $results->getResult()->getStatus(),
+                    \sprintf('Account #%d must be CREATED', $i),
+                );
+                if ($i < $count - 1) {
+                    $results->next();
+                }
+            }
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testCreateAccountsDuplicateId(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $id = Id::generate();
+
+            $first = new AccountBatch(1);
+            $first->add();
+            $first->setId($id);
+            $first->setLedger(1);
+            $first->setCode(1);
+            $client->createAccounts($first);
+
+            $second = new AccountBatch(1);
+            $second->add();
+            $second->setId($id);
+            $second->setLedger(1);
+            $second->setCode(1);
+
+            $results = $client->createAccounts($second);
+
+            $this->assertSame(1, $results->getLength());
+            $results->rewind();
+            $this->assertNotSame(
+                CreateAccountStatus::CREATED,
+                $results->getResult()->getStatus(),
+                'Re-creating the same account ID must not return CREATED',
+            );
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testCreateAccountsInvalidFlags(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $batch = new AccountBatch(1);
+            $batch->add();
+            $batch->setId(Id::generate());
+            $batch->setLedger(1);
+            $batch->setCode(1);
+            // DEBITS_MUST_NOT_EXCEED_CREDITS | CREDITS_MUST_NOT_EXCEED_DEBITS
+            // are mutually exclusive – TigerBeetle must reject this.
+            $batch->setFlags((1 << 1) | (1 << 2));
+
+            $results = $client->createAccounts($batch);
+
+            $this->assertSame(1, $results->getLength());
+            $results->rewind();
+            $this->assertSame(
+                CreateAccountStatus::MUTUALLY_EXCLUSIVE_FLAGS,
+                $results->getResult()->getStatus(),
+            );
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testCreateAccountsEmptyBatch(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $results = $client->createAccounts(new AccountBatch(0));
+
+            $this->assertSame(0, $results->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testCreateAccountsLargeBatch(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            $count = 100;
+            $batch = new AccountBatch($count);
+            for ($i = 0; $i < $count; $i++) {
+                $batch->add();
+                $batch->setId(Id::generate());
+                $batch->setLedger(1);
+                $batch->setCode(1);
+            }
+
+            $results = $client->createAccounts($batch);
+
+            $this->assertSame($count, $results->getLength());
+            $results->rewind();
+            for ($i = 0; $i < $count; $i++) {
+                $this->assertSame(
+                    CreateAccountStatus::CREATED,
+                    $results->getResult()->getStatus(),
+                    \sprintf('Account #%d must be CREATED', $i),
+                );
+                if ($i < $count - 1) {
+                    $results->next();
+                }
+            }
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testCreateAccountsAfterCloseThrows(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        $client->close();
+
+        $this->expectException(ClientClosedException::class);
+
+        $client->createAccounts(new AccountBatch(1));
     }
 }
