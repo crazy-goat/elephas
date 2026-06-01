@@ -1,0 +1,15 @@
+.git/
+.gitignore
+vendor/
+var/
+.phpunit.cache/
+.case/
+node_modules/
+package-lock.json
+ARCHITECTURE.md
+README.md
+composer.lock
+phpstan.neon.dist
+phpunit.xml.dist
+rector.php
+.php-cs-fixer.dist.php
