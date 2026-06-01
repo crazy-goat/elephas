@@ -5,17 +5,15 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Batch;
 
 use CrazyGoat\Elephas\CreateAccountResult;
+use CrazyGoat\Elephas\CreateAccountStatus;
+use CrazyGoat\Elephas\Internal\BinaryHelper;
+use CrazyGoat\Elephas\Uint128\Uint128;
 
-/**
- * Read-only batch of create account results.
- *
- * Contains the results of a createAccounts() operation.
- */
 class CreateAccountResultBatch extends AbstractBatch
 {
     protected function getStructSize(): int
     {
-        return \CrazyGoat\Elephas\Internal\BinaryHelper::CREATE_ACCOUNT_RESULT_SIZE;
+        return BinaryHelper::CREATE_ACCOUNT_RESULT_SIZE;
     }
 
     public function add(): void
@@ -28,9 +26,24 @@ class CreateAccountResultBatch extends AbstractBatch
         return true;
     }
 
+    public static function fromBuffer(string $buffer): self
+    {
+        $count = (int) \ceil(\strlen($buffer) / BinaryHelper::CREATE_ACCOUNT_RESULT_SIZE);
+        $batch = new self($count);
+        $batch->buffer = $buffer;
+        $batch->length = $count;
+
+        return $batch;
+    }
+
     public function getResult(): CreateAccountResult
     {
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $offset = $this->currentPosition * $this->getStructSize();
+        $data = \substr($this->buffer, $offset, $this->getStructSize());
+        $unpacked = BinaryHelper::unpackCreateAccountResult($data);
+
+        $id = Uint128::fromParts($unpacked['timestamp'], 0);
+
+        return new CreateAccountResult($id, CreateAccountStatus::from($unpacked['status']));
     }
 }
