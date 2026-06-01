@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas;
 
 use CrazyGoat\Elephas\Batch\AccountBalanceBatch;
 use CrazyGoat\Elephas\Batch\AccountBatch;
+use CrazyGoat\Elephas\Batch\AccountFilterBatch;
 use CrazyGoat\Elephas\Batch\CreateAccountResultBatch;
 use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
 use CrazyGoat\Elephas\Batch\IdBatch;
@@ -52,7 +53,7 @@ interface ClientInterface
      *
      * @throws ClientClosedException if the client has been closed
      */
-    public function getAccountTransfers(AccountFilter $filter): TransferBatch;
+    public function getAccountTransfers(AccountFilterBatch $filter): TransferBatch;
 
     /**
      * Get balances for an account.

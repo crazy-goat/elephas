@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Test\Unit;
 
 use CrazyGoat\Elephas\AccountFilter;
+use CrazyGoat\Elephas\AccountFilterFlags;
 use CrazyGoat\Elephas\Backend\BackendInterface;
 use CrazyGoat\Elephas\Batch\AccountBatch;
+use CrazyGoat\Elephas\Batch\AccountFilterBatch;
 use CrazyGoat\Elephas\Batch\CreateAccountResultBatch;
 use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
 use CrazyGoat\Elephas\Batch\IdBatch;
@@ -467,6 +469,104 @@ final class ClientTest extends TestCase
         $client->lookupTransfers(new IdBatch(1));
     }
 
+    public function testGetAccountTransfersSubmitsFilterBytesToBackend(): void
+    {
+        $accountId = Uint128::fromInt(42);
+        $filter = new AccountFilterBatch(1);
+        $filter->add();
+        $filter->setAccountId($accountId);
+        $filter->setFlags(AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS);
+
+        $expected = $filter->toBytes();
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::GET_ACCOUNT_TRANSFERS, $expected)
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->getAccountTransfers($filter);
+
+        $this->assertInstanceOf(TransferBatch::class, $result);
+    }
+
+    public function testGetAccountTransfersReturnsParsedTransferBatch(): void
+    {
+        $buffer = \implode('', [
+            $this->packTransfer(11, 1, 1),
+            $this->packTransfer(22, 2, 7),
+        ]);
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn($buffer);
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->getAccountTransfers(new AccountFilterBatch(1));
+
+        $this->assertSame(2, $result->getLength());
+
+        $result->rewind();
+        $this->assertTrue($result->getId()->equals(Uint128::fromInt(11)));
+        $this->assertSame(1, $result->getLedger());
+        $this->assertSame(1, $result->getCode());
+
+        $result->next();
+        $this->assertTrue($result->getId()->equals(Uint128::fromInt(22)));
+        $this->assertSame(2, $result->getLedger());
+        $this->assertSame(7, $result->getCode());
+    }
+
+    public function testGetAccountTransfersPassesTimestampAndLimitFilters(): void
+    {
+        $filter = new AccountFilterBatch(1);
+        $filter->add();
+        $filter->setAccountId(Uint128::fromInt(1));
+        $filter->setTimestampMin(1_700_000_000_000_000_000);
+        $filter->setTimestampMax(1_800_000_000_000_000_000);
+        $filter->setLimit(10);
+        $filter->setFlags(AccountFilterFlags::REVERSED);
+
+        $expected = $filter->toBytes();
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::GET_ACCOUNT_TRANSFERS, $expected)
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $client->getAccountTransfers($filter);
+    }
+
+    public function testGetAccountTransfersEmptyResponseProducesEmptyBatch(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->getAccountTransfers(new AccountFilterBatch(1));
+
+        $this->assertSame(0, $result->getLength());
+    }
+
+    public function testGetAccountTransfersPropagatesBackendException(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willThrowException(new \RuntimeException('boom'));
+
+        $client = Client::withBackend($backend);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('boom');
+
+        $client->getAccountTransfers(new AccountFilterBatch(1));
+    }
+
     public function testGetAccountTransfersAfterCloseThrowsClientClosedException(): void
     {
         $client = $this->createClientWithMockBackend();
@@ -474,7 +574,7 @@ final class ClientTest extends TestCase
 
         $this->expectException(ClientClosedException::class);
 
-        $client->getAccountTransfers(new AccountFilter(Uint128::zero(), Uint128::zero()));
+        $client->getAccountTransfers(new AccountFilterBatch(1));
     }
 
     public function testGetAccountBalancesAfterCloseThrowsClientClosedException(): void
