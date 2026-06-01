@@ -4,78 +4,209 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas\Batch;
 
+use CrazyGoat\Elephas\Internal\BinaryHelper;
 use CrazyGoat\Elephas\Uint128\Uint128;
 
-/**
- * Batch of accounts for createAccounts() operation.
- *
- * Provides setters and getters for account fields.
- */
 class AccountBatch extends AbstractBatch
 {
+    private const int ID = 0;
+    private const int DEBITS_PENDING = 16;
+    private const int DEBITS_POSTED = 32;
+    private const int CREDITS_PENDING = 48;
+    private const int CREDITS_POSTED = 64;
+    private const int USER_DATA_128 = 80;
+    private const int USER_DATA_64 = 96;
+    private const int USER_DATA_32 = 104;
+    private const int LEDGER = 112;
+    private const int CODE = 116;
+    private const int FLAGS = 118;
+    private const int TIMESTAMP = 120;
+
     protected function getStructSize(): int
     {
-        return \CrazyGoat\Elephas\Internal\BinaryHelper::ACCOUNT_SIZE;
+        return BinaryHelper::ACCOUNT_SIZE;
+    }
+
+    public static function fromBuffer(string $buffer): self
+    {
+        $count = (int) \ceil(\strlen($buffer) / BinaryHelper::ACCOUNT_SIZE);
+        $batch = new self($count);
+        $batch->buffer = $buffer;
+        $batch->length = $count;
+
+        return $batch;
     }
 
     public function setId(Uint128 $id): void
     {
-        // TODO: implement
+        $this->writeUint128(self::ID, $id);
     }
 
     public function getId(): Uint128
     {
-        // TODO: implement
-        return Uint128::zero();
+        return $this->readUint128(self::ID);
+    }
+
+    public function getDebitsPending(): Uint128
+    {
+        return $this->readUint128(self::DEBITS_PENDING);
     }
 
     public function setDebitsPending(Uint128 $value): void
     {
-        // TODO: implement
+        $this->writeUint128(self::DEBITS_PENDING, $value);
     }
 
-    public function setCreditsPending(Uint128 $value): void
+    public function getDebitsPosted(): Uint128
     {
-        // TODO: implement
+        return $this->readUint128(self::DEBITS_POSTED);
     }
 
     public function setDebitsPosted(Uint128 $value): void
     {
-        // TODO: implement
+        $this->writeUint128(self::DEBITS_POSTED, $value);
+    }
+
+    public function getCreditsPending(): Uint128
+    {
+        return $this->readUint128(self::CREDITS_PENDING);
+    }
+
+    public function setCreditsPending(Uint128 $value): void
+    {
+        $this->writeUint128(self::CREDITS_PENDING, $value);
+    }
+
+    public function getCreditsPosted(): Uint128
+    {
+        return $this->readUint128(self::CREDITS_POSTED);
     }
 
     public function setCreditsPosted(Uint128 $value): void
     {
-        // TODO: implement
+        $this->writeUint128(self::CREDITS_POSTED, $value);
+    }
+
+    public function getUserData128(): Uint128
+    {
+        return $this->readUint128(self::USER_DATA_128);
     }
 
     public function setUserData128(Uint128 $value): void
     {
-        // TODO: implement
+        $this->writeUint128(self::USER_DATA_128, $value);
+    }
+
+    public function getUserData64(): int
+    {
+        return $this->readUint64(self::USER_DATA_64);
     }
 
     public function setUserData64(int $value): void
     {
-        // TODO: implement
+        $this->writeUint64(self::USER_DATA_64, $value);
+    }
+
+    public function getUserData32(): int
+    {
+        return $this->readUint32(self::USER_DATA_32);
     }
 
     public function setUserData32(int $value): void
     {
-        // TODO: implement
+        $this->writeUint32(self::USER_DATA_32, $value);
+    }
+
+    public function getLedger(): int
+    {
+        return $this->readUint32(self::LEDGER);
     }
 
     public function setLedger(int $value): void
     {
-        // TODO: implement
+        $this->writeUint32(self::LEDGER, $value);
+    }
+
+    public function getCode(): int
+    {
+        return $this->readUint16(self::CODE);
     }
 
     public function setCode(int $value): void
     {
-        // TODO: implement
+        $this->writeUint16(self::CODE, $value);
+    }
+
+    public function getFlags(): int
+    {
+        return $this->readUint16(self::FLAGS);
     }
 
     public function setFlags(int $value): void
     {
-        // TODO: implement
+        $this->writeUint16(self::FLAGS, $value);
+    }
+
+    public function getTimestamp(): int
+    {
+        return $this->readUint64(self::TIMESTAMP);
+    }
+
+    private function readUint128(int $fieldOffset): Uint128
+    {
+        $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
+
+        return Uint128::fromBytes(\substr($this->buffer, $offset, 16));
+    }
+
+    private function writeUint128(int $fieldOffset, Uint128 $value): void
+    {
+        $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
+        $this->buffer = \substr_replace($this->buffer, $value->toBytes(), $offset, 16);
+    }
+
+    private function readUint64(int $fieldOffset): int
+    {
+        $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
+        /** @var array{1: int} $unpacked */
+        $unpacked = \unpack('P', \substr($this->buffer, $offset, 8));
+
+        return $unpacked[1];
+    }
+
+    private function writeUint64(int $fieldOffset, int $value): void
+    {
+        $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
+        $this->buffer = \substr_replace($this->buffer, \pack('P', $value), $offset, 8);
+    }
+
+    private function readUint32(int $fieldOffset): int
+    {
+        $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
+        /** @var array{1: int} $unpacked */
+        $unpacked = \unpack('V', \substr($this->buffer, $offset, 4));
+
+        return $unpacked[1];
+    }
+
+    private function writeUint32(int $fieldOffset, int $value): void
+    {
+        $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
+        $this->buffer = \substr_replace($this->buffer, \pack('V', $value), $offset, 4);
+    }
+
+    private function readUint16(int $fieldOffset): int
+    {
+        $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
+        /** @var array{1: int} $unpacked */
+        $unpacked = \unpack('v', \substr($this->buffer, $offset, 2));
+
+        return $unpacked[1];
+    }
+
+    private function writeUint16(int $fieldOffset, int $value): void
+    {
+        $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
+        $this->buffer = \substr_replace($this->buffer, \pack('v', $value), $offset, 2);
     }
 }
