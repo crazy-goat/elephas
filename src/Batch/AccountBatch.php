@@ -9,18 +9,18 @@ use CrazyGoat\Elephas\Uint128\Uint128;
 
 class AccountBatch extends AbstractBatch
 {
-    private const int ID = 0;
-    private const int DEBITS_PENDING = 16;
-    private const int DEBITS_POSTED = 32;
-    private const int CREDITS_PENDING = 48;
-    private const int CREDITS_POSTED = 64;
-    private const int USER_DATA_128 = 80;
-    private const int USER_DATA_64 = 96;
-    private const int USER_DATA_32 = 104;
-    private const int LEDGER = 112;
-    private const int CODE = 116;
-    private const int FLAGS = 118;
-    private const int TIMESTAMP = 120;
+    private const ID = 0;
+    private const DEBITS_PENDING = 16;
+    private const DEBITS_POSTED = 32;
+    private const CREDITS_PENDING = 48;
+    private const CREDITS_POSTED = 64;
+    private const USER_DATA_128 = 80;
+    private const USER_DATA_64 = 96;
+    private const USER_DATA_32 = 104;
+    private const LEDGER = 112;
+    private const CODE = 116;
+    private const FLAGS = 118;
+    private const TIMESTAMP = 120;
 
     protected function getStructSize(): int
     {
