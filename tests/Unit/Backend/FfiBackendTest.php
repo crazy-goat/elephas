@@ -20,15 +20,90 @@ class FfiBackendTest extends TestCase
     protected function setUp(): void
     {
         $this->nativeClient = $this->createMock(NativeClient::class);
-        $this->nativeClient
-            ->expects($this->once())
-            ->method('init')
-            ->with($this->isType('string'), $this->isType('array'));
 
         $this->backend = new FfiBackend(
             Uint128::zero(),
             ['127.0.0.1:3000'],
             $this->nativeClient,
+        );
+    }
+
+    public function testConstructorCallsNativeClientInit(): void
+    {
+        $nativeClient = $this->createMock(NativeClient::class);
+        $nativeClient
+            ->expects($this->once())
+            ->method('init')
+            ->with($this->isType('string'), $this->isType('array'));
+
+        new FfiBackend(
+            Uint128::zero(),
+            ['127.0.0.1:3000'],
+            $nativeClient,
+        );
+    }
+
+    public function testConstructorAcceptsLibPathParameter(): void
+    {
+        $nativeClient = $this->createMock(NativeClient::class);
+        $nativeClient
+            ->expects($this->once())
+            ->method('init');
+
+        new FfiBackend(
+            Uint128::zero(),
+            ['127.0.0.1:3000'],
+            $nativeClient,
+            '/custom/path/libtb_client.so',
+        );
+    }
+
+    public function testConstructorWithMultipleAddresses(): void
+    {
+        $nativeClient = $this->createMock(NativeClient::class);
+        $nativeClient
+            ->expects($this->once())
+            ->method('init')
+            ->with($this->isType('string'), ['127.0.0.1:3001', '127.0.0.1:3002', '127.0.0.1:3003']);
+
+        new FfiBackend(
+            Uint128::fromInt(1),
+            ['127.0.0.1:3001', '127.0.0.1:3002', '127.0.0.1:3003'],
+            $nativeClient,
+        );
+    }
+
+    public function testConstructorWithNonZeroClusterId(): void
+    {
+        $nativeClient = $this->createMock(NativeClient::class);
+        $clusterId = Uint128::fromInt(42);
+        $nativeClient
+            ->expects($this->once())
+            ->method('init')
+            ->with($clusterId->toBytes(), $this->isType('array'));
+
+        new FfiBackend(
+            $clusterId,
+            ['127.0.0.1:3000'],
+            $nativeClient,
+        );
+    }
+
+    public function testConstructorInitExceptionPropagates(): void
+    {
+        $nativeClient = $this->createMock(NativeClient::class);
+        $nativeClient
+            ->expects($this->once())
+            ->method('init')
+            ->willThrowException(new \CrazyGoat\Elephas\Exception\InitializationException('Init failed'));
+
+        $this->expectException(\CrazyGoat\Elephas\Exception\InitializationException::class);
+        $this->expectExceptionMessage('Init failed');
+
+        new FfiBackend(
+            Uint128::zero(),
+            ['127.0.0.1:3000'],
+            $nativeClient,
         );
     }
 
@@ -100,13 +175,83 @@ class FfiBackendTest extends TestCase
         $this->assertTrue(true);
     }
 
+    public function testCloseCallsDeinit(): void
+    {
+        $nativeClient = $this->createMock(NativeClient::class);
+        $nativeClient
+            ->method('init');
+        $nativeClient
+            ->expects($this->once())
+            ->method('deinit');
+
+        $backend = new FfiBackend(
+            Uint128::zero(),
+            ['127.0.0.1:3000'],
+            $nativeClient,
+        );
+
+        $backend->close();
+    }
+
+    public function testMultipleCloseOnlyCallsDeinitOnce(): void
+    {
+        $nativeClient = $this->createMock(NativeClient::class);
+        $nativeClient
+            ->method('init');
+        $nativeClient
+            ->expects($this->once())
+            ->method('deinit');
+
+        $backend = new FfiBackend(
+            Uint128::zero(),
+            ['127.0.0.1:3000'],
+            $nativeClient,
+        );
+
+        $backend->close();
+        $backend->close();
+        $backend->close();
+    }
+
     public function testGetClusterId(): void
     {
         $this->assertEquals(Uint128::zero(), $this->backend->getClusterId());
     }
 
+    public function testGetClusterIdWithCustomValue(): void
+    {
+        $clusterId = Uint128::fromString('123456789');
+        $nativeClient = $this->createMock(NativeClient::class);
+        $nativeClient
+            ->method('init');
+
+        $backend = new FfiBackend(
+            $clusterId,
+            ['127.0.0.1:3000'],
+            $nativeClient,
+        );
+
+        $this->assertTrue($clusterId->equals($backend->getClusterId()));
+    }
+
     public function testGetReplicaAddresses(): void
     {
         $this->assertSame(['127.0.0.1:3000'], $this->backend->getReplicaAddresses());
+    }
+
+    public function testGetReplicaAddressesWithMultiple(): void
+    {
+        $addresses = ['127.0.0.1:3001', '127.0.0.1:3002'];
+        $nativeClient = $this->createMock(NativeClient::class);
+        $nativeClient
+            ->method('init');
+
+        $backend = new FfiBackend(
+            Uint128::zero(),
+            $addresses,
+            $nativeClient,
+        );
+
+        $this->assertSame($addresses, $backend->getReplicaAddresses());
     }
 }

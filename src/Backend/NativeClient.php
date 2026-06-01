@@ -72,7 +72,14 @@ CPROG;
     public function __construct(?string $libPath = null)
     {
         $this->libPath = $libPath ?? $this->detectLibraryPath();
-        $this->ffi = \FFI::cdef(self::HEADER, $this->libPath);
+
+        try {
+            $this->ffi = \FFI::cdef(self::HEADER, $this->libPath);
+        } catch (\FFI\Exception $e) {
+            throw InitializationException::create(
+                \sprintf('Cannot load tb_client library from %s: %s', $this->libPath, $e->getMessage()),
+            );
+        }
     }
 
     /** @param array<string> $addresses */
