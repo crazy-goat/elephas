@@ -24,6 +24,16 @@ class AccountFilterBatch extends AbstractBatch
         return BinaryHelper::ACCOUNT_FILTER_SIZE;
     }
 
+    public static function fromBuffer(string $buffer): self
+    {
+        $count = (int) \ceil(\strlen($buffer) / BinaryHelper::ACCOUNT_FILTER_SIZE);
+        $batch = new self($count);
+        $batch->buffer = $buffer;
+        $batch->length = $count;
+
+        return $batch;
+    }
+
     public function setAccountId(Uint128 $id): void
     {
         $this->writeUint128(self::ACCOUNT_ID, $id);
