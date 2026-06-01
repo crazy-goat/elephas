@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas;
 
+use CrazyGoat\Elephas\Backend\BackendFactory;
 use CrazyGoat\Elephas\Backend\BackendInterface;
-use CrazyGoat\Elephas\Backend\FfiBackend;
 use CrazyGoat\Elephas\Batch\AccountBalanceBatch;
 use CrazyGoat\Elephas\Batch\AccountBatch;
 use CrazyGoat\Elephas\Batch\AccountFilterBatch;
@@ -40,7 +40,7 @@ final class Client implements ClientInterface
         string ...$replicaAddresses,
     ) {
         $this->replicaAddresses = $replicaAddresses;
-        $this->backend = new FfiBackend($clusterId, $replicaAddresses);
+        $this->backend = BackendFactory::create($clusterId, $replicaAddresses);
     }
 
     /**
