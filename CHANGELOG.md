@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `BackendFactory` – auto-detect available backend implementation (#48)
+
+## [0.3.0] – Client API – 2026-06-01
+
+### Added
 - `Client` API: `createAccounts`, `createTransfers`, `lookupAccounts`, `lookupTransfers`, `getAccountTransfers`, `getAccountBalances` (#41, #42, #43, #44, #45, #46, #47)
 
 ## [0.2.0] – Backend + Batch – 2026-06-01
