@@ -45,8 +45,9 @@ final class Client implements ClientInterface
     /**
      * Create a Client instance with a custom backend (for testing/dependency injection).
      *
-     * Uses reflection to bypass the public constructor and avoid creating an FfiBackend,
-     * since the provided backend replaces the default one.
+     * Bypasses the public constructor via reflection so that the default FfiBackend
+     * is not instantiated. PHP 8.2+ allows ReflectionProperty::setValue() to set
+     * readonly properties from outside the declaring class scope.
      */
     public static function withBackend(BackendInterface $backend): self
     {
@@ -54,9 +55,13 @@ final class Client implements ClientInterface
         /** @var self $client */
         $client = $reflection->newInstanceWithoutConstructor();
 
-        $reflection->getProperty('clusterId')->setValue($client, Uint128::zero());
-        $reflection->getProperty('replicaAddresses')->setValue($client, []);
-        $reflection->getProperty('backend')->setValue($client, $backend);
+        $clusterIdProperty = $reflection->getProperty('clusterId');
+        $replicaAddressesProperty = $reflection->getProperty('replicaAddresses');
+        $backendProperty = $reflection->getProperty('backend');
+
+        $clusterIdProperty->setValue($client, Uint128::zero());
+        $replicaAddressesProperty->setValue($client, []);
+        $backendProperty->setValue($client, $backend);
 
         return $client;
     }
