@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BackendFactory` – auto-detect available backend implementation (#48)
 - `README.md` – installation guide, quickstart, API reference, and development docs (#51)
 - `LICENSE` – MIT license (#52)
+- `bin/build-tb-client.sh` – build script that compiles the `tb_client` native shared library for the host platform using Zig 0.14.1 and TigerBeetle 0.17.4 (#49)
 
 ## [0.3.0] – Client API – 2026-06-01
 
