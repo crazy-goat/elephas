@@ -13,9 +13,11 @@ use CrazyGoat\Elephas\CreateAccountResult;
  */
 class CreateAccountResultBatch extends AbstractBatch
 {
-    /**
-     * TODO: implement
-     */
+    protected function getStructSize(): int
+    {
+        return \CrazyGoat\Elephas\Internal\BinaryHelper::CREATE_ACCOUNT_RESULT_SIZE;
+    }
+
     public function add(): void
     {
         throw new \RuntimeException('CreateAccountResultBatch is read-only');

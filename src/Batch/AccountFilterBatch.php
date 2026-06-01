@@ -11,8 +11,8 @@ namespace CrazyGoat\Elephas\Batch;
  */
 class AccountFilterBatch extends AbstractBatch
 {
-    public function add(): void
+    protected function getStructSize(): int
     {
-        // TODO: implement
+        return \CrazyGoat\Elephas\Internal\BinaryHelper::ACCOUNT_FILTER_SIZE;
     }
 }

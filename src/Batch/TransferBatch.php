@@ -13,12 +13,9 @@ use CrazyGoat\Elephas\Uint128\Uint128;
  */
 class TransferBatch extends AbstractBatch
 {
-    /**
-     * TODO: implement
-     */
-    public function add(): void
+    protected function getStructSize(): int
     {
-        // TODO: implement
+        return \CrazyGoat\Elephas\Internal\BinaryHelper::TRANSFER_SIZE;
     }
 
     public function setId(Uint128 $id): void

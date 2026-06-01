@@ -4,90 +4,89 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas\Batch;
 
-/**
- * Abstract base class for TigerBeetle batch operations.
- *
- * Provides navigation and state management for batch items.
- * Concrete implementations handle specific data types.
- */
 abstract class AbstractBatch implements \Countable
 {
-    protected int $position = 0;
+    protected string $buffer;
 
     protected int $length = 0;
 
-    /**
-     * TODO: implement
-     */
+    protected int $currentPosition = 0;
+
     public function __construct(
         protected readonly int $capacity,
     ) {
+        $this->buffer = \str_repeat("\0", $capacity * $this->getStructSize());
     }
 
-    /**
-     * Add a new item to the batch.
-     */
-    abstract public function add(): void;
+    abstract protected function getStructSize(): int;
 
-    /**
-     * Move to the next item.
-     */
+    public function add(): void
+    {
+        if ($this->length >= $this->capacity) {
+            throw new \OverflowException('Batch capacity exceeded');
+        }
+
+        $this->currentPosition = $this->length;
+        $this->length++;
+    }
+
     public function next(): bool
     {
-        // TODO: implement
-        return false;
+        if ($this->currentPosition >= $this->length - 1) {
+            return false;
+        }
+
+        $this->currentPosition++;
+
+        return true;
     }
 
-    /**
-     * Move to the previous item.
-     */
     public function prev(): bool
     {
-        // TODO: implement
-        return false;
+        if ($this->currentPosition <= 0) {
+            return false;
+        }
+
+        $this->currentPosition--;
+
+        return true;
     }
 
-    /**
-     * Reset position to the beginning.
-     */
     public function rewind(): void
     {
-        $this->position = 0;
+        $this->currentPosition = 0;
     }
 
-    /**
-     * Get the current number of items in the batch.
-     *
-     * @return int<0, max>
-     */
     public function getLength(): int
     {
-        /** @phpstan-ignore return.type */
         return $this->length;
     }
 
-    /**
-     * Get the maximum capacity of the batch.
-     */
     public function getCapacity(): int
     {
         return $this->capacity;
     }
 
-    /**
-     * Check if the current position is valid.
-     */
     public function isValidPosition(): bool
     {
-        return $this->position >= 0 && $this->position < $this->length;
+        return $this->currentPosition >= 0 && $this->currentPosition < $this->length;
     }
 
-    /**
-     * Check if this batch is read-only.
-     */
     public function isReadOnly(): bool
     {
         return false;
+    }
+
+    public function getBuffer(): string
+    {
+        $size = $this->length * $this->getStructSize();
+
+        return $size > 0 ? \substr($this->buffer, 0, $size) : '';
+    }
+
+    public function toBytes(): string
+    {
+        return $this->getBuffer();
     }
 
     /**
