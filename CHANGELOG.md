@@ -1,5 +1,32 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- `BackendFactory` – auto-detect available backend implementation (#48)
+- `Client` API: `createAccounts`, `createTransfers`, `lookupAccounts`, `lookupTransfers`, `getAccountTransfers`, `getAccountBalances` (#41, #42, #43, #44, #45, #46, #47)
+
+## [0.2.0] – Backend + Batch – 2026-06-01
+
+### Added
+- `BinaryHelper` – pack/unpack for TigerBeetle structs: `Account` (128B), `Transfer` (128B), `AccountFilter` (128B), `AccountBalance` (128B), `QueryFilter` (64B), `CreateAccountResult` (16B), `CreateTransferResult` (16B) (#28, #29, #30)
+- `Packet` – final class wrapping `tb_client` async callback with busy-wait synchronization, nullable response, `PacketStatus` enum (#31)
+- `BackendInterface` – transport contract (`submit`, `close`) (#32)
+- `AbstractBackend` – Template Method pattern with `closed` flag, `ClientClosedException`, `TooMuchDataException` validation, idempotent `close()`, 1 MB default max batch size (#32)
+- `AbstractBatch` – buffer-based navigation (`add`, `currentPosition`, `count`, `reset`, `getBuffer`) (#33)
+- `AccountBatch` – typed getters/setters and `fromBuffer` factory for `Account` (#34)
+- `TransferBatch` – typed getters/setters and `fromBuffer` factory for `Transfer` (#35)
+- `IdBatch` – batch of 128-bit IDs (#36)
+- Result batches: `CreateAccountResultBatch`, `CreateTransferResultBatch` with index/result accessors (#36)
+- Filter batches: `AccountFilterBatch`, `AccountBalanceBatch`, `QueryFilterBatch` (#37)
+- `FfiBackend` – FFI-based backend using `tb_client` shared library (#38, #39, #40)
+- `NativeClient` – low-level FFI wrapper around `tb_client` C API (#40)
+
 ## [0.1.0] – Foundation – 2026-06-01
 
 ### Added
