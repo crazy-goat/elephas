@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `.github/SECURITY.md` – security policy and vulnerability reporting instructions (#56)
+- `.github/ISSUE_TEMPLATE/bug_report.md` – bug report template (#56)
+- `.github/ISSUE_TEMPLATE/feature_request.md` – feature request template (#56)
+- `.github/PULL_REQUEST_TEMPLATE.md` – pull request checklist template (#56)
 - `BackendFactory` – auto-detect available backend implementation (#48)
 - `README.md` – installation guide, quickstart, API reference, and development docs (#51)
 - `LICENSE` – MIT license (#52)
