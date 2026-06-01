@@ -13,9 +13,11 @@ use CrazyGoat\Elephas\CreateTransferResult;
  */
 class CreateTransferResultBatch extends AbstractBatch
 {
-    /**
-     * TODO: implement
-     */
+    protected function getStructSize(): int
+    {
+        return \CrazyGoat\Elephas\Internal\BinaryHelper::CREATE_TRANSFER_RESULT_SIZE;
+    }
+
     public function add(): void
     {
         throw new \RuntimeException('CreateTransferResultBatch is read-only');

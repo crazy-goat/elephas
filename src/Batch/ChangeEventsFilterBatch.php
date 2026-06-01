@@ -11,8 +11,8 @@ namespace CrazyGoat\Elephas\Batch;
  */
 class ChangeEventsFilterBatch extends AbstractBatch
 {
-    public function add(): void
+    protected function getStructSize(): int
     {
-        // TODO: implement
+        return \CrazyGoat\Elephas\Internal\BinaryHelper::UINT128_SIZE;
     }
 }

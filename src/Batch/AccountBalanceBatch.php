@@ -13,9 +13,11 @@ use CrazyGoat\Elephas\AccountBalance;
  */
 class AccountBalanceBatch extends AbstractBatch
 {
-    /**
-     * TODO: implement
-     */
+    protected function getStructSize(): int
+    {
+        return \CrazyGoat\Elephas\Internal\BinaryHelper::ACCOUNT_BALANCE_SIZE;
+    }
+
     public function add(): void
     {
         throw new \RuntimeException('AccountBalanceBatch is read-only');
