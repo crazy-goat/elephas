@@ -33,7 +33,7 @@ jobs:
       - name: Run code style checks
         run: composer lint
 
-  tests:
+  test-matrix:
     name: Tests (PHP ${{ matrix.php-version }})
     runs-on: ubuntu-latest
     strategy:
@@ -85,3 +85,13 @@ jobs:
       - name: Stop TigerBeetle
         if: always()
         run: docker stop tigerbeetle || true
+
+  tests:
+    name: tests
+    needs: [test-matrix]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.test-matrix.result }}" != "success" ]; then exit 1; fi
