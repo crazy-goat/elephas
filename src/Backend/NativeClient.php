@@ -80,13 +80,16 @@ CPROG;
     {
         \assert(\strlen($clusterId) === 16, 'Cluster ID must be 16 bytes');
 
+        /** @phpstan-var \FFI\CData $cClusterId */
         $cClusterId = $this->ffi->new('tb_uint128_t');
         \FFI::memcpy($cClusterId, $clusterId, 16);
 
         $addressString = \implode("\0", $addresses) . "\0";
+        /** @phpstan-var \FFI\CData $cAddresses */
         $cAddresses = $this->ffi->new('char[' . \strlen($addressString) . ']');
         \FFI::memcpy($cAddresses, $addressString, \strlen($addressString));
 
+        /** @phpstan-var \FFI\CData $clientPtr */
         $clientPtr = $this->ffi->new('tb_client_t*');
 
         /** @phpstan-ignore method.notFound */
