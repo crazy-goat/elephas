@@ -62,11 +62,14 @@ class ChangelogTest extends TestCase
 
         $versions = [];
         foreach ($matches[1] as $i => $major) {
-            $versions[] = sprintf('%d.%d.%d', $major, $matches[2][$i], $matches[3][$i]);
+            $versions[] = [
+                'str' => sprintf('%d.%d.%d', $major, $matches[2][$i], $matches[3][$i]),
+                'num' => ((int) $major) * 10000 + ((int) $matches[2][$i]) * 100 + ((int) $matches[3][$i]),
+            ];
         }
 
         $sorted = $versions;
-        usort($sorted, version_compare(...));
+        usort($sorted, static fn(array $a, array $b): int => $a['num'] <=> $b['num']);
         $sorted = array_reverse($sorted);
 
         $this->assertSame($sorted, $versions, 'Versions must be in descending order');
