@@ -57,11 +57,19 @@ jobs:
 
       - name: Start TigerBeetle
         run: |
-          docker run -d --name tigerbeetle --rm -p 3000:3000 \
+          docker run --rm --privileged \
+            -v /tmp/tb:/tmp/tb \
             ghcr.io/tigerbeetle/tigerbeetle:0.17.4 \
-            start --addresses=3000 --development
+            format --cluster=0 --replica=0 --replica-count=1 /tmp/tb/data
+
+          docker run -d --name tigerbeetle --rm --privileged \
+            -p 3000:3000 \
+            -v /tmp/tb:/tmp/tb \
+            ghcr.io/tigerbeetle/tigerbeetle:0.17.4 \
+            start --addresses=3000 --development /tmp/tb/data
+
           for i in $(seq 1 30); do
-            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+            if bash -c 'echo > /dev/tcp/localhost/3000' 2>/dev/null; then
               echo "TigerBeetle is ready"
               break
             fi
