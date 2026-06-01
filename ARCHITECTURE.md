@@ -496,31 +496,67 @@ resources/
 
 ## 12. Docker
 
+Dev environment with two containers: PHP 8.2 CLI and TigerBeetle 0.17.4.
+
 ### docker-compose.yml
 
 ```yaml
 services:
+  tigerbeetle:
+    image: ghcr.io/tigerbeetle/tigerbeetle:0.17.4
+    entrypoint: >
+      sh -c "
+        tigerbeetle format --cluster=0 --replica=0 --replica-count=1 --development /data/0_0.tigerbeetle &&
+        tigerbeetle start --addresses=3000 --development /data/0_0.tigerbeetle
+      "
+    ports:
+      - "3000:3000"
+    volumes:
+      - tb_data:/data
+
   elephas:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      TIGERBEETLE_ADDRESS: tigerbeetle:3000
     volumes:
       - ..:/app
+    working_dir: /app
     depends_on:
       tigerbeetle:
         condition: service_started
+    entrypoint: ["tail", "-f", "/dev/null"]
 
-  tigerbeetle:
-    image: ghcr.io/tigerbeetle/tigerbeetle:0.17.4
-    command: ["start", "--addresses=3000", "--development"]
+volumes:
+  tb_data:
 ```
 
 ### Dockerfile
 
-- PHP 8.2 CLI
-- `ext-ffi`, `ext-gmp`, `ext-bcmath`, `ext-pcntl`, `ext-posix`
-- Composer
-- TigerBeetle binary do testów
+- **Base**: `php:8.2-cli-alpine` (smaller image)
+- **Extensions**: `ext-ffi`, `ext-gmp`, `ext-bcmath`, `ext-pcntl`, `ext-posix`
+- **Composer**: from `composer:latest`
+- **TigerBeetle binary**: multi-stage build for `linux/amd64` and `linux/arm64` (for local testing without Docker-in-Docker)
+
+### Usage
+
+```bash
+cd docker
+docker compose up -d --build
+docker compose exec elephas php -v
+docker compose exec elephas php -m | grep -E "ffi|gmp|bcmath|pcntl|posix"
+docker compose exec elephas composer --version
+docker compose down
+```
+
+### Validation
+
+Run `docker/validate.sh` to verify all requirements:
+
+```bash
+docker/validate.sh
+```
 
 ---
 

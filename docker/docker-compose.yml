@@ -16,7 +16,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      TB_ADDRESS: tigerbeetle:3000
+      TIGERBEETLE_ADDRESS: tigerbeetle:3000
     volumes:
       - ..:/app
     working_dir: /app
