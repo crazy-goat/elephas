@@ -52,9 +52,16 @@
         }
     },
     "scripts": {
-        "test": "vendor/bin/phpunit",
-        "test:functional": "vendor/bin/phpunit --testsuite=functional",
-        "test:unit": "vendor/bin/phpunit --testsuite=unit",
+        "post-install-cmd": "php bin/install-git-hook.php",
+        "post-update-cmd": "php bin/install-git-hook.php",
+        "test": [
+            "@test-unit",
+            "@test-functional"
+        ],
+        "test-unit": "vendor/bin/phpunit --testsuite=unit",
+        "test:unit": "@test-unit",
+        "test-functional": "bin/run-functional-tests.sh",
+        "test:functional": "@test-functional",
         "lint": [
             "vendor/bin/php-cs-fixer fix -v --dry-run",
             "vendor/bin/phpstan analyse",
