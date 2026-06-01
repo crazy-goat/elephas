@@ -8,6 +8,7 @@ use CrazyGoat\Elephas\Backend\BackendInterface;
 use CrazyGoat\Elephas\Backend\FfiBackend;
 use CrazyGoat\Elephas\Batch\AccountBalanceBatch;
 use CrazyGoat\Elephas\Batch\AccountBatch;
+use CrazyGoat\Elephas\Batch\AccountFilterBatch;
 use CrazyGoat\Elephas\Batch\CreateAccountResultBatch;
 use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
 use CrazyGoat\Elephas\Batch\IdBatch;
@@ -102,12 +103,13 @@ final class Client implements ClientInterface
         return TransferBatch::fromBuffer($response);
     }
 
-    public function getAccountTransfers(AccountFilter $filter): TransferBatch
+    public function getAccountTransfers(AccountFilterBatch $filter): TransferBatch
     {
         $this->ensureNotClosed();
 
-        // TODO: implement in #46
-        throw new \RuntimeException('Not implemented');
+        $response = $this->backend->submit(Operation::GET_ACCOUNT_TRANSFERS, $filter->toBytes());
+
+        return TransferBatch::fromBuffer($response);
     }
 
     public function getAccountBalances(AccountFilter $filter): AccountBalanceBatch

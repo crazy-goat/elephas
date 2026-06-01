@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas\Test\Functional;
 
+use CrazyGoat\Elephas\AccountFilterFlags;
 use CrazyGoat\Elephas\AccountFlags;
 use CrazyGoat\Elephas\Backend\FfiBackend;
 use CrazyGoat\Elephas\Batch\AccountBatch;
+use CrazyGoat\Elephas\Batch\AccountFilterBatch;
 use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
 use CrazyGoat\Elephas\Batch\IdBatch;
 use CrazyGoat\Elephas\Batch\TransferBatch;
@@ -840,5 +842,294 @@ class TransferTest extends TestCase
         } catch (\ValueError) {
             return CreateTransferStatus::LINKED_EVENT_FAILED;
         }
+    }
+
+    /**
+     * Helper: create N transfers from $debit to $credit and return their IDs in creation order.
+     *
+     * @return array<int, Uint128> transfer ids
+     */
+    private function createTransfersBetween(
+        Client $client,
+        Uint128 $debit,
+        Uint128 $credit,
+        int $count,
+    ): array {
+        $batch = new TransferBatch($count);
+        $ids = [];
+        for ($i = 0; $i < $count; $i++) {
+            $id = Id::generate();
+            $ids[] = $id;
+            $batch->add();
+            $batch->setId($id);
+            $batch->setDebitAccountId($debit);
+            $batch->setCreditAccountId($credit);
+            $batch->setAmount(Uint128::fromInt(10));
+            $batch->setLedger(1);
+            $batch->setCode(1);
+        }
+        $client->createTransfers($batch);
+
+        return $ids;
+    }
+
+    /**
+     * Helper: build a single-entry AccountFilterBatch with the given fields.
+     */
+    private function buildFilter(
+        Uint128 $accountId,
+        int $flags = 0,
+        int $timestampMin = 0,
+        int $timestampMax = 0,
+        int $limit = 0,
+    ): AccountFilterBatch {
+        $filter = new AccountFilterBatch(1);
+        $filter->add();
+        $filter->setAccountId($accountId);
+        $filter->setFlags($flags);
+        $filter->setTimestampMin($timestampMin);
+        $filter->setTimestampMax($timestampMax);
+        $filter->setLimit($limit);
+
+        return $filter;
+    }
+
+    public function testGetAccountTransfersAll(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+            $ids = $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            $filter = $this->buildFilter(
+                $debit,
+                AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS,
+            );
+
+            $transfers = $client->getAccountTransfers($filter);
+
+            $this->assertSame(3, $transfers->getLength());
+            $transfers->rewind();
+            for ($i = 0; $i < 3; $i++) {
+                $this->assertTrue(
+                    $ids[$i]->equals($transfers->getId()),
+                    \sprintf('Transfer #%d must match expected ID', $i),
+                );
+                $this->assertTrue($debit->equals($transfers->getDebitAccountId()));
+                $this->assertTrue($credit->equals($transfers->getCreditAccountId()));
+                if ($i < 2) {
+                    $transfers->next();
+                }
+            }
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountTransfersDebitsOnly(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+            $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            // Querying the debit account with DEBITS-only returns all 3 transfers
+            // (account_id matches debit side).
+            $debitFilter = $this->buildFilter($debit, AccountFilterFlags::DEBITS);
+            $debitTransfers = $client->getAccountTransfers($debitFilter);
+            $this->assertSame(3, $debitTransfers->getLength());
+
+            // Querying the credit account with DEBITS-only returns no transfers
+            // (account_id never matches the debit side of any transfer).
+            $creditFilter = $this->buildFilter($credit, AccountFilterFlags::DEBITS);
+            $creditTransfers = $client->getAccountTransfers($creditFilter);
+            $this->assertSame(0, $creditTransfers->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountTransfersCreditsOnly(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+            $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            // Querying the credit account with CREDITS-only returns all 3 transfers.
+            $creditFilter = $this->buildFilter($credit, AccountFilterFlags::CREDITS);
+            $creditTransfers = $client->getAccountTransfers($creditFilter);
+            $this->assertSame(3, $creditTransfers->getLength());
+
+            // Querying the debit account with CREDITS-only returns nothing.
+            $debitFilter = $this->buildFilter($debit, AccountFilterFlags::CREDITS);
+            $debitTransfers = $client->getAccountTransfers($debitFilter);
+            $this->assertSame(0, $debitTransfers->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountTransfersReversed(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+            $ids = $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            $flags = AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS;
+
+            $forward = $client->getAccountTransfers($this->buildFilter($debit, $flags));
+            $this->assertSame(3, $forward->getLength());
+            $forward->rewind();
+            $forwardIds = [];
+            for ($i = 0; $i < 3; $i++) {
+                $forwardIds[] = $forward->getId();
+                if ($i < 2) {
+                    $forward->next();
+                }
+            }
+
+            $reversed = $client->getAccountTransfers(
+                $this->buildFilter($debit, $flags | AccountFilterFlags::REVERSED),
+            );
+            $this->assertSame(3, $reversed->getLength());
+            $reversed->rewind();
+            for ($i = 0; $i < 3; $i++) {
+                $this->assertTrue(
+                    $forwardIds[2 - $i]->equals($reversed->getId()),
+                    \sprintf('Reversed transfer #%d must equal forward transfer #%d', $i, 2 - $i),
+                );
+                if ($i < 2) {
+                    $reversed->next();
+                }
+            }
+
+            // Sanity check: the first reversed transfer is the last forward one.
+            $this->assertTrue($ids[2]->equals($forwardIds[2]));
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountTransfersTimestampRange(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+            $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            $flags = AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS;
+
+            $all = $client->getAccountTransfers($this->buildFilter($debit, $flags));
+            $this->assertSame(3, $all->getLength());
+            $all->rewind();
+            $timestamps = [];
+            for ($i = 0; $i < 3; $i++) {
+                $timestamps[] = $all->getTimestamp();
+                if ($i < 2) {
+                    $all->next();
+                }
+            }
+            $this->assertGreaterThan(0, $timestamps[0]);
+
+            // Use the middle transfer's timestamp as the inclusive lower bound;
+            // expect 2 results (middle + last).
+            $filtered = $client->getAccountTransfers(
+                $this->buildFilter($debit, $flags, timestampMin: $timestamps[1]),
+            );
+            $this->assertSame(2, $filtered->getLength());
+
+            // Use the middle transfer's timestamp as the inclusive upper bound;
+            // expect 2 results (first + middle).
+            $upper = $client->getAccountTransfers(
+                $this->buildFilter($debit, $flags, timestampMax: $timestamps[1]),
+            );
+            $this->assertSame(2, $upper->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountTransfersLimit(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$debit, $credit] = $this->createAccounts($client, 2);
+            $this->createTransfersBetween($client, $debit, $credit, 3);
+
+            $filter = $this->buildFilter(
+                $debit,
+                AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS,
+                limit: 2,
+            );
+
+            $transfers = $client->getAccountTransfers($filter);
+
+            $this->assertSame(2, $transfers->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountTransfersEmpty(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        try {
+            [$account] = $this->createAccounts($client, 1);
+
+            $filter = $this->buildFilter(
+                $account,
+                AccountFilterFlags::DEBITS | AccountFilterFlags::CREDITS,
+            );
+
+            $transfers = $client->getAccountTransfers($filter);
+
+            $this->assertSame(0, $transfers->getLength());
+        } finally {
+            $client->close();
+        }
+    }
+
+    public function testGetAccountTransfersAfterCloseThrows(): void
+    {
+        $client = $this->createClient();
+        if (!$client instanceof Client) {
+            $this->markTestSkipped('TigerBeetle or FFI not available');
+        }
+
+        $client->close();
+
+        $this->expectException(ClientClosedException::class);
+
+        $client->getAccountTransfers(new AccountFilterBatch(1));
     }
 }
