@@ -24,7 +24,7 @@ else
 fi
 
 echo "=== Checking TigerBeetle connectivity ==="
-if docker compose exec elephas bash -c 'echo > /dev/tcp/tigerbeetle/3000' 2>/dev/null; then
+if docker compose exec elephas php -r 'fsockopen("tigerbeetle", 3000) ?: exit(1);' 2>/dev/null; then
   echo "  ✓ TigerBeetle reachable on tigerbeetle:3000"
 else
   echo "  ✗ TigerBeetle NOT reachable"
