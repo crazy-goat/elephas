@@ -171,67 +171,6 @@ final class BinaryHelper
 
     /**
      * @param array{
-     *   account_id: Uint128|string,
-     *   user_data_128: Uint128|string,
-     *   user_data_64: int,
-     *   user_data_32: int,
-     *   code: int,
-     *   timestamp_min: int,
-     *   timestamp_max: int,
-     *   limit: int,
-     *   flags: int,
-     * } $fields
-     */
-    public static function packAccountFilter(array $fields): string
-    {
-        return pack('P5Vva58P2V2', ...[
-            ...self::uint128Parts($fields['account_id']),
-            ...self::uint128Parts($fields['user_data_128']),
-            $fields['user_data_64'],
-            $fields['user_data_32'],
-            $fields['code'],
-            str_repeat("\0", 58),
-            $fields['timestamp_min'],
-            $fields['timestamp_max'],
-            $fields['limit'],
-            $fields['flags'],
-        ]);
-    }
-
-    /**
-     * @return array{
-     *   account_id: string,
-     *   user_data_128: string,
-     *   user_data_64: int,
-     *   user_data_32: int,
-     *   code: int,
-     *   timestamp_min: int,
-     *   timestamp_max: int,
-     *   limit: int,
-     *   flags: int,
-     * }
-     */
-    public static function unpackAccountFilter(string $bytes): array
-    {
-        $raw = unpack('Paid_low/Paid_high/Pud128_low/Pud128_high/Pud64/Vud32/vcode/a58reserved/Ptimestamp_min/Ptimestamp_max/Vlimit/Vflags', $bytes);
-
-        \assert(\is_array($raw));
-
-        return [
-            'account_id' => self::fromRawParts($raw['aid_low'], $raw['aid_high']),
-            'user_data_128' => self::fromRawParts($raw['ud128_low'], $raw['ud128_high']),
-            'user_data_64' => $raw['ud64'],
-            'user_data_32' => $raw['ud32'],
-            'code' => $raw['code'],
-            'timestamp_min' => $raw['timestamp_min'],
-            'timestamp_max' => $raw['timestamp_max'],
-            'limit' => $raw['limit'],
-            'flags' => $raw['flags'],
-        ];
-    }
-
-    /**
-     * @param array{
      *   debits_pending: Uint128|string,
      *   debits_posted: Uint128|string,
      *   credits_pending: Uint128|string,
