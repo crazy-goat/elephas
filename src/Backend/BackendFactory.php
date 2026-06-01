@@ -15,7 +15,7 @@ final class BackendFactory
         Uint128 $clusterId,
         array $replicaAddresses,
     ): BackendInterface {
-        if (self::isFfiAvailable()) {
+        if (\extension_loaded('ffi')) {
             try {
                 return new FfiBackend($clusterId, $replicaAddresses);
             } catch (\Throwable) {
