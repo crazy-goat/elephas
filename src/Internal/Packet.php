@@ -20,13 +20,38 @@ class Packet
 
     private bool $completed = false;
 
-    /**
-     * TODO: implement
-     */
     public function __construct(
         private readonly Operation $operation,
         private readonly string $payload,
     ) {
+    }
+
+    public function onComplete(PacketStatus $status, string $data): void
+    {
+        $this->status = $status;
+        $this->data = $data;
+        $this->completed = true;
+    }
+
+    /**
+     * Wait for the packet to complete, with optional timeout in microseconds.
+     *
+     * @param int<0, max> $timeout maximum wait time in microseconds (0 = no timeout)
+     *
+     * @throws \RuntimeException if timeout is reached
+     */
+    public function wait(int $timeout = 0): void
+    {
+        $elapsed = 0;
+
+        while (!$this->completed) {
+            if ($timeout > 0 && $elapsed >= $timeout) {
+                throw new \RuntimeException('Packet wait timeout');
+            }
+
+            usleep(100);
+            $elapsed += 100;
+        }
     }
 
     public function getOperation(): Operation
