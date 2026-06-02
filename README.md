@@ -125,6 +125,7 @@ $client->close();
 | Method | Description | Returns |
 |--------|-------------|---------|
 | `__construct(Uint128 $clusterId, string ...$replicaAddresses)` | Connect to a TigerBeetle cluster | — |
+| `Client::withTimeout(Uint128 $clusterId, ?float $timeoutSeconds, string ...$replicaAddresses)` | Connect with a custom request timeout | `Client` |
 | `close(): void` | Disconnect and release resources | — |
 | `createAccounts(AccountBatch $batch): CreateAccountResultBatch` | Create accounts | `CreateAccountResultBatch` |
 | `createTransfers(TransferBatch $batch): CreateTransferResultBatch` | Create transfers | `CreateTransferResultBatch` |
@@ -134,6 +135,46 @@ $client->close();
 | `getAccountBalances(AccountFilterBatch $filter): AccountBalanceBatch` | Get account balances | `AccountBalanceBatch` |
 | `queryAccounts(QueryFilter $filter): AccountBatch` | Query accounts (not yet implemented) | `AccountBatch` |
 | `queryTransfers(QueryFilter $filter): TransferBatch` | Query transfers (not yet implemented) | `TransferBatch` |
+
+### Request Timeout
+
+By default each request waits up to **30 seconds** for the native TigerBeetle client
+to complete before throwing a `RequestTimeoutException`.  You can override this on a
+per-client basis using the `Client::withTimeout()` factory:
+
+```php
+use CrazyGoat\Elephas\Client;
+use CrazyGoat\Elephas\Uint128\Uint128;
+
+// 5-second timeout
+$client = Client::withTimeout(
+    Uint128::zero(),
+    5.0,
+    '127.0.0.1:3000',
+);
+
+// Default (30 s) timeout
+$client = new Client(Uint128::zero(), '127.0.0.1:3000');
+
+// Pass null to use the backend default explicitly
+$client = Client::withTimeout(Uint128::zero(), null, '127.0.0.1:3000');
+```
+
+When the timeout expires, a `CrazyGoat\Elephas\Exception\RequestTimeoutException`
+is thrown — a subclass of `\RuntimeException` that implements the project's
+`ElephasExceptionInterface`.  You can catch it to distinguish timeout failures
+from other request errors:
+
+```php
+use CrazyGoat\Elephas\Exception\RequestTimeoutException;
+
+try {
+    $result = $client->createAccounts($accounts);
+} catch (RequestTimeoutException $e) {
+    // $e->getTimeoutSeconds() returns the configured timeout value
+    echo "Timed out after " . $e->getTimeoutSeconds() . " s\n";
+}
+```
 
 ### Uint128
 

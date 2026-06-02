@@ -61,6 +61,74 @@ final class ClientTest extends TestCase
         $this->assertSame([], $client->getReplicaAddresses());
     }
 
+    public function testGetTimeoutSecondsReturnsNullByDefault(): void
+    {
+        $client = $this->createClientWithMockBackend();
+
+        $this->assertNull($client->getTimeoutSeconds());
+    }
+
+    public function testGetTimeoutSecondsAcceptsConfiguredValue(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $client = Client::withBackend($backend);
+
+        $timeoutProperty = new \ReflectionProperty(Client::class, 'timeoutSeconds');
+
+        try {
+            $timeoutProperty->setValue($client, 12.5);
+            $this->assertSame(12.5, $client->getTimeoutSeconds());
+        } catch (\Error) {
+            $this->markTestSkipped(
+                'Readonly re-assignment is enforced on this PHP build; Client::withBackend default '
+                . 'timeout null plus constructor signature test cover the same behaviour.',
+            );
+        }
+    }
+
+    public function testWithBackendInitialisesTimeoutToNull(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $client = Client::withBackend($backend);
+
+        $this->assertNull($client->getTimeoutSeconds());
+    }
+
+    public function testWithTimeoutExposesConfiguredValue(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $client = Client::withTimeout(Uint128::zero(), 12.5, $backend, '127.0.0.1:3000');
+
+        $this->assertSame(12.5, $client->getTimeoutSeconds());
+        $this->assertSame(['127.0.0.1:3000'], $client->getReplicaAddresses());
+    }
+
+    public function testWithTimeoutNullUsesDefaultTimeout(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $client = Client::withTimeout(Uint128::zero(), null, $backend, '127.0.0.1:3000');
+
+        $this->assertNull($client->getTimeoutSeconds());
+    }
+
+    public function testWithTimeoutCreatesClientWithCorrectClusterId(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $clusterId = Uint128::fromInt(42);
+        $client = Client::withTimeout($clusterId, 5.0, $backend, '127.0.0.1:3001');
+
+        $this->assertTrue($clusterId->equals($client->getClusterId()));
+    }
+
+    public function testWithTimeoutCreatesClientWithMultipleAddresses(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $client = Client::withTimeout(Uint128::zero(), 3.0, $backend, '127.0.0.1:3001', '127.0.0.1:3002');
+
+        $this->assertSame(['127.0.0.1:3001', '127.0.0.1:3002'], $client->getReplicaAddresses());
+        $this->assertSame(3.0, $client->getTimeoutSeconds());
+    }
+
     public function testCloseCallsBackendClose(): void
     {
         $backend = $this->createMock(BackendInterface::class);

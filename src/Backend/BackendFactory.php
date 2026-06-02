@@ -10,14 +10,16 @@ final class BackendFactory
 {
     /**
      * @param array<string> $replicaAddresses
+     * @param float|null    $timeoutSeconds  forwarded to the backend; see {@see NativeClient} for the default
      */
     public static function create(
         Uint128 $clusterId,
         array $replicaAddresses,
+        ?float $timeoutSeconds = null,
     ): BackendInterface {
         if (\extension_loaded('ffi')) {
             try {
-                return new FfiBackend($clusterId, $replicaAddresses);
+                return new FfiBackend($clusterId, $replicaAddresses, null, null, $timeoutSeconds);
             } catch (\Throwable) {
             }
         }

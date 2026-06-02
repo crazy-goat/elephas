@@ -11,6 +11,7 @@ use CrazyGoat\Elephas\Exception\ElephasExceptionInterface;
 use CrazyGoat\Elephas\Exception\InitializationException;
 use CrazyGoat\Elephas\Exception\IntegerOverflowException;
 use CrazyGoat\Elephas\Exception\RequestException;
+use CrazyGoat\Elephas\Exception\RequestTimeoutException;
 use CrazyGoat\Elephas\Exception\TooMuchDataException;
 use CrazyGoat\Elephas\InitStatus;
 use PHPUnit\Framework\Attributes\CoversNothing;
@@ -429,6 +430,54 @@ final class ExceptionTest extends TestCase
     }
 
     // ──────────────────────────────────────────────
+    //  RequestTimeoutException
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function requestTimeoutExceptionImplementsInterface(): void
+    {
+        $e = RequestTimeoutException::create(5.0);
+
+        $this->assertInstanceOf(ElephasExceptionInterface::class, $e);
+    }
+
+    #[Test]
+    public function requestTimeoutExceptionExtendsRuntimeException(): void
+    {
+        $e = RequestTimeoutException::create(5.0);
+
+        $this->assertInstanceOf(\RuntimeException::class, $e);
+    }
+
+    #[Test]
+    public function requestTimeoutExceptionMessageIncludesTimeout(): void
+    {
+        $e = RequestTimeoutException::create(7.5);
+
+        $this->assertStringContainsString('7.500', $e->getMessage());
+        $this->assertStringContainsString('timed out', $e->getMessage());
+    }
+
+    #[Test]
+    public function requestTimeoutExceptionExposesConfiguredTimeout(): void
+    {
+        $e = RequestTimeoutException::create(2.5);
+
+        $this->assertSame(2.5, $e->getTimeoutSeconds());
+    }
+
+    #[Test]
+    public function requestTimeoutExceptionCatchedAsInterface(): void
+    {
+        try {
+            throw RequestTimeoutException::create(1.0);
+        } catch (ElephasExceptionInterface $e) {
+            $this->assertInstanceOf(RequestTimeoutException::class, $e);
+            $this->assertSame(1.0, $e->getTimeoutSeconds());
+        }
+    }
+
+    // ──────────────────────────────────────────────
     //  All exception classes are final
     // ──────────────────────────────────────────────
 
@@ -442,6 +491,7 @@ final class ExceptionTest extends TestCase
             InitializationException::class,
             IntegerOverflowException::class,
             RequestException::class,
+            RequestTimeoutException::class,
             TooMuchDataException::class,
         ];
 
@@ -465,11 +515,12 @@ final class ExceptionTest extends TestCase
             InitializationException::class,
             IntegerOverflowException::class,
             RequestException::class,
+            RequestTimeoutException::class,
             TooMuchDataException::class,
         ];
 
         foreach ($exceptionClasses as $class) {
-            $e = new $class();
+            $e = $class === RequestTimeoutException::class ? $class::create(1.0) : new $class();
             $this->assertInstanceOf(\RuntimeException::class, $e);
             $this->assertInstanceOf(ElephasExceptionInterface::class, $e);
         }
