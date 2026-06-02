@@ -12,9 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI provisions a version-pinned (0.17.4) `tb_client` native library before running functional tests, ensuring FFI-backed tests no longer silently skip in CI (#108)
 - `AccountBatch::isFound()` and `TransferBatch::isFound()` methods for detecting missing records in lookup results (#112)
 - Lookup behaviour (ordering, missing-record zeroed struct) documented in README and `ClientInterface` docblocks (#112)
+- `NativeClient` lifecycle and failure-mode tests covering initialisation success/failure, request completion, native error statuses, timeout, and deinitialisation idempotency (#134)
 
 ### Changed
 - Replaced `assert()` calls with explicit exception-throwing validation at public and native boundaries so that validation cannot be silently disabled by PHP assertion settings (#121)
+- `NativeClient` FFI calls (`tb_client_init`, `tb_client_submit`, `tb_client_deinit`) extracted to overridable protected methods, enabling controlled test doubles without a real native library (#134)
 
 ### Fixed
 - All batch `fromBuffer()` factories now reject malformed buffers whose size is not an exact multiple of the expected struct size, preventing partial-record deserialization (#113)
