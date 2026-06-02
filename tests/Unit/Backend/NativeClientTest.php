@@ -10,6 +10,7 @@ use CrazyGoat\Elephas\Exception\RequestException;
 use CrazyGoat\Elephas\Exception\TooMuchDataException;
 use CrazyGoat\Elephas\PacketStatus;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -151,6 +152,81 @@ final class NativeClientTest extends TestCase
         $this->expectException(RequestException::class);
 
         $method->invoke($client, 255, 0, '');
+    }
+
+    #[Test]
+    #[RequiresPhpExtension('ffi')]
+    public function createDataBufferReturnsBufferOfCorrectSize(): void
+    {
+        $client = $this->createClientWithFfi();
+
+        $method = new \ReflectionMethod(NativeClient::class, 'createDataBuffer');
+
+        $buffer = $method->invoke($client, 'hello');
+
+        $this->assertInstanceOf(\FFI\CData::class, $buffer);
+        $this->assertSame(5, \FFI::sizeof($buffer));
+    }
+
+    #[Test]
+    #[RequiresPhpExtension('ffi')]
+    public function createDataBufferCopiesContentCorrectly(): void
+    {
+        $client = $this->createClientWithFfi();
+
+        $method = new \ReflectionMethod(NativeClient::class, 'createDataBuffer');
+
+        $buffer = $method->invoke($client, 'hello');
+
+        $this->assertSame('hello', \FFI::string($buffer, 5));
+    }
+
+    /**
+     * Verify that the buffer returned by createDataBuffer() remains valid
+     * after a cast to uint8_t*, which is what submit() does.  FFI::cast()
+     * does not extend the lifetime of the source CData — the caller must
+     * keep the original buffer alive.
+     */
+    #[Test]
+    #[RequiresPhpExtension('ffi')]
+    public function bufferSurvivesCastWhenOriginalReferenceIsKept(): void
+    {
+        $client = $this->createClientWithFfi();
+
+        $method = new \ReflectionMethod(NativeClient::class, 'createDataBuffer');
+
+        // Simulate what submit() does: allocate buffer, cast to pointer,
+        // keep the original alive locally.
+        /** @phpstan-var \FFI\CData $dataBuffer */
+        $dataBuffer = $method->invoke($client, 'persistent');
+        $ptr = $client->getFfi()->cast('uint8_t*', $dataBuffer);
+
+        // Read-back through the pointer — this is what pollForCompletion()
+        // does via FFI::string($packet->data, ...).
+        $this->assertSame('persistent', \FFI::string($ptr, 10));
+
+        // Simulate the cast-without-reference pattern: if the intermediate
+        // were discarded, the pointer could dangle.
+        unset($dataBuffer);
+        // After unset, the CData is eligible for GC, but FFI::string()
+        // on the still-alive $ptr might still work due to PHP's GC timing.
+        // This test documents the expected pattern; the real fix is the
+        // code structure in submit() that keeps the reference.
+    }
+
+    /**
+     * Create a NativeClient whose FFI instance can allocate uint8_t[] buffers.
+     * Uses a system library (libc) so the test does not require tb_client.
+     */
+    private function createClientWithFfi(): NativeClient
+    {
+        $ffi = \FFI::cdef('typedef unsigned char uint8_t;', 'libc.so.6');
+
+        $client = $this->createClientWithoutFfi();
+        $ref = new \ReflectionProperty(NativeClient::class, 'ffi');
+        $ref->setValue($client, $ffi);
+
+        return $client;
     }
 
     /** @phpstan-return NativeClient */
