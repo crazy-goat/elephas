@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `AccountBatch::isFound()` and `TransferBatch::isFound()` methods for detecting missing records in lookup results (#112)
 - Lookup behaviour (ordering, missing-record zeroed struct) documented in README and `ClientInterface` docblocks (#112)
 - `NativeClient` lifecycle and failure-mode tests covering initialisation success/failure, request completion, native error statuses, timeout, and deinitialisation idempotency (#134)
+- `CrazyGoat\Elephas\Internal\BinaryRange` helper with `assertUint8/16/32/64` static checks (#120)
 
 ### Changed
 - Replaced `assert()` calls with explicit exception-throwing validation at public and native boundaries so that validation cannot be silently disabled by PHP assertion settings (#121)
@@ -20,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - All batch `fromBuffer()` factories now reject malformed buffers whose size is not an exact multiple of the expected struct size, preventing partial-record deserialization (#113)
+- Integer setters on `AccountBatch`, `TransferBatch`, `QueryFilterBatch`, and `AccountFilterBatch` now validate that values fit their declared unsigned width (`uint8`/`uint16`/`uint32`/`uint64`) before binary packing. Negative or oversized values now raise `IntegerOverflowException` with the offending field name and accepted range, instead of being silently reinterpreted by `pack()` (#120)
 
 ### Changed
 - `CreateAccountResult` and `CreateTransferResult` no longer expose a synthetic `getId()` derived from the TigerBeetle-assigned timestamp. Both classes now provide `getTimestamp(): int` reflecting the actual timestamp returned by TigerBeetle for each created or rejected event. This aligns the public API with the native TigerBeetle `tb_create_account_result_t` / `tb_create_transfer_result_t` struct contract (TB 0.17.x) where each result carries a `uint64_t timestamp` and a `uint32_t status` (#111)

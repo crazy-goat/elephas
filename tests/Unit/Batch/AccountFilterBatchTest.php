@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\AccountFilterBatch;
+use CrazyGoat\Elephas\Exception\IntegerOverflowException;
 use CrazyGoat\Elephas\Uint128\Uint128;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class AccountFilterBatchTest extends TestCase
@@ -172,5 +174,57 @@ class AccountFilterBatchTest extends TestCase
         $this->assertTrue(
             Uint128::fromString('2000000000000000000000000000000')->equals($batch->getAccountId()),
         );
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1: int}>
+     */
+    public static function invalidIntegerValues(): iterable
+    {
+        yield 'user_data_64 negative' => ['user_data_64', -1];
+        yield 'user_data_32 negative' => ['user_data_32', -1];
+        yield 'user_data_32 overflow' => ['user_data_32', 0x1_0000_0000];
+        yield 'code negative' => ['code', -1];
+        yield 'code overflow' => ['code', 0x1_0000];
+        yield 'timestamp_min negative' => ['timestamp_min', -1];
+        yield 'timestamp_max negative' => ['timestamp_max', -1];
+        yield 'limit negative' => ['limit', -1];
+        yield 'limit overflow' => ['limit', 0x1_0000_0000];
+        yield 'flags negative' => ['flags', -1];
+        yield 'flags overflow' => ['flags', 0x1_0000_0000];
+    }
+
+    #[DataProvider('invalidIntegerValues')]
+    public function testIntegerSettersRejectOutOfRangeValues(string $field, int $value): void
+    {
+        $batch = new AccountFilterBatch(1);
+        $batch->add();
+
+        $this->expectException(IntegerOverflowException::class);
+        $this->expectExceptionMessage(\sprintf('"%s"', $field));
+
+        $batch->{'set' . \str_replace('_', '', \ucwords($field, '_'))}($value);
+    }
+
+    public function testIntegerSettersAcceptBoundaryValues(): void
+    {
+        $batch = new AccountFilterBatch(1);
+        $batch->add();
+
+        $batch->setUserData64(PHP_INT_MAX);
+        $batch->setUserData32(0xFFFFFFFF);
+        $batch->setCode(0xFFFF);
+        $batch->setTimestampMin(PHP_INT_MAX);
+        $batch->setTimestampMax(PHP_INT_MAX);
+        $batch->setLimit(0xFFFFFFFF);
+        $batch->setFlags(0xFFFFFFFF);
+
+        $this->assertSame(PHP_INT_MAX, $batch->getUserData64());
+        $this->assertSame(0xFFFFFFFF, $batch->getUserData32());
+        $this->assertSame(0xFFFF, $batch->getCode());
+        $this->assertSame(PHP_INT_MAX, $batch->getTimestampMin());
+        $this->assertSame(PHP_INT_MAX, $batch->getTimestampMax());
+        $this->assertSame(0xFFFFFFFF, $batch->getLimit());
+        $this->assertSame(0xFFFFFFFF, $batch->getFlags());
     }
 }

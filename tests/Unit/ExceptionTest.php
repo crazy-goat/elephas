@@ -85,6 +85,18 @@ final class ExceptionTest extends TestCase
     }
 
     #[Test]
+    public function integerOverflowExceptionForFieldRange(): void
+    {
+        $e = IntegerOverflowException::forFieldRange('user_data_32', 32, -1, 0, 4294967295);
+
+        $this->assertInstanceOf(IntegerOverflowException::class, $e);
+        $this->assertStringContainsString('user_data_32', $e->getMessage());
+        $this->assertStringContainsString('unsigned 32-bit', $e->getMessage());
+        $this->assertStringContainsString('0, 4294967295', $e->getMessage());
+        $this->assertStringContainsString('-1', $e->getMessage());
+    }
+
+    #[Test]
     public function integerOverflowExceptionCatchedAsRuntimeException(): void
     {
         try {

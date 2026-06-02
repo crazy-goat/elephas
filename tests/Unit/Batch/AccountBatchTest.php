@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\AccountBatch;
+use CrazyGoat\Elephas\Exception\IntegerOverflowException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 use CrazyGoat\Elephas\Uint128\Uint128;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 class AccountBatchTest extends TestCase
@@ -422,5 +424,69 @@ class AccountBatchTest extends TestCase
 
         $batch->rewind();
         $this->assertTrue($id->equals($batch->getId()));
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1: int}>
+     */
+    public static function invalidIntegerValues(): iterable
+    {
+        yield 'user_data_64 negative' => ['user_data_64', -1];
+        yield 'user_data_32 negative' => ['user_data_32', -1];
+        yield 'user_data_32 overflow' => ['user_data_32', 0x1_0000_0000];
+        yield 'ledger negative' => ['ledger', -1];
+        yield 'ledger overflow' => ['ledger', 0x1_0000_0000];
+        yield 'code negative' => ['code', -1];
+        yield 'code overflow' => ['code', 0x1_0000];
+        yield 'flags negative' => ['flags', -1];
+        yield 'flags overflow' => ['flags', 0x1_0000];
+    }
+
+    #[DataProvider('invalidIntegerValues')]
+    public function testIntegerSettersRejectOutOfRangeValues(string $field, int $value): void
+    {
+        $batch = new AccountBatch(1);
+        $batch->add();
+
+        $this->expectException(IntegerOverflowException::class);
+        $this->expectExceptionMessage(\sprintf('"%s"', $field));
+
+        $batch->{'set' . \str_replace('_', '', \ucwords($field, '_'))}($value);
+    }
+
+    public function testIntegerSettersAcceptBoundaryValues(): void
+    {
+        $batch = new AccountBatch(1);
+        $batch->add();
+
+        $batch->setUserData64(PHP_INT_MAX);
+        $batch->setUserData32(0xFFFFFFFF);
+        $batch->setLedger(0xFFFFFFFF);
+        $batch->setCode(0xFFFF);
+        $batch->setFlags(0xFFFF);
+
+        $this->assertSame(PHP_INT_MAX, $batch->getUserData64());
+        $this->assertSame(0xFFFFFFFF, $batch->getUserData32());
+        $this->assertSame(0xFFFFFFFF, $batch->getLedger());
+        $this->assertSame(0xFFFF, $batch->getCode());
+        $this->assertSame(0xFFFF, $batch->getFlags());
+    }
+
+    public function testIntegerSettersAcceptZero(): void
+    {
+        $batch = new AccountBatch(1);
+        $batch->add();
+
+        $batch->setUserData64(0);
+        $batch->setUserData32(0);
+        $batch->setLedger(0);
+        $batch->setCode(0);
+        $batch->setFlags(0);
+
+        $this->assertSame(0, $batch->getUserData64());
+        $this->assertSame(0, $batch->getUserData32());
+        $this->assertSame(0, $batch->getLedger());
+        $this->assertSame(0, $batch->getCode());
+        $this->assertSame(0, $batch->getFlags());
     }
 }

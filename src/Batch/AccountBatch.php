@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Batch;
 
 use CrazyGoat\Elephas\Internal\BinaryHelper;
+use CrazyGoat\Elephas\Internal\BinaryRange;
 use CrazyGoat\Elephas\Uint128\Uint128;
 
 class AccountBatch extends AbstractBatch
@@ -118,6 +119,7 @@ class AccountBatch extends AbstractBatch
 
     public function setUserData64(int $value): void
     {
+        BinaryRange::assertUint64($value, 'user_data_64');
         $this->writeUint64(self::USER_DATA_64, $value);
     }
 
@@ -128,6 +130,7 @@ class AccountBatch extends AbstractBatch
 
     public function setUserData32(int $value): void
     {
+        BinaryRange::assertUint32($value, 'user_data_32');
         $this->writeUint32(self::USER_DATA_32, $value);
     }
 
@@ -138,6 +141,7 @@ class AccountBatch extends AbstractBatch
 
     public function setLedger(int $value): void
     {
+        BinaryRange::assertUint32($value, 'ledger');
         $this->writeUint32(self::LEDGER, $value);
     }
 
@@ -148,6 +152,7 @@ class AccountBatch extends AbstractBatch
 
     public function setCode(int $value): void
     {
+        BinaryRange::assertUint16($value, 'code');
         $this->writeUint16(self::CODE, $value);
     }
 
@@ -158,6 +163,7 @@ class AccountBatch extends AbstractBatch
 
     public function setFlags(int $value): void
     {
+        BinaryRange::assertUint16($value, 'flags');
         $this->writeUint16(self::FLAGS, $value);
     }
 
