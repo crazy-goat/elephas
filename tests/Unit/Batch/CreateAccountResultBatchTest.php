@@ -200,7 +200,7 @@ class CreateAccountResultBatchTest extends TestCase
         $batch = CreateAccountResultBatch::fromBuffer('');
 
         $this->expectException(InvalidBatchCursorException::class);
-        $this->expectExceptionMessage('Cannot read result on ' . CreateAccountResultBatch::class);
+        $this->expectExceptionMessage('Cannot read field on ' . CreateAccountResultBatch::class);
 
         $batch->getResult();
     }

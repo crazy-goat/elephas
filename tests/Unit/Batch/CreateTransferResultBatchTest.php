@@ -200,7 +200,7 @@ class CreateTransferResultBatchTest extends TestCase
         $batch = CreateTransferResultBatch::fromBuffer('');
 
         $this->expectException(InvalidBatchCursorException::class);
-        $this->expectExceptionMessage('Cannot read result on ' . CreateTransferResultBatch::class);
+        $this->expectExceptionMessage('Cannot read field on ' . CreateTransferResultBatch::class);
 
         $batch->getResult();
     }

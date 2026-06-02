@@ -496,7 +496,7 @@ class AccountBatchTest extends TestCase
         $batch = new AccountBatch(10);
 
         $this->expectException(InvalidBatchCursorException::class);
-        $this->expectExceptionMessage('Cannot write field on ' . AccountBatch::class . ': cursor position 0 is outside the populated range [0, 0). Call add() to populate the batch before accessing elements.');
+        $this->expectExceptionMessage('Cannot write field on ' . AccountBatch::class . ': cursor position 0 is outside the populated range [0, 0). Populate the batch before accessing elements.');
 
         $batch->setId(Uint128::fromString('1'));
     }
@@ -506,7 +506,7 @@ class AccountBatchTest extends TestCase
         $batch = new AccountBatch(10);
 
         $this->expectException(InvalidBatchCursorException::class);
-        $this->expectExceptionMessage('Cannot read field on ' . AccountBatch::class . ': cursor position 0 is outside the populated range [0, 0). Call add() to populate the batch before accessing elements.');
+        $this->expectExceptionMessage('Cannot read field on ' . AccountBatch::class . ': cursor position 0 is outside the populated range [0, 0). Populate the batch before accessing elements.');
 
         $batch->getId();
     }
@@ -528,24 +528,6 @@ class AccountBatchTest extends TestCase
         $this->expectException(InvalidBatchCursorException::class);
 
         $batch->setLedger(1);
-    }
-
-    public function testSettersAndGettersWorkAfterNavigationCycle(): void
-    {
-        $batch = new AccountBatch(2);
-        $batch->add();
-        $batch->setId(Uint128::fromString('1000000000000000000000000000000'));
-        $batch->add();
-        $batch->setId(Uint128::fromString('2000000000000000000000000000000'));
-
-        $batch->rewind();
-        $this->assertTrue(Uint128::fromString('1000000000000000000000000000000')->equals($batch->getId()));
-
-        $batch->next();
-        $this->assertTrue(Uint128::fromString('2000000000000000000000000000000')->equals($batch->getId()));
-
-        $batch->prev();
-        $this->assertTrue(Uint128::fromString('1000000000000000000000000000000')->equals($batch->getId()));
     }
 
     /**

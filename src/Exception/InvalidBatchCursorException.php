@@ -14,7 +14,7 @@ final class InvalidBatchCursorException extends \RuntimeException implements Ele
     public static function atPosition(string $batchClass, int $position, int $length, string $action): self
     {
         return new self(\sprintf(
-            'Cannot %s on %s: cursor position %d is outside the populated range [0, %d). Call add() to populate the batch before accessing elements.',
+            'Cannot %s on %s: cursor position %d is outside the populated range [0, %d). Populate the batch before accessing elements.',
             $action,
             $batchClass,
             $position,

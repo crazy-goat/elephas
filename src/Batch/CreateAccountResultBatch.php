@@ -46,7 +46,7 @@ class CreateAccountResultBatch extends AbstractBatch
 
     public function getResult(): CreateAccountResult
     {
-        $this->requireValidPosition('read result');
+        $this->requireValidPosition('read field');
         $offset = $this->currentPosition * $this->getStructSize();
         $data = \substr($this->buffer, $offset, $this->getStructSize());
         $unpacked = BinaryHelper::unpackCreateAccountResult($data);

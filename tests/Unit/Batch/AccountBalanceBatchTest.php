@@ -125,7 +125,7 @@ class AccountBalanceBatchTest extends TestCase
         $batch = AccountBalanceBatch::fromBuffer('');
 
         $this->expectException(InvalidBatchCursorException::class);
-        $this->expectExceptionMessage('Cannot read balance on ' . AccountBalanceBatch::class);
+        $this->expectExceptionMessage('Cannot read field on ' . AccountBalanceBatch::class);
 
         $batch->getBalance();
     }

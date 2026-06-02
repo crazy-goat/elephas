@@ -46,7 +46,7 @@ class AccountBalanceBatch extends AbstractBatch
 
     public function getBalance(): AccountBalance
     {
-        $this->requireValidPosition('read balance');
+        $this->requireValidPosition('read field');
         $offset = $this->currentPosition * $this->getStructSize();
         $data = \substr($this->buffer, $offset, $this->getStructSize());
         $unpacked = BinaryHelper::unpackAccountBalance($data);
