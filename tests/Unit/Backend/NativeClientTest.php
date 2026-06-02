@@ -200,6 +200,7 @@ final class NativeClientTest extends TestCase
         /** @phpstan-var \FFI\CData $dataBuffer */
         $dataBuffer = $method->invoke($client, 'persistent');
         $ptr = $client->getFfi()->cast('uint8_t*', $dataBuffer);
+        $this->assertInstanceOf(\FFI\CData::class, $ptr);
 
         // Read-back through the pointer — this is what pollForCompletion()
         // does via FFI::string($packet->data, ...).
