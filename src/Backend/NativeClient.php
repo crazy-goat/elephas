@@ -124,6 +124,13 @@ CPROG;
         /** @phpstan-var \FFI\CData $cPacket */
         $cPacket = $this->ffi->new('tb_packet_t');
 
+        // Keep a PHP reference to the underlying data buffer for the entire
+        // native request lifetime.  FFI::cast() does not extend the source
+        // CData lifetime — without this reference the uint8_t[] memory could
+        // be freed while tb_client still holds the raw pointer.
+        /** @phpstan-var \FFI\CData $dataBuffer */
+        $dataBuffer = $this->createDataBuffer($data);
+
         /** @phpstan-ignore property.notFound */
         $cPacket->user_data = 0;
         /** @phpstan-ignore property.notFound */
@@ -133,7 +140,7 @@ CPROG;
         /** @phpstan-ignore property.notFound */
         $cPacket->data_size = \strlen($data);
         /** @phpstan-ignore property.notFound */
-        $cPacket->data = $this->ffi->cast('uint8_t*', $this->createDataBuffer($data));
+        $cPacket->data = $this->ffi->cast('uint8_t*', $dataBuffer);
         /** @phpstan-ignore property.notFound */
         $cPacket->callback_context = 0;
 
@@ -141,6 +148,8 @@ CPROG;
         $this->ffi->tb_client_submit($this->client, \FFI::addr($cPacket));
 
         return $this->pollForCompletion($cPacket);
+        // $dataBuffer goes out of scope here, after the response has been
+        // read inside pollForCompletion() — no additional long-lived memory.
     }
 
     public function deinit(): void
