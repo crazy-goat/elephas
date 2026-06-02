@@ -7,7 +7,6 @@ namespace CrazyGoat\Elephas\Batch;
 use CrazyGoat\Elephas\CreateTransferResult;
 use CrazyGoat\Elephas\CreateTransferStatus;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
-use CrazyGoat\Elephas\Uint128\Uint128;
 
 class CreateTransferResultBatch extends AbstractBatch
 {
@@ -51,8 +50,6 @@ class CreateTransferResultBatch extends AbstractBatch
         $data = \substr($this->buffer, $offset, $this->getStructSize());
         $unpacked = BinaryHelper::unpackCreateTransferResult($data);
 
-        $id = Uint128::fromParts($unpacked['timestamp'], 0);
-
-        return new CreateTransferResult($id, CreateTransferStatus::from($unpacked['status']));
+        return new CreateTransferResult($unpacked['timestamp'], CreateTransferStatus::from($unpacked['status']));
     }
 }

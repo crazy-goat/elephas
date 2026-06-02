@@ -184,9 +184,15 @@ class ClientTest extends TestCase
 
             $this->assertSame(1, $results->getLength());
             $results->rewind();
+            $result = $results->getResult();
             $this->assertSame(
                 CreateAccountStatus::CREATED,
-                $results->getResult()->getStatus(),
+                $result->getStatus(),
+            );
+            $this->assertGreaterThan(
+                0,
+                $result->getTimestamp(),
+                'Successful account creation must return a positive timestamp',
             );
         } finally {
             $client->close();
@@ -214,12 +220,20 @@ class ClientTest extends TestCase
 
             $this->assertSame($count, $results->getLength());
             $results->rewind();
+            $previousTimestamp = 0;
             for ($i = 0; $i < $count; $i++) {
+                $result = $results->getResult();
                 $this->assertSame(
                     CreateAccountStatus::CREATED,
-                    $results->getResult()->getStatus(),
+                    $result->getStatus(),
                     \sprintf('Account #%d must be CREATED', $i),
                 );
+                $this->assertGreaterThan(
+                    $previousTimestamp,
+                    $result->getTimestamp(),
+                    \sprintf('Account #%d timestamp must be strictly increasing', $i),
+                );
+                $previousTimestamp = $result->getTimestamp();
                 if ($i < $count - 1) {
                     $results->next();
                 }
@@ -256,10 +270,18 @@ class ClientTest extends TestCase
 
             $this->assertSame(1, $results->getLength());
             $results->rewind();
+            $result = $results->getResult();
             $this->assertNotSame(
                 CreateAccountStatus::CREATED,
-                $results->getResult()->getStatus(),
+                $result->getStatus(),
                 'Re-creating the same account ID must not return CREATED',
+            );
+            // For duplicate IDs, TigerBeetle returns the status code; the
+            // timestamp is the original object's timestamp.
+            $this->assertGreaterThan(
+                0,
+                $result->getTimestamp(),
+                'Duplicate account result must include the original timestamp',
             );
         } finally {
             $client->close();
@@ -333,12 +355,20 @@ class ClientTest extends TestCase
 
             $this->assertSame($count, $results->getLength());
             $results->rewind();
+            $previousTimestamp = 0;
             for ($i = 0; $i < $count; $i++) {
+                $result = $results->getResult();
                 $this->assertSame(
                     CreateAccountStatus::CREATED,
-                    $results->getResult()->getStatus(),
+                    $result->getStatus(),
                     \sprintf('Account #%d must be CREATED', $i),
                 );
+                $this->assertGreaterThan(
+                    $previousTimestamp,
+                    $result->getTimestamp(),
+                    \sprintf('Account #%d timestamp must be strictly increasing', $i),
+                );
+                $previousTimestamp = $result->getTimestamp();
                 if ($i < $count - 1) {
                     $results->next();
                 }

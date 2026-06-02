@@ -7,7 +7,6 @@ namespace CrazyGoat\Elephas\Batch;
 use CrazyGoat\Elephas\CreateAccountResult;
 use CrazyGoat\Elephas\CreateAccountStatus;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
-use CrazyGoat\Elephas\Uint128\Uint128;
 
 class CreateAccountResultBatch extends AbstractBatch
 {
@@ -51,8 +50,6 @@ class CreateAccountResultBatch extends AbstractBatch
         $data = \substr($this->buffer, $offset, $this->getStructSize());
         $unpacked = BinaryHelper::unpackCreateAccountResult($data);
 
-        $id = Uint128::fromParts($unpacked['timestamp'], 0);
-
-        return new CreateAccountResult($id, CreateAccountStatus::from($unpacked['status']));
+        return new CreateAccountResult($unpacked['timestamp'], CreateAccountStatus::from($unpacked['status']));
     }
 }

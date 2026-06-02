@@ -62,7 +62,7 @@ class CreateTransferResultBatchTest extends TestCase
         $this->assertSame(CreateTransferStatus::LINKED_EVENT_FAILED, $result->getStatus());
     }
 
-    public function testGetResultReturnsCorrectIdAsTimestamp(): void
+    public function testGetResultReturnsCorrectTimestamp(): void
     {
         $batch = CreateTransferResultBatch::fromBuffer(
             \pack('PVV', 999888777, 0xFFFFFFFF, 0),
@@ -71,7 +71,7 @@ class CreateTransferResultBatchTest extends TestCase
         $batch->rewind();
         $result = $batch->getResult();
 
-        $this->assertSame('999888777', $result->getId()->toString());
+        $this->assertSame(999888777, $result->getTimestamp());
     }
 
     public function testMultipleResults(): void
@@ -132,5 +132,65 @@ class CreateTransferResultBatchTest extends TestCase
         $batch = CreateTransferResultBatch::fromBuffer($buffer);
 
         $this->assertSame(3, $batch->count());
+    }
+
+    public function testGetResultThrowsValueErrorForUnknownStatus(): void
+    {
+        $batch = CreateTransferResultBatch::fromBuffer(
+            \pack('PVV', 0, 999, 0),
+        );
+
+        $batch->rewind();
+
+        $this->expectException(\ValueError::class);
+        $batch->getResult();
+    }
+
+    public function testGetResultTimestampCorrespondsToPosition(): void
+    {
+        $buffer = \implode('', [
+            \pack('PVV', 111, 0xFFFFFFFF, 0),
+            \pack('PVV', 222, 0xFFFFFFFF, 0),
+            \pack('PVV', 333, 0xFFFFFFFF, 0),
+        ]);
+        $batch = CreateTransferResultBatch::fromBuffer($buffer);
+
+        $this->assertSame(3, $batch->getLength());
+
+        $batch->rewind();
+        $this->assertSame(111, $batch->getResult()->getTimestamp());
+
+        $batch->next();
+        $this->assertSame(222, $batch->getResult()->getTimestamp());
+
+        $batch->next();
+        $this->assertSame(333, $batch->getResult()->getTimestamp());
+    }
+
+    public function testGetResultReturnsTimestampFromSuccessfulResult(): void
+    {
+        $batch = CreateTransferResultBatch::fromBuffer(
+            \pack('PVV', 42, 0xFFFFFFFF, 0),
+        );
+
+        $batch->rewind();
+        $result = $batch->getResult();
+
+        $this->assertSame(42, $result->getTimestamp());
+        $this->assertTrue($result->isCreated());
+    }
+
+    public function testGetResultReturnsTimestampFromErrorResult(): void
+    {
+        $batch = CreateTransferResultBatch::fromBuffer(
+            \pack('PVV', 0, CreateTransferStatus::ID_MUST_NOT_BE_ZERO->value, 0),
+        );
+
+        $batch->rewind();
+        $result = $batch->getResult();
+
+        $this->assertSame(0, $result->getTimestamp());
+        $this->assertFalse($result->isCreated());
+        $this->assertSame(CreateTransferStatus::ID_MUST_NOT_BE_ZERO, $result->getStatus());
     }
 }
