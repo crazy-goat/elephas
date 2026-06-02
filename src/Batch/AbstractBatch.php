@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas\Batch;
 
+use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
+
 abstract class AbstractBatch implements \Countable
 {
     protected string $buffer;
@@ -75,6 +77,21 @@ abstract class AbstractBatch implements \Countable
     public function isReadOnly(): bool
     {
         return false;
+    }
+
+    /**
+     * @throws InvalidBatchCursorException when the current position is outside the populated range
+     */
+    protected function requireValidPosition(string $action): void
+    {
+        if (!$this->isValidPosition()) {
+            throw InvalidBatchCursorException::atPosition(
+                static::class,
+                $this->currentPosition,
+                $this->length,
+                $action,
+            );
+        }
     }
 
     public function getBuffer(): string

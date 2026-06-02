@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lookup behaviour (ordering, missing-record zeroed struct) documented in README and `ClientInterface` docblocks (#112)
 - `NativeClient` lifecycle and failure-mode tests covering initialisation success/failure, request completion, native error statuses, timeout, and deinitialisation idempotency (#134)
 - `CrazyGoat\Elephas\Internal\BinaryRange` helper with `assertUint8/16/32/64` static checks (#120)
+- `CrazyGoat\Elephas\Exception\InvalidBatchCursorException` thrown by batch getters and setters when the cursor position is outside the populated range (#119)
 
 ### Changed
 - Replaced `assert()` calls with explicit exception-throwing validation at public and native boundaries so that validation cannot be silently disabled by PHP assertion settings (#121)
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - All batch `fromBuffer()` factories now reject malformed buffers whose size is not an exact multiple of the expected struct size, preventing partial-record deserialization (#113)
+- Batch getters and setters on `AccountBatch`, `TransferBatch`, `IdBatch`, `AccountFilterBatch`, `QueryFilterBatch`, `AccountBalanceBatch`, `CreateAccountResultBatch`, and `CreateTransferResultBatch` now fail fast with a dedicated `InvalidBatchCursorException` when called before `add()` (or on a buffer created from an empty response), instead of silently writing into or reading from the pre-allocated buffer while the logical length remains zero (#119)
 - Integer setters on `AccountBatch`, `TransferBatch`, `QueryFilterBatch`, and `AccountFilterBatch` now validate that values fit their declared unsigned width (`uint8`/`uint16`/`uint32`/`uint64`) before binary packing. Negative or oversized values now raise `IntegerOverflowException` with the offending field name and accepted range, instead of being silently reinterpreted by `pack()` (#120)
 
 ### Changed

@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\TransferBatch;
 use CrazyGoat\Elephas\Exception\IntegerOverflowException;
+use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -548,5 +549,47 @@ class TransferBatchTest extends TestCase
         $this->assertSame(0, $batch->getLedger());
         $this->assertSame(0, $batch->getCode());
         $this->assertSame(0, $batch->getFlags());
+    }
+
+    public function testSettersThrowBeforeAdd(): void
+    {
+        $batch = new TransferBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot write field on ' . TransferBatch::class);
+
+        $batch->setId(Uint128::fromString('1'));
+    }
+
+    public function testGettersThrowBeforeAdd(): void
+    {
+        $batch = new TransferBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot read field on ' . TransferBatch::class);
+
+        $batch->getId();
+    }
+
+    public function testSettersAndGettersThrowOnEmptyFromBuffer(): void
+    {
+        $batch = TransferBatch::fromBuffer('');
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $batch->setLedger(1);
+    }
+
+    public function testBufferRemainsEmptyAfterFailedSetterBeforeAdd(): void
+    {
+        $batch = new TransferBatch(10);
+
+        try {
+            $batch->setAmount(Uint128::fromString('1'));
+            $this->fail('Expected InvalidBatchCursorException');
+        } catch (InvalidBatchCursorException) {
+        }
+
+        $this->assertSame(0, $batch->getLength());
+        $this->assertSame('', $batch->getBuffer());
     }
 }

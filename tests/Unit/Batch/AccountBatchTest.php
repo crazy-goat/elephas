@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\AccountBatch;
 use CrazyGoat\Elephas\Exception\IntegerOverflowException;
+use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -488,5 +489,104 @@ class AccountBatchTest extends TestCase
         $this->assertSame(0, $batch->getLedger());
         $this->assertSame(0, $batch->getCode());
         $this->assertSame(0, $batch->getFlags());
+    }
+
+    public function testSettersThrowBeforeAdd(): void
+    {
+        $batch = new AccountBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot write field on ' . AccountBatch::class . ': cursor position 0 is outside the populated range [0, 0)');
+
+        $batch->setId(Uint128::fromString('1'));
+    }
+
+    public function testGettersThrowBeforeAdd(): void
+    {
+        $batch = new AccountBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot read field on ' . AccountBatch::class . ': cursor position 0 is outside the populated range [0, 0)');
+
+        $batch->getId();
+    }
+
+    public function testGettersThrowOnEmptyFromBuffer(): void
+    {
+        $batch = AccountBatch::fromBuffer('');
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('cursor position 0 is outside the populated range [0, 0)');
+
+        $batch->getId();
+    }
+
+    public function testSettersThrowOnEmptyFromBuffer(): void
+    {
+        $batch = AccountBatch::fromBuffer('');
+
+        $this->expectException(InvalidBatchCursorException::class);
+
+        $batch->setLedger(1);
+    }
+
+    public function testSettersAndGettersWorkAfterNavigationCycle(): void
+    {
+        $batch = new AccountBatch(2);
+        $batch->add();
+        $batch->setId(Uint128::fromString('1000000000000000000000000000000'));
+        $batch->add();
+        $batch->setId(Uint128::fromString('2000000000000000000000000000000'));
+
+        $batch->rewind();
+        $this->assertTrue(Uint128::fromString('1000000000000000000000000000000')->equals($batch->getId()));
+
+        $batch->next();
+        $this->assertTrue(Uint128::fromString('2000000000000000000000000000000')->equals($batch->getId()));
+
+        $batch->prev();
+        $this->assertTrue(Uint128::fromString('1000000000000000000000000000000')->equals($batch->getId()));
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1: int|Uint128}>
+     */
+    public static function settersThatThrowBeforeAdd(): iterable
+    {
+        yield 'setId' => ['setId', Uint128::fromString('1')];
+        yield 'setDebitsPending' => ['setDebitsPending', Uint128::fromString('1')];
+        yield 'setDebitsPosted' => ['setDebitsPosted', Uint128::fromString('1')];
+        yield 'setCreditsPending' => ['setCreditsPending', Uint128::fromString('1')];
+        yield 'setCreditsPosted' => ['setCreditsPosted', Uint128::fromString('1')];
+        yield 'setUserData128' => ['setUserData128', Uint128::fromString('1')];
+        yield 'setUserData64' => ['setUserData64', 1];
+        yield 'setUserData32' => ['setUserData32', 1];
+        yield 'setLedger' => ['setLedger', 1];
+        yield 'setCode' => ['setCode', 1];
+        yield 'setFlags' => ['setFlags', 1];
+    }
+
+    #[DataProvider('settersThatThrowBeforeAdd')]
+    public function testAllSettersThrowBeforeAdd(string $setter, int|Uint128 $value): void
+    {
+        $batch = new AccountBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+
+        $batch->{$setter}($value);
+    }
+
+    public function testBufferRemainsEmptyAfterFailedSetterBeforeAdd(): void
+    {
+        $batch = new AccountBatch(10);
+
+        try {
+            $batch->setId(Uint128::fromString('1'));
+            $this->fail('Expected InvalidBatchCursorException');
+        } catch (InvalidBatchCursorException) {
+        }
+
+        $this->assertSame(0, $batch->getLength());
+        $this->assertSame('', $batch->getBuffer());
     }
 }

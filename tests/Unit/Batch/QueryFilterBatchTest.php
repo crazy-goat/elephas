@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\QueryFilterBatch;
 use CrazyGoat\Elephas\Exception\IntegerOverflowException;
+use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -286,5 +287,25 @@ class QueryFilterBatchTest extends TestCase
         $this->assertSame(PHP_INT_MAX, $batch->getTimestampMax());
         $this->assertSame(0xFFFFFFFF, $batch->getLimit());
         $this->assertSame(0xFFFFFFFF, $batch->getFlags());
+    }
+
+    public function testSettersThrowBeforeAdd(): void
+    {
+        $batch = new QueryFilterBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot write field on ' . QueryFilterBatch::class);
+
+        $batch->setUserData128(Uint128::fromString('1'));
+    }
+
+    public function testGettersThrowBeforeAdd(): void
+    {
+        $batch = new QueryFilterBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot read field on ' . QueryFilterBatch::class);
+
+        $batch->getUserData128();
     }
 }

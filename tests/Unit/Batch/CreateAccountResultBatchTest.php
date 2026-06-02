@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\CreateAccountResultBatch;
 use CrazyGoat\Elephas\CreateAccountStatus;
+use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 use PHPUnit\Framework\TestCase;
 
@@ -192,5 +193,15 @@ class CreateAccountResultBatchTest extends TestCase
         $this->assertSame(0, $result->getTimestamp());
         $this->assertFalse($result->isCreated());
         $this->assertSame(CreateAccountStatus::ID_MUST_NOT_BE_ZERO, $result->getStatus());
+    }
+
+    public function testGetResultThrowsOnEmptyBatch(): void
+    {
+        $batch = CreateAccountResultBatch::fromBuffer('');
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot read result on ' . CreateAccountResultBatch::class);
+
+        $batch->getResult();
     }
 }

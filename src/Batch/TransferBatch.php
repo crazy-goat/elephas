@@ -186,6 +186,7 @@ class TransferBatch extends AbstractBatch
 
     private function readUint128(int $fieldOffset): Uint128
     {
+        $this->requireValidPosition('read field');
         $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
 
         return Uint128::fromBytes(\substr($this->buffer, $offset, 16));
@@ -193,12 +194,14 @@ class TransferBatch extends AbstractBatch
 
     private function writeUint128(int $fieldOffset, Uint128 $value): void
     {
+        $this->requireValidPosition('write field');
         $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
         $this->buffer = \substr_replace($this->buffer, $value->toBytes(), $offset, 16);
     }
 
     private function readUint64(int $fieldOffset): int
     {
+        $this->requireValidPosition('read field');
         $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
         /** @var array{1: int} $unpacked */
         $unpacked = \unpack('P', \substr($this->buffer, $offset, 8));
@@ -208,12 +211,14 @@ class TransferBatch extends AbstractBatch
 
     private function writeUint64(int $fieldOffset, int $value): void
     {
+        $this->requireValidPosition('write field');
         $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
         $this->buffer = \substr_replace($this->buffer, \pack('P', $value), $offset, 8);
     }
 
     private function readUint32(int $fieldOffset): int
     {
+        $this->requireValidPosition('read field');
         $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
         /** @var array{1: int} $unpacked */
         $unpacked = \unpack('V', \substr($this->buffer, $offset, 4));
@@ -223,12 +228,14 @@ class TransferBatch extends AbstractBatch
 
     private function writeUint32(int $fieldOffset, int $value): void
     {
+        $this->requireValidPosition('write field');
         $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
         $this->buffer = \substr_replace($this->buffer, \pack('V', $value), $offset, 4);
     }
 
     private function readUint16(int $fieldOffset): int
     {
+        $this->requireValidPosition('read field');
         $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
         /** @var array{1: int} $unpacked */
         $unpacked = \unpack('v', \substr($this->buffer, $offset, 2));
@@ -238,6 +245,7 @@ class TransferBatch extends AbstractBatch
 
     private function writeUint16(int $fieldOffset, int $value): void
     {
+        $this->requireValidPosition('write field');
         $offset = $this->currentPosition * $this->getStructSize() + $fieldOffset;
         $this->buffer = \substr_replace($this->buffer, \pack('v', $value), $offset, 2);
     }

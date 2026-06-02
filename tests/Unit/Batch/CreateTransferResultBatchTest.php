@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
 use CrazyGoat\Elephas\CreateTransferStatus;
+use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 use PHPUnit\Framework\TestCase;
 
@@ -192,5 +193,15 @@ class CreateTransferResultBatchTest extends TestCase
         $this->assertSame(0, $result->getTimestamp());
         $this->assertFalse($result->isCreated());
         $this->assertSame(CreateTransferStatus::ID_MUST_NOT_BE_ZERO, $result->getStatus());
+    }
+
+    public function testGetResultThrowsOnEmptyBatch(): void
+    {
+        $batch = CreateTransferResultBatch::fromBuffer('');
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot read result on ' . CreateTransferResultBatch::class);
+
+        $batch->getResult();
     }
 }

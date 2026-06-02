@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\AccountFilterBatch;
 use CrazyGoat\Elephas\Exception\IntegerOverflowException;
+use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -226,5 +227,25 @@ class AccountFilterBatchTest extends TestCase
         $this->assertSame(PHP_INT_MAX, $batch->getTimestampMax());
         $this->assertSame(0xFFFFFFFF, $batch->getLimit());
         $this->assertSame(0xFFFFFFFF, $batch->getFlags());
+    }
+
+    public function testSettersThrowBeforeAdd(): void
+    {
+        $batch = new AccountFilterBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot write field on ' . AccountFilterBatch::class);
+
+        $batch->setAccountId(Uint128::fromString('1'));
+    }
+
+    public function testGettersThrowBeforeAdd(): void
+    {
+        $batch = new AccountFilterBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot read field on ' . AccountFilterBatch::class);
+
+        $batch->getAccountId();
     }
 }
