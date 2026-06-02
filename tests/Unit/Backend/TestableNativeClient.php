@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Test\Unit\Backend;
 
 use CrazyGoat\Elephas\Backend\NativeClient;
+use CrazyGoat\Elephas\Exception\RequestTimeoutException;
 use CrazyGoat\Elephas\PacketStatus;
 
 final class TestableNativeClient extends NativeClient
@@ -29,6 +30,9 @@ final class TestableNativeClient extends NativeClient
     {
         $ref = new \ReflectionProperty(NativeClient::class, 'libPath');
         $ref->setValue($this, '/dev/null');
+
+        $timeoutRef = new \ReflectionProperty(NativeClient::class, 'timeoutSeconds');
+        $timeoutRef->setValue($this, NativeClient::DEFAULT_TIMEOUT_SECONDS);
 
         $minimalHeader = <<<'CPROG'
 typedef unsigned char tb_uint128_t[16];
@@ -115,7 +119,7 @@ CPROG;
     protected function pollForCompletion(\FFI\CData $packet): string
     {
         if ($this->submitShouldTimeout) {
-            throw new \RuntimeException('TigerBeetle request timed out after 30 s');
+            throw RequestTimeoutException::create($this->getTimeoutSeconds());
         }
 
         if ($this->submitException instanceof \Throwable) {

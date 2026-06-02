@@ -19,8 +19,9 @@ class FfiBackend extends AbstractBackend
         private readonly array $replicaAddresses,
         ?NativeClient $nativeClient = null,
         ?string $libPath = null,
+        ?float $timeoutSeconds = null,
     ) {
-        $this->client = $nativeClient ?? new NativeClient($libPath);
+        $this->client = $nativeClient ?? new NativeClient($libPath, $timeoutSeconds);
         $this->client->init($this->clusterId->toBytes(), $this->replicaAddresses);
     }
 

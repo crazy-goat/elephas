@@ -31,6 +31,8 @@ final class Client implements ClientInterface
     /** @var array<string> */
     private readonly array $replicaAddresses;
 
+    private ?float $timeoutSeconds = null;
+
     /**
      * @param Uint128 $clusterId the cluster ID
      * @param string ...$replicaAddresses the replica addresses
@@ -44,11 +46,49 @@ final class Client implements ClientInterface
     }
 
     /**
+     * Create a Client instance with a custom request timeout.
+     *
+     * The timeout controls how long each {@see submit()}-based call (e.g.
+     * {@see createAccounts()}, {@see lookupAccounts()}, …) waits for the
+     * native TigerBeetle client to complete before throwing
+     * {@see \CrazyGoat\Elephas\Exception\RequestTimeoutException}.
+     *
+     * @param float|null       $timeoutSeconds   request completion timeout in seconds; null keeps
+     *                                           the backend default (30 s). Must be > 0 if provided.
+     * @param BackendInterface $backend          for testing / dependency injection; when null
+     *                                           the default FfiBackend is created via BackendFactory.
+     * @param string           ...$replicaAddresses the replica addresses
+     */
+    public static function withTimeout(
+        Uint128 $clusterId,
+        ?float $timeoutSeconds = null,
+        ?BackendInterface $backend = null,
+        string ...$replicaAddresses,
+    ): self {
+        $reflection = new \ReflectionClass(self::class);
+        /** @var self $client */
+        $client = $reflection->newInstanceWithoutConstructor();
+
+        $clusterIdProperty = $reflection->getProperty('clusterId');
+        $replicaAddressesProperty = $reflection->getProperty('replicaAddresses');
+        $backendProperty = $reflection->getProperty('backend');
+
+        $clusterIdProperty->setValue($client, $clusterId);
+        $replicaAddressesProperty->setValue($client, $replicaAddresses);
+        $client->timeoutSeconds = $timeoutSeconds;
+        $backendProperty->setValue(
+            $client,
+            $backend ?? BackendFactory::create($clusterId, $replicaAddresses, $timeoutSeconds),
+        );
+
+        return $client;
+    }
+
+    /**
      * Create a Client instance with a custom backend (for testing/dependency injection).
      *
      * Bypasses the public constructor via reflection so that the default FfiBackend
-     * is not instantiated. PHP 8.2+ allows ReflectionProperty::setValue() to set
-     * readonly properties from outside the declaring class scope.
+     * is not instantiated.
      */
     public static function withBackend(BackendInterface $backend): self
     {
@@ -59,10 +99,12 @@ final class Client implements ClientInterface
         $clusterIdProperty = $reflection->getProperty('clusterId');
         $replicaAddressesProperty = $reflection->getProperty('replicaAddresses');
         $backendProperty = $reflection->getProperty('backend');
+        $timeoutProperty = $reflection->getProperty('timeoutSeconds');
 
         $clusterIdProperty->setValue($client, Uint128::zero());
         $replicaAddressesProperty->setValue($client, []);
         $backendProperty->setValue($client, $backend);
+        $timeoutProperty->setValue($client, null);
 
         return $client;
     }
@@ -146,6 +188,11 @@ final class Client implements ClientInterface
     public function getReplicaAddresses(): array
     {
         return $this->replicaAddresses;
+    }
+
+    public function getTimeoutSeconds(): ?float
+    {
+        return $this->timeoutSeconds;
     }
 
     public function close(): void

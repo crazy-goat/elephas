@@ -7,6 +7,7 @@ namespace CrazyGoat\Elephas\Test\Unit\Backend;
 use CrazyGoat\Elephas\Backend\NativeClient;
 use CrazyGoat\Elephas\Exception\InitializationException;
 use CrazyGoat\Elephas\Exception\RequestException;
+use CrazyGoat\Elephas\Exception\RequestTimeoutException;
 use CrazyGoat\Elephas\Exception\TooMuchDataException;
 use CrazyGoat\Elephas\Operation;
 use CrazyGoat\Elephas\PacketStatus;
@@ -23,7 +24,8 @@ final class NativeClientTest extends TestCase
         try {
             $client = new NativeClient();
             $this->assertInstanceOf(NativeClient::class, $client);
-        } catch (InitializationException $e) {
+        } catch (\Throwable $e) {
+            $this->assertInstanceOf(InitializationException::class, $e);
             $this->assertStringContainsString('Cannot find tb_client', $e->getMessage());
         }
     }
@@ -41,6 +43,66 @@ final class NativeClientTest extends TestCase
     {
         $this->assertNotSame(0, NativeClient::PACKET_PENDING);
         $this->assertNotSame(PacketStatus::OK->value, NativeClient::PACKET_PENDING);
+    }
+
+    #[Test]
+    public function defaultTimeoutIsExposed(): void
+    {
+        $client = $this->createClientWithoutFfi();
+
+        $this->assertSame(NativeClient::DEFAULT_TIMEOUT_SECONDS, $client->getTimeoutSeconds());
+    }
+
+    #[Test]
+    public function defaultTimeoutConstantIsPositive(): void
+    {
+        $this->assertGreaterThan(0.0, NativeClient::DEFAULT_TIMEOUT_SECONDS);
+    }
+
+    #[Test]
+    public function processCompletionResultIncludesConfiguredTimeoutInException(): void
+    {
+        $client = $this->createClientWithoutFfi();
+        $client->setTimeoutForTests(4.25);
+        $method = $this->getProcessCompletionResultMethod();
+
+        $this->expectException(RequestTimeoutException::class);
+        $this->expectExceptionMessage('4.250');
+
+        $method->invoke($client, NativeClient::PACKET_PENDING, 0, '');
+    }
+
+    #[Test]
+    public function processCompletionResultExposesConfiguredTimeoutOnException(): void
+    {
+        $client = $this->createClientWithoutFfi();
+        $client->setTimeoutForTests(2.0);
+        $method = $this->getProcessCompletionResultMethod();
+
+        try {
+            $method->invoke($client, NativeClient::PACKET_PENDING, 0, '');
+            $this->fail('Expected RequestTimeoutException');
+        } catch (RequestTimeoutException $e) {
+            $this->assertSame(2.0, $e->getTimeoutSeconds());
+        }
+    }
+
+    #[Test]
+    public function constructorRejectsZeroTimeout(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Request timeout must be positive');
+
+        new NativeClient('/nonexistent/libtb_client.so', 0.0);
+    }
+
+    #[Test]
+    public function constructorRejectsNegativeTimeout(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Request timeout must be positive');
+
+        new NativeClient('/nonexistent/libtb_client.so', -1.0);
     }
 
     #[Test]
@@ -115,12 +177,12 @@ final class NativeClientTest extends TestCase
     }
 
     #[Test]
-    public function processCompletionResultThrowsRuntimeExceptionForSentinelValue(): void
+    public function processCompletionResultThrowsRequestTimeoutExceptionForSentinelValue(): void
     {
         $client = $this->createClientWithoutFfi();
         $method = $this->getProcessCompletionResultMethod();
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RequestTimeoutException::class);
         $this->expectExceptionMessage('timed out');
 
         $method->invoke($client, NativeClient::PACKET_PENDING, 0, '');
@@ -291,14 +353,14 @@ final class NativeClientTest extends TestCase
     }
 
     #[Test]
-    public function submitThrowsTimeoutWhenPacketNeverCompletes(): void
+    public function submitThrowsRequestTimeoutWhenPacketNeverCompletes(): void
     {
         $client = new TestableNativeClient();
         $client->initResult = 0;
         $client->submitShouldTimeout = true;
         $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(RequestTimeoutException::class);
         $this->expectExceptionMessage('timed out');
 
         $client->submit(Operation::PULSE, 'data');
@@ -441,7 +503,7 @@ final class NativeClientTest extends TestCase
      * Create a NativeClient whose FFI instance can allocate uint8_t[] buffers.
      * Uses a system library (libc) so the test does not require tb_client.
      */
-    private function createClientWithFfi(): NativeClient
+    private function createClientWithFfi(): \CrazyGoat\Elephas\Test\Unit\Backend\TimeoutSettableNativeClient
     {
         $ffi = \FFI::cdef('typedef unsigned char uint8_t;', 'libc.so.6');
 
@@ -452,11 +514,13 @@ final class NativeClientTest extends TestCase
         return $client;
     }
 
-    /** @phpstan-return NativeClient */
-    private function createClientWithoutFfi(): NativeClient
+    /** @phpstan-return TimeoutSettableNativeClient */
+    private function createClientWithoutFfi(): TimeoutSettableNativeClient
     {
-        /** @phpstan-var NativeClient $client */
-        $client = (new \ReflectionClass(NativeClient::class))->newInstanceWithoutConstructor();
+        $client = (new \ReflectionClass(TimeoutSettableNativeClient::class))->newInstanceWithoutConstructor();
+
+        $timeoutProperty = new \ReflectionProperty(NativeClient::class, 'timeoutSeconds');
+        $timeoutProperty->setValue($client, NativeClient::DEFAULT_TIMEOUT_SECONDS);
 
         return $client;
     }

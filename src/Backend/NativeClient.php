@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Backend;
 
 use CrazyGoat\Elephas\Exception\InitializationException;
 use CrazyGoat\Elephas\Exception\RequestException;
+use CrazyGoat\Elephas\Exception\RequestTimeoutException;
 use CrazyGoat\Elephas\Exception\TooMuchDataException;
 use CrazyGoat\Elephas\InitStatus;
 use CrazyGoat\Elephas\Operation;
@@ -14,6 +15,8 @@ use CrazyGoat\Elephas\PacketStatus;
 class NativeClient
 {
     public const PACKET_PENDING = 0xFFFFFFFF;
+
+    public const DEFAULT_TIMEOUT_SECONDS = 30.0;
 
     private const HEADER = <<<'CPROG'
 typedef unsigned char tb_uint128_t[16];
@@ -75,8 +78,26 @@ CPROG;
 
     protected readonly string $libPath;
 
-    public function __construct(?string $libPath = null)
+    protected float $timeoutSeconds;
+
+    /**
+     * @param string|null    $libPath         path to the tb_client shared library, or null for auto-detect
+     * @param float|null     $timeoutSeconds  request completion timeout in seconds; null falls back to
+     *                                        {@see self::DEFAULT_TIMEOUT_SECONDS}. Must be > 0.
+     *
+     * @throws \InvalidArgumentException if $timeoutSeconds is not positive
+     */
+    public function __construct(?string $libPath = null, ?float $timeoutSeconds = null)
     {
+        $this->timeoutSeconds = $timeoutSeconds ?? self::DEFAULT_TIMEOUT_SECONDS;
+
+        if ($this->timeoutSeconds <= 0) {
+            throw new \InvalidArgumentException(\sprintf(
+                'Request timeout must be positive, got %.3f s',
+                $this->timeoutSeconds,
+            ));
+        }
+
         $this->libPath = $libPath ?? $this->detectLibraryPath();
 
         try {
@@ -255,17 +276,15 @@ CPROG;
 
     protected function pollForCompletion(\FFI\CData $packet): string
     {
-        $timeout = 30_000_000;
-        $elapsed = 0;
+        $deadline = \microtime(true) + $this->timeoutSeconds;
 
         /** @phpstan-ignore property.notFound */
         while ((int) $packet->status === self::PACKET_PENDING) {
-            if ($elapsed >= $timeout) {
-                throw new \RuntimeException('TigerBeetle request timed out after 30 s');
+            if (\microtime(true) >= $deadline) {
+                throw RequestTimeoutException::create($this->timeoutSeconds);
             }
 
             usleep(1000);
-            $elapsed += 1000;
         }
 
         /** @phpstan-ignore property.notFound */
@@ -286,7 +305,7 @@ CPROG;
     protected function processCompletionResult(int $statusCode, int $dataSize, string $data): string
     {
         if ($statusCode === self::PACKET_PENDING) {
-            throw new \RuntimeException('TigerBeetle request timed out');
+            throw RequestTimeoutException::create($this->timeoutSeconds);
         }
 
         if ($statusCode !== PacketStatus::OK->value) {
@@ -294,6 +313,11 @@ CPROG;
         }
 
         return $data;
+    }
+
+    public function getTimeoutSeconds(): float
+    {
+        return $this->timeoutSeconds;
     }
 
     private function createException(int $statusCode, int $dataSize): \RuntimeException

@@ -254,4 +254,32 @@ class FfiBackendTest extends TestCase
 
         $this->assertSame($addresses, $backend->getReplicaAddresses());
     }
+
+    public function testConstructorRejectsZeroTimeoutWhenCreatingNativeClient(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Request timeout must be positive');
+
+        new FfiBackend(
+            Uint128::zero(),
+            ['127.0.0.1:3000'],
+            null,
+            '/nonexistent/libtb_client.so',
+            0.0,
+        );
+    }
+
+    public function testConstructorRejectsNegativeTimeoutWhenCreatingNativeClient(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Request timeout must be positive');
+
+        new FfiBackend(
+            Uint128::zero(),
+            ['127.0.0.1:3000'],
+            null,
+            '/nonexistent/libtb_client.so',
+            -2.0,
+        );
+    }
 }
