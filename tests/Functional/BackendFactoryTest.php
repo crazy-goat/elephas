@@ -19,10 +19,25 @@ class BackendFactoryTest extends TestCase
         return ($address === false || $address === '') ? null : $address;
     }
 
-    public function testIsFfiAvailableReturnsTrue(): void
+    private function isFfiAvailable(): bool
     {
         if (!\extension_loaded('ffi')) {
-            $this->markTestSkipped('FFI extension not loaded');
+            return false;
+        }
+
+        try {
+            new \CrazyGoat\Elephas\Backend\NativeClient();
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    public function testIsFfiAvailableReturnsTrue(): void
+    {
+        if (!$this->isFfiAvailable()) {
+            $this->markTestSkipped('FFI native client library not available');
         }
 
         $this->assertTrue(BackendFactory::isFfiAvailable());
@@ -33,6 +48,10 @@ class BackendFactoryTest extends TestCase
         $address = $this->getAddress();
         if ($address === null) {
             $this->markTestSkipped('TIGERBEETLE_ADDRESS env var is not set');
+        }
+
+        if (!$this->isFfiAvailable()) {
+            $this->markTestSkipped('FFI native client library not available');
         }
 
         $backend = BackendFactory::create(Uint128::zero(), [$address]);

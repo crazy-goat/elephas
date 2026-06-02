@@ -81,6 +81,10 @@ class ClientTest extends TestCase
 
     public function testConstructInvalidAddressThrows(): void
     {
+        if (!$this->isFfiBackendAvailable()) {
+            $this->markTestSkipped('FfiBackend not available (tb_client library missing)');
+        }
+
         $this->expectException(InitializationException::class);
 
         new Client(Uint128::zero(), '999.999.999.999:9999');
