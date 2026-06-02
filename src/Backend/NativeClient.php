@@ -151,8 +151,8 @@ CPROG;
             $this->noopCallback,
         );
 
-        if ((int) $status !== 0) {
-            throw InitializationException::fromStatus(InitStatus::from((int) $status));
+        if ($status !== 0) {
+            throw InitializationException::fromStatus(InitStatus::from($status));
         }
 
         $this->client = $clientPtr;

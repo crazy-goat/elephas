@@ -66,7 +66,7 @@ CPROG;
         int $addressCount,
         \FFI\CData $callback,
     ): int {
-        if ($this->initException !== null) {
+        if ($this->initException instanceof \Throwable) {
             throw $this->initException;
         }
 
@@ -75,7 +75,7 @@ CPROG;
 
     protected function callTbClientSubmit(\FFI\CData $client, \FFI\CData $packet): void
     {
-        if ($this->submitException !== null) {
+        if ($this->submitException instanceof \Throwable) {
             throw $this->submitException;
         }
     }
@@ -84,7 +84,7 @@ CPROG;
     {
         $this->deinitCalled = true;
 
-        if ($this->deinitException !== null) {
+        if ($this->deinitException instanceof \Throwable) {
             throw $this->deinitException;
         }
     }
@@ -112,7 +112,7 @@ CPROG;
             throw new \RuntimeException('TigerBeetle request timed out after 30 s');
         }
 
-        if ($this->submitException !== null) {
+        if ($this->submitException instanceof \Throwable) {
             throw $this->submitException;
         }
 
