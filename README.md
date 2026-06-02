@@ -5,6 +5,10 @@
 [![PHP Version](https://img.shields.io/badge/PHP-^8.2-blue)](https://php.net)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+<p align="center">
+  <img src="assets/elephas-logo.jpg" alt="Elephas logo" width="320">
+</p>
+
 PHP client for [TigerBeetle](https://tigerbeetle.com) — a high-performance financial transactions database.
 
 ## Requirements
