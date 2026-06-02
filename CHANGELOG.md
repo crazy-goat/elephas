@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] – Polish – 2026-06-02
+
 ### Added
 - `.github/SECURITY.md` – security policy and vulnerability reporting instructions (#56)
 - `.github/ISSUE_TEMPLATE/bug_report.md` – bug report template (#56)
@@ -15,8 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BackendFactory` – auto-detect available backend implementation (#48)
 - `README.md` – installation guide, quickstart, API reference, and development docs (#51)
 - `LICENSE` – MIT license (#52)
+- `CHANGELOG.md` – Keep a Changelog format (#53)
+- `ROADMAP.md` – milestone timeline and planned features (#54)
+- `CONTRIBUTING.md` – development guidelines and PR process (#55)
 - `bin/build-tb-client.sh` – build script that compiles the `tb_client` native shared library for the host platform using Zig 0.14.1 and TigerBeetle 0.17.4 (#49)
 - CI/CD release workflow – builds `tb_client` for linux/amd64, linux/arm64, macos/amd64, macos/arm64 on tag push `v*` and attaches the shared libraries to a GitHub Release (#50)
+
+### Removed
+- Unused `AccountFilter` value object and orphaned `BinaryHelper::packAccountFilter()`/`unpackAccountFilter()` methods (#97)
 
 ## [0.3.0] – Client API – 2026-06-01
 
