@@ -496,7 +496,7 @@ class AccountBatchTest extends TestCase
         $batch = new AccountBatch(10);
 
         $this->expectException(InvalidBatchCursorException::class);
-        $this->expectExceptionMessage('Cannot write field on ' . AccountBatch::class . ': cursor position 0 is outside the populated range [0, 0)');
+        $this->expectExceptionMessage('Cannot write field on ' . AccountBatch::class . ': cursor position 0 is outside the populated range [0, 0). Call add() to populate the batch before accessing elements.');
 
         $batch->setId(Uint128::fromString('1'));
     }
@@ -506,7 +506,7 @@ class AccountBatchTest extends TestCase
         $batch = new AccountBatch(10);
 
         $this->expectException(InvalidBatchCursorException::class);
-        $this->expectExceptionMessage('Cannot read field on ' . AccountBatch::class . ': cursor position 0 is outside the populated range [0, 0)');
+        $this->expectExceptionMessage('Cannot read field on ' . AccountBatch::class . ': cursor position 0 is outside the populated range [0, 0). Call add() to populate the batch before accessing elements.');
 
         $batch->getId();
     }
