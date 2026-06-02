@@ -288,7 +288,7 @@ ensure_source() {
     if [ ! -d "$TB_SRC_DIR/.git" ]; then
         log "cloning tigerbeetle $TB_VERSION into $TB_SRC_DIR"
         rm -rf "$TB_SRC_DIR"
-        git clone --depth 1 --branch "$TB_VERSION" "$TB_REPO" "$TB_SRC_DIR" \
+        git clone --depth 2 --branch "$TB_VERSION" "$TB_REPO" "$TB_SRC_DIR" \
             || die --code 4 "git clone failed"
     else
         log "reusing existing checkout at $TB_SRC_DIR"
