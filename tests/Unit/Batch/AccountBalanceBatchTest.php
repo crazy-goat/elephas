@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\AccountBalanceBatch;
+use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\TestCase;
@@ -117,5 +118,15 @@ class AccountBalanceBatchTest extends TestCase
 
         $this->assertSame(0, $batch->getLength());
         $this->assertSame(0, $batch->getCapacity());
+    }
+
+    public function testGetBalanceThrowsOnEmptyBatch(): void
+    {
+        $batch = AccountBalanceBatch::fromBuffer('');
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot read field on ' . AccountBalanceBatch::class);
+
+        $batch->getBalance();
     }
 }

@@ -46,6 +46,7 @@ class CreateTransferResultBatch extends AbstractBatch
 
     public function getResult(): CreateTransferResult
     {
+        $this->requireValidPosition('read field');
         $offset = $this->currentPosition * $this->getStructSize();
         $data = \substr($this->buffer, $offset, $this->getStructSize());
         $unpacked = BinaryHelper::unpackCreateTransferResult($data);

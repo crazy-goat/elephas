@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\IdBatch;
+use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\TestCase;
@@ -132,5 +133,39 @@ class IdBatchTest extends TestCase
         $unpacked = BinaryHelper::unpackUint128($buffer);
 
         $this->assertTrue($id->equals($unpacked));
+    }
+
+    public function testSetterThrowsBeforeAdd(): void
+    {
+        $batch = new IdBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot write field on ' . IdBatch::class);
+
+        $batch->setId(Uint128::fromString('1'));
+    }
+
+    public function testGetterThrowsBeforeAdd(): void
+    {
+        $batch = new IdBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot read field on ' . IdBatch::class);
+
+        $batch->getId();
+    }
+
+    public function testBufferRemainsEmptyAfterFailedSetterBeforeAdd(): void
+    {
+        $batch = new IdBatch(10);
+
+        try {
+            $batch->setId(Uint128::fromString('1'));
+            $this->fail('Expected InvalidBatchCursorException');
+        } catch (InvalidBatchCursorException) {
+        }
+
+        $this->assertSame(0, $batch->getLength());
+        $this->assertSame('', $batch->getBuffer());
     }
 }

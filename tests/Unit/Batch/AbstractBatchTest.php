@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Test\Unit\Batch;
 
 use CrazyGoat\Elephas\Batch\AbstractBatch;
+use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
 use PHPUnit\Framework\TestCase;
 
 final class TestBatch extends AbstractBatch
@@ -199,5 +200,68 @@ class AbstractBatchTest extends TestCase
         $this->assertTrue($batch->next());
         $this->assertTrue($batch->next());
         $this->assertFalse($batch->next());
+    }
+
+    public function testRequireValidPositionThrowsOnEmptyBatch(): void
+    {
+        $batch = new TestBatch(10);
+
+        $this->expectException(InvalidBatchCursorException::class);
+        $this->expectExceptionMessage('Cannot read field on ' . TestBatch::class . ': cursor position 0 is outside the populated range [0, 0)');
+
+        $this->callRequireValidPosition($batch, 'read field');
+    }
+
+    public function testRequireValidPositionPassesAfterAdd(): void
+    {
+        $batch = new TestBatch(10);
+        $batch->add();
+
+        $this->callRequireValidPosition($batch, 'read field');
+
+        $this->assertTrue($batch->isValidPosition());
+    }
+
+    public function testRequireValidPositionPassesAfterAddAndContinuesToPass(): void
+    {
+        $batch = new TestBatch(10);
+        $batch->add();
+        $this->callRequireValidPosition($batch, 'read field');
+
+        $batch->add();
+        $this->callRequireValidPosition($batch, 'read field');
+
+        $this->assertTrue($batch->isValidPosition());
+    }
+
+    public function testRequireValidPositionActionMessageIsIncluded(): void
+    {
+        $batch = new TestBatch(10);
+
+        try {
+            $this->callRequireValidPosition($batch, 'write custom action');
+            $this->fail('Expected InvalidBatchCursorException');
+        } catch (InvalidBatchCursorException $e) {
+            $this->assertStringContainsString('write custom action', $e->getMessage());
+            $this->assertStringContainsString(TestBatch::class, $e->getMessage());
+        }
+    }
+
+    public function testExceptionImplementsElephasInterface(): void
+    {
+        $batch = new TestBatch(10);
+
+        try {
+            $this->callRequireValidPosition($batch, 'read field');
+            $this->fail('Expected InvalidBatchCursorException');
+        } catch (InvalidBatchCursorException $e) {
+            $this->assertInstanceOf(\CrazyGoat\Elephas\Exception\ElephasExceptionInterface::class, $e);
+        }
+    }
+
+    private function callRequireValidPosition(AbstractBatch $batch, string $action): void
+    {
+        $ref = new \ReflectionMethod(AbstractBatch::class, 'requireValidPosition');
+        $ref->invoke($batch, $action);
     }
 }
