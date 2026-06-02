@@ -98,12 +98,14 @@ CPROG;
         $size = \strlen($data);
 
         if ($size === 0) {
+            /** @phpstan-var \FFI\CData $buffer */
             $buffer = $this->ffi->new('uint8_t[1]');
             \FFI::memset($buffer, 0, 1);
 
             return $buffer;
         }
 
+        /** @phpstan-var \FFI\CData $buffer */
         $buffer = $this->ffi->new('uint8_t[' . $size . ']');
         \FFI::memcpy($buffer, $data, $size);
 
