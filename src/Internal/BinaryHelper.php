@@ -74,7 +74,9 @@ final class BinaryHelper
     {
         $raw = unpack('Pid_low/Pid_high/Pdp_low/Pdp_high/Pdo_low/Pdo_high/Pcp_low/Pcp_high/Pco_low/Pco_high/Pud128_low/Pud128_high/Pud64/Vud32/Vreserved/Vledger/vcode/vflags/Ptimestamp', $bytes);
 
-        \assert(\is_array($raw));
+        if ($raw === false) {
+            throw new \RuntimeException('Failed to unpack account data');
+        }
 
         return [
             'id' => self::fromRawParts($raw['id_low'], $raw['id_high']),
@@ -150,7 +152,9 @@ final class BinaryHelper
     {
         $raw = unpack('Pid_low/Pid_high/Pda_low/Pda_high/Pca_low/Pca_high/Pamt_low/Pamt_high/Ppid_low/Ppid_high/Pud128_low/Pud128_high/Pud64/Vud32/Vtimeout/Vledger/vcode/vflags/Ptimestamp', $bytes);
 
-        \assert(\is_array($raw));
+        if ($raw === false) {
+            throw new \RuntimeException('Failed to unpack transfer data');
+        }
 
         return [
             'id' => self::fromRawParts($raw['id_low'], $raw['id_high']),
@@ -203,7 +207,9 @@ final class BinaryHelper
     {
         $raw = unpack('Pdp_low/Pdp_high/Pdo_low/Pdo_high/Pcp_low/Pcp_high/Pco_low/Pco_high/Ptimestamp/a56reserved', $bytes);
 
-        \assert(\is_array($raw));
+        if ($raw === false) {
+            throw new \RuntimeException('Failed to unpack account balance data');
+        }
 
         return [
             'debits_pending' => self::fromRawParts($raw['dp_low'], $raw['dp_high']),
@@ -260,7 +266,9 @@ final class BinaryHelper
     {
         $raw = unpack('Pud128_low/Pud128_high/Pud64/Vud32/Vledger/vcode/a6reserved/Ptimestamp_min/Ptimestamp_max/Vlimit/Vflags', $bytes);
 
-        \assert(\is_array($raw));
+        if ($raw === false) {
+            throw new \RuntimeException('Failed to unpack query filter data');
+        }
 
         return [
             'user_data_128' => self::fromRawParts($raw['ud128_low'], $raw['ud128_high']),
@@ -282,7 +290,9 @@ final class BinaryHelper
     {
         $raw = unpack('Ptimestamp/Vstatus/Vreserved', $bytes);
 
-        \assert(\is_array($raw));
+        if ($raw === false) {
+            throw new \RuntimeException('Failed to unpack create account result data');
+        }
 
         return [
             'timestamp' => $raw['timestamp'],
@@ -298,7 +308,9 @@ final class BinaryHelper
     {
         $raw = unpack('Ptimestamp/Vstatus/Vreserved', $bytes);
 
-        \assert(\is_array($raw));
+        if ($raw === false) {
+            throw new \RuntimeException('Failed to unpack create transfer result data');
+        }
 
         return [
             'timestamp' => $raw['timestamp'],
