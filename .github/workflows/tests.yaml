@@ -55,6 +55,14 @@ jobs:
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist
 
+      - name: Run unit tests
+        run: vendor/bin/phpunit --testsuite=unit
+
+      - name: Build native tb_client library
+        run: bash bin/build-tb-client.sh
+        env:
+          TB_VERSION: 0.17.4
+
       - name: Start TigerBeetle
         run: |
           docker run --rm --privileged \
@@ -76,9 +84,6 @@ jobs:
             echo "Waiting for TigerBeetle... ($i/30)"
             sleep 1
           done
-
-      - name: Run unit tests
-        run: vendor/bin/phpunit --testsuite=unit
 
       - name: Run functional tests
         run: vendor/bin/phpunit --testsuite=functional

@@ -55,7 +55,6 @@ int tb_client_init(
     tb_uint128_t cluster_id,
     const char* addresses,
     uint32_t addresses_count,
-    uint32_t max_concurrency,
     uintptr_t callback_context,
     void (*callback)(uintptr_t, tb_packet_t*, uint64_t, const uint8_t*, uint32_t)
 );
@@ -63,9 +62,12 @@ int tb_client_init(
 void tb_client_deinit(tb_client_t* client);
 
 void tb_client_submit(tb_client_t* client, tb_packet_t* packet);
+
 CPROG;
 
     private readonly \FFI $ffi;
+
+    private readonly \FFI\CData $noopCallback;
 
     private \FFI\CData $client;
 
@@ -82,10 +84,43 @@ CPROG;
                 \sprintf('Cannot load tb_client library from %s: %s', $this->libPath, $e->getMessage()),
             );
         }
+
+        $this->noopCallback = $this->loadNoopCallback($this->libPath);
+    }
+
+    /**
+     * Load a thread-safe no-op completion callback from a companion shared
+     * library.  tb_client calls the completion callback on its I/O thread;
+     * a PHP closure cannot be safely invoked from a foreign thread.
+     */
+    private function loadNoopCallback(string $tbLibPath): \FFI\CData
+    {
+        $noopDir = \dirname($tbLibPath);
+        $noopLib = $noopDir . '/libelephas_noop.so';
+
+        if (\file_exists($noopLib)) {
+            $noop = \FFI::cdef(
+                'void elephas_noop(unsigned long, void*, unsigned long long, const void*, unsigned int);',
+                $noopLib,
+            );
+
+            /** @phpstan-ignore property.notFound */
+            return $noop->elephas_noop;
+        }
+
+        // Fall back to free(NULL) from glibc — compatible ABI on x86_64.
+        // free(NULL) is a defined no-op; extra register arguments are ignored.
+        $libc = \FFI::cdef(
+            'void free(uintptr_t, void*, unsigned long long, const void*, unsigned int);',
+            'libc.so.6',
+        );
+
+        /** @phpstan-ignore property.notFound */
+        return $libc->free;
     }
 
     /** @param array<string> $addresses */
-    public function init(string $clusterId, array $addresses, int $concurrencyMax = 32): void
+    public function init(string $clusterId, array $addresses): void
     {
         if (\strlen($clusterId) !== 16) {
             throw new \ValueError(\sprintf(
@@ -112,16 +147,15 @@ CPROG;
             $cClusterId,
             $cAddresses,
             \count($addresses),
-            $concurrencyMax,
             0,
-            null,
+            $this->noopCallback,
         );
 
         if ((int) $status !== 0) {
             throw InitializationException::fromStatus(InitStatus::from((int) $status));
         }
 
-        $this->client = $clientPtr[0];
+        $this->client = $clientPtr;
     }
 
     public function submit(Operation $operation, string $data): string

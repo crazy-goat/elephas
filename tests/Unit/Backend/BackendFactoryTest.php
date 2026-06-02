@@ -55,5 +55,7 @@ final class BackendFactoryTest extends TestCase
         $backend = BackendFactory::create(Uint128::zero(), ['127.0.0.1:3000']);
 
         $this->assertInstanceOf(BackendInterface::class, $backend);
+
+        $backend->close();
     }
 }

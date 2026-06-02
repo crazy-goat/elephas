@@ -37,6 +37,20 @@ final class TestWorkflowTest extends TestCase
         $this->assertStringContainsString('--testsuite=functional', $content, 'workflow must run the functional test suite');
     }
 
+    public function testBuildsNativeLibraryBeforeFunctionalTests(): void
+    {
+        $content = $this->getContent();
+
+        $this->assertStringContainsString('Build native tb_client library', $content, 'workflow must build tb_client before functional tests');
+    }
+
+    public function testNativeLibraryBuildUsesVersionPin(): void
+    {
+        $content = $this->getContent();
+
+        $this->assertStringContainsString('TB_VERSION: 0.17.4', $content, 'workflow must pin tb_client version');
+    }
+
     public function testFunctionalSuiteHasTigerBeetleAddressEnv(): void
     {
         $content = $this->getContent();

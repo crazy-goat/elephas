@@ -140,16 +140,39 @@ lib_filename_for() {
     esac
 }
 
+# Compare two dotted version strings; returns 0 if $1 >= $2, 1 otherwise.
+version_gte() {
+    local IFS=.
+    local -a v1=($1) v2=($2)
+    for ((i=0; i<${#v1[@]}; i++)); do
+        if ((10#${v1[i]:-0} > 10#${v2[i]:-0})); then return 0; fi
+        if ((10#${v1[i]:-0} < 10#${v2[i]:-0})); then return 1; fi
+    done
+    return 0
+}
+
 zig_archive_name() {
     local host_os="$1"
     local host_arch="$2"
-    case "$host_os/$host_arch" in
-        linux/x86_64)  printf 'zig-linux-x86_64-%s.tar.xz\n' "$ZIG_VERSION" ;;
-        linux/aarch64) printf 'zig-linux-aarch64-%s.tar.xz\n' "$ZIG_VERSION" ;;
-        darwin/x86_64) printf 'zig-macos-x86_64-%s.tar.xz\n' "$ZIG_VERSION" ;;
-        darwin/arm64)  printf 'zig-macos-aarch64-%s.tar.xz\n' "$ZIG_VERSION" ;;
+    local os_part arch_part
+
+    case "$host_os" in
+        linux)  os_part=linux  ;;
+        darwin) os_part=macos  ;;
         *) die --code 1 "no zig archive for host: $host_os/$host_arch" ;;
     esac
+
+    case "$host_arch" in
+        x86_64|amd64)  arch_part=x86_64  ;;
+        aarch64|arm64) arch_part=aarch64 ;;
+        *) die --code 1 "no zig archive for host: $host_os/$host_arch" ;;
+    esac
+
+    if version_gte "$ZIG_VERSION" "0.14.1"; then
+        printf 'zig-%s-%s-%s.tar.xz\n' "$arch_part" "$os_part" "$ZIG_VERSION"
+    else
+        printf 'zig-%s-%s-%s.tar.xz\n' "$os_part" "$arch_part" "$ZIG_VERSION"
+    fi
 }
 
 zig_minimal_path() {
@@ -265,7 +288,7 @@ ensure_source() {
     if [ ! -d "$TB_SRC_DIR/.git" ]; then
         log "cloning tigerbeetle $TB_VERSION into $TB_SRC_DIR"
         rm -rf "$TB_SRC_DIR"
-        git clone --depth 1 --branch "$TB_VERSION" "$TB_REPO" "$TB_SRC_DIR" \
+        git clone --branch "$TB_VERSION" "$TB_REPO" "$TB_SRC_DIR" \
             || die --code 4 "git clone failed"
     else
         log "reusing existing checkout at $TB_SRC_DIR"
@@ -274,11 +297,11 @@ ensure_source() {
 
 run_build() {
     local target="$1"
-    log "running zig build clients:c -Drelease-safe (target: $target)"
+    log "running zig build clients:c -Drelease=true (target: $target)"
     # The `clients:c` step in TigerBeetle's build.zig builds the dynamic
     # library for all supported platforms and installs them under
     # <src>/src/clients/c/lib/<platform>/libtb_client.{so,dylib}.
-    ( cd "$TB_SRC_DIR" && "$ZIG_BIN" build clients:c -Drelease-safe ) \
+    ( cd "$TB_SRC_DIR" && "$ZIG_BIN" build clients:c -Drelease=true ) \
         || die --code 5 "zig build failed"
 }
 
@@ -307,7 +330,21 @@ install_library() {
     mkdir -p "$out_dir"
     cp "$built_path" "$out_path"
     chmod 0644 "$out_path"
+    # Strip debug info to reduce size and avoid potential FFI issues with
+    # debug sections on some platforms.
+    command -v strip >/dev/null 2>&1 && strip "$out_path" 2>/dev/null || true
     log "installed library: $out_path"
+
+    # Build companion no-op callback library (used by NativeClient as a
+    # thread-safe completion callback).  gcc is available on all CI runners.
+    local noop_src="$REPO_ROOT/resources/noop.c"
+    local noop_out="$out_dir/libelephas_noop.so"
+    if [ -f "$noop_src" ] && command -v gcc >/dev/null 2>&1; then
+        if gcc -shared -fPIC -o "$noop_out" "$noop_src" 2>/dev/null; then
+            chmod 0644 "$noop_out"
+            log "installed noop callback: $noop_out"
+        fi
+    fi
     printf '%s\n' "$out_path"
 }
 
