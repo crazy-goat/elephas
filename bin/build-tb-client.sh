@@ -297,11 +297,11 @@ ensure_source() {
 
 run_build() {
     local target="$1"
-    log "running zig build clients:c (target: $target)"
+    log "running zig build clients:c -Drelease=true (target: $target)"
     # The `clients:c` step in TigerBeetle's build.zig builds the dynamic
     # library for all supported platforms and installs them under
     # <src>/src/clients/c/lib/<platform>/libtb_client.{so,dylib}.
-    ( cd "$TB_SRC_DIR" && "$ZIG_BIN" build clients:c ) \
+    ( cd "$TB_SRC_DIR" && "$ZIG_BIN" build clients:c -Drelease=true ) \
         || die --code 5 "zig build failed"
 }
 
@@ -330,7 +330,21 @@ install_library() {
     mkdir -p "$out_dir"
     cp "$built_path" "$out_path"
     chmod 0644 "$out_path"
+    # Strip debug info to reduce size and avoid potential FFI issues with
+    # debug sections on some platforms.
+    command -v strip >/dev/null 2>&1 && strip "$out_path" 2>/dev/null || true
     log "installed library: $out_path"
+
+    # Build companion no-op callback library (used by NativeClient as a
+    # thread-safe completion callback).  gcc is available on all CI runners.
+    local noop_src="$REPO_ROOT/resources/noop.c"
+    local noop_out="$out_dir/libelephas_noop.so"
+    if [ -f "$noop_src" ] && command -v gcc >/dev/null 2>&1; then
+        if gcc -shared -fPIC -o "$noop_out" "$noop_src" 2>/dev/null; then
+            chmod 0644 "$noop_out"
+            log "installed noop callback: $noop_out"
+        fi
+    fi
     printf '%s\n' "$out_path"
 }
 

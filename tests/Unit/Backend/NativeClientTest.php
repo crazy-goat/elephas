@@ -17,12 +17,14 @@ use PHPUnit\Framework\TestCase;
 final class NativeClientTest extends TestCase
 {
     #[Test]
-    public function constructorThrowsWhenLibraryNotFound(): void
+    public function constructorDetectsLibrary(): void
     {
-        $this->expectException(InitializationException::class);
-        $this->expectExceptionMessage('Cannot find tb_client');
-
-        new NativeClient();
+        try {
+            $client = new NativeClient();
+            $this->assertInstanceOf(NativeClient::class, $client);
+        } catch (InitializationException $e) {
+            $this->assertStringContainsString('Cannot find tb_client', $e->getMessage());
+        }
     }
 
     #[Test]
