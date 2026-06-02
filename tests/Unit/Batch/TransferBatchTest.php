@@ -230,6 +230,51 @@ class TransferBatchTest extends TestCase
         $this->assertSame(0b1010, $batch->getFlags());
     }
 
+    public function testIsFoundReturnsTrueForNonZeroId(): void
+    {
+        $batch = new TransferBatch(10);
+        $batch->add();
+        $batch->setId(Uint128::fromString('1000000000000000000000000000000'));
+
+        $this->assertTrue($batch->isFound());
+    }
+
+    public function testIsFoundReturnsFalseForZeroId(): void
+    {
+        $batch = TransferBatch::fromBuffer(\str_repeat("\0", 128));
+        $batch->rewind();
+
+        $this->assertFalse($batch->isFound());
+    }
+
+    public function testIsFoundOnEmptyBufferReturnsFalse(): void
+    {
+        $batch = TransferBatch::fromBuffer('');
+
+        $this->assertFalse($batch->isFound());
+    }
+
+    public function testIsFoundMixedBatch(): void
+    {
+        $source = new TransferBatch(3);
+        $source->add();
+        $source->setId(Uint128::fromString('1000000000000000000000000000000'));
+        $source->add();
+        $source->setId(Uint128::fromString('2000000000000000000000000000000'));
+
+        $buffer = $source->getBuffer() . \str_repeat("\0", 128);
+        $batch = TransferBatch::fromBuffer($buffer);
+
+        $this->assertSame(3, $batch->getLength());
+
+        $batch->rewind();
+        $this->assertTrue($batch->isFound());
+        $batch->next();
+        $this->assertTrue($batch->isFound());
+        $batch->next();
+        $this->assertFalse($batch->isFound());
+    }
+
     public function testFromBufferCreatesCorrectBatch(): void
     {
         $source = new TransferBatch(3);

@@ -37,12 +37,20 @@ interface ClientInterface
     /**
      * Lookup accounts by their IDs.
      *
+     * Returns exactly one result per requested ID, in the same order.
+     * Missing records are returned as zeroed structs — use
+     * {@see AccountBatch::isFound()} to distinguish found from missing.
+     *
      * @throws ClientClosedException if the client has been closed
      */
     public function lookupAccounts(IdBatch $ids): AccountBatch;
 
     /**
      * Lookup transfers by their IDs.
+     *
+     * Returns exactly one result per requested ID, in the same order.
+     * Missing records are returned as zeroed structs — use
+     * {@see TransferBatch::isFound()} to distinguish found from missing.
      *
      * @throws ClientClosedException if the client has been closed
      */

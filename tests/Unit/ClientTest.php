@@ -313,6 +313,7 @@ final class ClientTest extends TestCase
 
         $this->assertSame(1, $result->getLength());
         $result->rewind();
+        $this->assertFalse($result->isFound());
         $this->assertTrue($result->getId()->equals(Uint128::zero()));
         $this->assertSame(0, $result->getLedger());
         $this->assertSame(0, $result->getCode());
@@ -420,6 +421,7 @@ final class ClientTest extends TestCase
 
         $this->assertSame(1, $result->getLength());
         $result->rewind();
+        $this->assertFalse($result->isFound());
         $this->assertTrue($result->getId()->equals(Uint128::zero()));
         $this->assertTrue($result->getDebitAccountId()->equals(Uint128::zero()));
         $this->assertTrue($result->getCreditAccountId()->equals(Uint128::zero()));

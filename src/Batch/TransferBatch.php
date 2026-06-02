@@ -57,6 +57,11 @@ class TransferBatch extends AbstractBatch
         return $this->readUint128(self::ID);
     }
 
+    public function isFound(): bool
+    {
+        return $this->isValidPosition() && !$this->getId()->isZero();
+    }
+
     public function setDebitAccountId(Uint128 $id): void
     {
         $this->writeUint128(self::DEBIT_ACCOUNT_ID, $id);
