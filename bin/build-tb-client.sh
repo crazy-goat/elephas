@@ -140,16 +140,39 @@ lib_filename_for() {
     esac
 }
 
+# Compare two dotted version strings; returns 0 if $1 >= $2, 1 otherwise.
+version_gte() {
+    local IFS=.
+    local -a v1=($1) v2=($2)
+    for ((i=0; i<${#v1[@]}; i++)); do
+        if ((10#${v1[i]:-0} > 10#${v2[i]:-0})); then return 0; fi
+        if ((10#${v1[i]:-0} < 10#${v2[i]:-0})); then return 1; fi
+    done
+    return 0
+}
+
 zig_archive_name() {
     local host_os="$1"
     local host_arch="$2"
-    case "$host_os/$host_arch" in
-        linux/x86_64)  printf 'zig-linux-x86_64-%s.tar.xz\n' "$ZIG_VERSION" ;;
-        linux/aarch64) printf 'zig-linux-aarch64-%s.tar.xz\n' "$ZIG_VERSION" ;;
-        darwin/x86_64) printf 'zig-macos-x86_64-%s.tar.xz\n' "$ZIG_VERSION" ;;
-        darwin/arm64)  printf 'zig-macos-aarch64-%s.tar.xz\n' "$ZIG_VERSION" ;;
+    local os_part arch_part
+
+    case "$host_os" in
+        linux)  os_part=linux  ;;
+        darwin) os_part=macos  ;;
         *) die --code 1 "no zig archive for host: $host_os/$host_arch" ;;
     esac
+
+    case "$host_arch" in
+        x86_64|amd64)  arch_part=x86_64  ;;
+        aarch64|arm64) arch_part=aarch64 ;;
+        *) die --code 1 "no zig archive for host: $host_os/$host_arch" ;;
+    esac
+
+    if version_gte "$ZIG_VERSION" "0.14.1"; then
+        printf 'zig-%s-%s-%s.tar.xz\n' "$arch_part" "$os_part" "$ZIG_VERSION"
+    else
+        printf 'zig-%s-%s-%s.tar.xz\n' "$os_part" "$arch_part" "$ZIG_VERSION"
+    fi
 }
 
 zig_minimal_path() {
