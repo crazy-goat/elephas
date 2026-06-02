@@ -117,9 +117,15 @@ class TransferTest extends TestCase
 
             $this->assertSame(1, $results->getLength());
             $results->rewind();
+            $result = $results->getResult();
             $this->assertSame(
                 CreateTransferStatus::CREATED,
-                $results->getResult()->getStatus(),
+                $result->getStatus(),
+            );
+            $this->assertGreaterThan(
+                0,
+                $result->getTimestamp(),
+                'Successful transfer creation must return a positive timestamp',
             );
         } finally {
             $client->close();
@@ -153,12 +159,20 @@ class TransferTest extends TestCase
 
             $this->assertSame(3, $results->getLength());
             $results->rewind();
+            $previousTimestamp = 0;
             for ($i = 0; $i < 3; $i++) {
+                $result = $results->getResult();
                 $this->assertSame(
                     CreateTransferStatus::CREATED,
-                    $results->getResult()->getStatus(),
+                    $result->getStatus(),
                     \sprintf('Linked transfer #%d must be CREATED', $i),
                 );
+                $this->assertGreaterThan(
+                    $previousTimestamp,
+                    $result->getTimestamp(),
+                    \sprintf('Linked transfer #%d timestamp must be strictly increasing', $i),
+                );
+                $previousTimestamp = $result->getTimestamp();
                 if ($i < 2) {
                     $results->next();
                 }
@@ -192,9 +206,15 @@ class TransferTest extends TestCase
 
             $this->assertSame(1, $results->getLength());
             $results->rewind();
+            $result = $results->getResult();
             $this->assertSame(
                 CreateTransferStatus::CREATED,
-                $results->getResult()->getStatus(),
+                $result->getStatus(),
+            );
+            $this->assertGreaterThan(
+                0,
+                $result->getTimestamp(),
+                'Pending transfer creation must return a positive timestamp',
             );
         } finally {
             $client->close();
@@ -238,9 +258,15 @@ class TransferTest extends TestCase
 
             $this->assertSame(1, $results->getLength());
             $results->rewind();
+            $result = $results->getResult();
             $this->assertSame(
                 CreateTransferStatus::CREATED,
-                $results->getResult()->getStatus(),
+                $result->getStatus(),
+            );
+            $this->assertGreaterThan(
+                0,
+                $result->getTimestamp(),
+                'Post-pending-transfer creation must return a positive timestamp',
             );
         } finally {
             $client->close();
@@ -284,9 +310,15 @@ class TransferTest extends TestCase
 
             $this->assertSame(1, $results->getLength());
             $results->rewind();
+            $result = $results->getResult();
             $this->assertSame(
                 CreateTransferStatus::CREATED,
-                $results->getResult()->getStatus(),
+                $result->getStatus(),
+            );
+            $this->assertGreaterThan(
+                0,
+                $result->getTimestamp(),
+                'Void-pending-transfer creation must return a positive timestamp',
             );
         } finally {
             $client->close();
@@ -462,9 +494,15 @@ class TransferTest extends TestCase
 
             $this->assertSame(1, $results->getLength());
             $results->rewind();
+            $result = $results->getResult();
             $this->assertSame(
                 CreateTransferStatus::CREATED,
-                $results->getResult()->getStatus(),
+                $result->getStatus(),
+            );
+            $this->assertGreaterThan(
+                0,
+                $result->getTimestamp(),
+                'Balancing-debit transfer creation must return a positive timestamp',
             );
         } finally {
             $client->close();
@@ -498,9 +536,15 @@ class TransferTest extends TestCase
 
             $this->assertSame(1, $results->getLength());
             $results->rewind();
+            $result = $results->getResult();
             $this->assertSame(
                 CreateTransferStatus::CREATED,
-                $results->getResult()->getStatus(),
+                $result->getStatus(),
+            );
+            $this->assertGreaterThan(
+                0,
+                $result->getTimestamp(),
+                'Zero-amount transfer creation must return a positive timestamp',
             );
         } finally {
             $client->close();
@@ -533,9 +577,15 @@ class TransferTest extends TestCase
 
             $this->assertSame(1, $results->getLength());
             $results->rewind();
+            $result = $results->getResult();
             $this->assertSame(
                 CreateTransferStatus::CREATED,
-                $results->getResult()->getStatus(),
+                $result->getStatus(),
+            );
+            $this->assertGreaterThan(
+                0,
+                $result->getTimestamp(),
+                'Large-amount transfer creation must return a positive timestamp',
             );
         } finally {
             $client->close();

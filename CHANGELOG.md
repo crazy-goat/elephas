@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - All batch `fromBuffer()` factories now reject malformed buffers whose size is not an exact multiple of the expected struct size, preventing partial-record deserialization (#113)
+
+### Changed
+- `CreateAccountResult` and `CreateTransferResult` no longer expose a synthetic `getId()` derived from the TigerBeetle-assigned timestamp. Both classes now provide `getTimestamp(): int` reflecting the actual timestamp returned by TigerBeetle for each created or rejected event. This aligns the public API with the native TigerBeetle `tb_create_account_result_t` / `tb_create_transfer_result_t` struct contract (TB 0.17.x) where each result carries a `uint64_t timestamp` and a `uint32_t status` (#111)
 - `NativeClient` request completion no longer confuses `TB_PACKET_OK` (status 0) with an incomplete/pending packet. A sentinel status value (`0xFFFFFFFF`) is now used to track the pending state, allowing status 0 to be correctly interpreted as a successful response (#109)
 - `NativeClient::submit()` now retains a PHP reference to the FFI data buffer for the full native request lifetime, preventing a potential use-after-free when the CData backing the request payload is garbage-collected while `tb_client` still holds the raw pointer (#110)
 
