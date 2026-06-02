@@ -13,6 +13,8 @@ use CrazyGoat\Elephas\PacketStatus;
 
 class NativeClient
 {
+    private const PACKET_PENDING = 0xFFFFFFFF;
+
     private const HEADER = <<<'CPROG'
 typedef unsigned char tb_uint128_t[16];
 
@@ -127,7 +129,7 @@ CPROG;
         /** @phpstan-ignore property.notFound */
         $cPacket->operation = $operation->value;
         /** @phpstan-ignore property.notFound */
-        $cPacket->status = 0;
+        $cPacket->status = self::PACKET_PENDING;
         /** @phpstan-ignore property.notFound */
         $cPacket->data_size = \strlen($data);
         /** @phpstan-ignore property.notFound */
@@ -170,9 +172,9 @@ CPROG;
         $elapsed = 0;
 
         /** @phpstan-ignore property.notFound */
-        while ((int) $packet->status === 0) {
+        while ((int) $packet->status === self::PACKET_PENDING) {
             if ($elapsed >= $timeout) {
-                throw new \RuntimeException('TigerBeetle request timed out');
+                throw new \RuntimeException('TigerBeetle request timed out after 30 s');
             }
 
             usleep(1000);
@@ -181,20 +183,30 @@ CPROG;
 
         /** @phpstan-ignore property.notFound */
         $statusCode = (int) $packet->status;
-        $status = PacketStatus::tryFrom($statusCode);
+        /** @phpstan-ignore property.notFound */
+        $dataSize = (int) $packet->data_size;
 
-        if ($status === null || $status !== PacketStatus::OK) {
-            /** @phpstan-ignore property.notFound */
-            throw $this->createException($statusCode, (int) $packet->data_size);
+        return $this->processCompletionResult(
+            $statusCode,
+            $dataSize,
+            $dataSize > 0
+                /** @phpstan-ignore property.notFound */
+                ? \FFI::string($packet->data, $dataSize)
+                : '',
+        );
+    }
+
+    private function processCompletionResult(int $statusCode, int $dataSize, string $data): string
+    {
+        if ($statusCode === self::PACKET_PENDING) {
+            throw new \RuntimeException('TigerBeetle request timed out');
         }
 
-        /** @phpstan-ignore property.notFound */
-        $responseSize = (int) $packet->data_size;
+        if ($statusCode !== PacketStatus::OK->value) {
+            throw $this->createException($statusCode, $dataSize);
+        }
 
-        return $responseSize > 0
-            /** @phpstan-ignore property.notFound */
-            ? \FFI::string($packet->data, $responseSize)
-            : '';
+        return $data;
     }
 
     private function createException(int $statusCode, int $dataSize): \RuntimeException
