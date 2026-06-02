@@ -297,11 +297,11 @@ ensure_source() {
 
 run_build() {
     local target="$1"
-    log "running zig build clients:c -Doptimize=ReleaseSafe (target: $target)"
+    log "running zig build clients:c (target: $target)"
     # The `clients:c` step in TigerBeetle's build.zig builds the dynamic
     # library for all supported platforms and installs them under
     # <src>/src/clients/c/lib/<platform>/libtb_client.{so,dylib}.
-    ( cd "$TB_SRC_DIR" && "$ZIG_BIN" build clients:c -Doptimize=ReleaseSafe ) \
+    ( cd "$TB_SRC_DIR" && "$ZIG_BIN" build clients:c ) \
         || die --code 5 "zig build failed"
 }
 
