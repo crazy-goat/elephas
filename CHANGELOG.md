@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - CI workflow now executes both unit and functional PHPUnit suites, with distinct steps for each (#107)
 
+### Changed
+- Replaced `assert()` calls with explicit exception-throwing validation at public and native boundaries so that validation cannot be silently disabled by PHP assertion settings (#121)
+
 ### Fixed
 - `NativeClient` request completion no longer confuses `TB_PACKET_OK` (status 0) with an incomplete/pending packet. A sentinel status value (`0xFFFFFFFF`) is now used to track the pending state, allowing status 0 to be correctly interpreted as a successful response (#109)
 - `NativeClient::submit()` now retains a PHP reference to the FFI data buffer for the full native request lifetime, preventing a potential use-after-free when the CData backing the request payload is garbage-collected while `tb_client` still holds the raw pointer (#110)

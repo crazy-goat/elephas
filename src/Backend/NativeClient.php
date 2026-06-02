@@ -87,7 +87,12 @@ CPROG;
     /** @param array<string> $addresses */
     public function init(string $clusterId, array $addresses, int $concurrencyMax = 32): void
     {
-        \assert(\strlen($clusterId) === 16, 'Cluster ID must be 16 bytes');
+        if (\strlen($clusterId) !== 16) {
+            throw new \ValueError(\sprintf(
+                'Cluster ID must be exactly 16 bytes, got %d',
+                \strlen($clusterId),
+            ));
+        }
 
         /** @phpstan-var \FFI\CData $cClusterId */
         $cClusterId = $this->ffi->new('tb_uint128_t');

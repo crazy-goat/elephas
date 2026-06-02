@@ -144,6 +144,37 @@ final class NativeClientTest extends TestCase
     }
 
     #[Test]
+    public function initThrowsValueErrorWhenClusterIdIsWrongLength(): void
+    {
+        $client = $this->createClientWithoutFfi();
+
+        $this->expectException(\ValueError::class);
+        $this->expectExceptionMessage('Cluster ID must be exactly 16 bytes');
+
+        $client->init('too-short', ['127.0.0.1:3000']);
+    }
+
+    #[Test]
+    public function initThrowsValueErrorWhenClusterIdIsEmpty(): void
+    {
+        $client = $this->createClientWithoutFfi();
+
+        $this->expectException(\ValueError::class);
+
+        $client->init('', ['127.0.0.1:3000']);
+    }
+
+    #[Test]
+    public function initThrowsValueErrorWhenClusterIdIsTooLong(): void
+    {
+        $client = $this->createClientWithoutFfi();
+
+        $this->expectException(\ValueError::class);
+
+        $client->init(\str_repeat('x', 17), ['127.0.0.1:3000']);
+    }
+
+    #[Test]
     public function processCompletionResultThrowsForUnknownNonOkStatus(): void
     {
         $client = $this->createClientWithoutFfi();

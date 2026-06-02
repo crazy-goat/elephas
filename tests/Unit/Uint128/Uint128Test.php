@@ -153,6 +153,19 @@ class Uint128Test extends TestCase
         $this->assertSame('18446744073709551616', $val3->toString());
     }
 
+    public function testFromHexThrowsOnInvalidCharacters(): void
+    {
+        $this->expectException(\ValueError::class);
+        $this->expectExceptionMessage('non-hexadecimal');
+        Uint128::fromHex('zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz');
+    }
+
+    public function testFromHexThrowsOnInvalidCharactersMixed(): void
+    {
+        $this->expectException(\ValueError::class);
+        Uint128::fromHex('0xabcdefghijklmnop');
+    }
+
     public function testFromHexWith0xPrefix(): void
     {
         $val = Uint128::fromHex('0xabcdef0123456789');

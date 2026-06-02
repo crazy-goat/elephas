@@ -104,7 +104,9 @@ final readonly class Uint128
         }
 
         $parts = \unpack('Plow/Phigh', $bytes);
-        \assert(\is_array($parts), 'unpack should return an array for valid input');
+        if ($parts === false) {
+            throw new \RuntimeException('Failed to unpack Uint128 bytes');
+        }
 
         return new self($parts['low'], $parts['high']);
     }
@@ -124,8 +126,12 @@ final readonly class Uint128
             throw new \ValueError('Hex string exceeds 128-bit range');
         }
 
+        if (!\ctype_xdigit($hex)) {
+            throw new \ValueError('Hex string contains non-hexadecimal characters');
+        }
+
+        /** @var non-empty-string $bytes */
         $bytes = \hex2bin($hex);
-        \assert(\is_string($bytes), 'hex2bin should return a string for valid hex input');
         // hex string is big-endian, reverse to little-endian
         $bytes = \strrev($bytes);
 
