@@ -15,22 +15,21 @@ namespace CrazyGoat\Elephas\Exception;
  */
 final class RequestTimeoutException extends \RuntimeException implements ElephasExceptionInterface
 {
+    private function __construct(private readonly float $timeoutSeconds)
+    {
+        parent::__construct(\sprintf(
+            'TigerBeetle request timed out after %.3f s',
+            $this->timeoutSeconds,
+        ));
+    }
+
     public static function create(float $timeoutSeconds): self
     {
-        return new self(\sprintf(
-            'TigerBeetle request timed out after %.3f s',
-            $timeoutSeconds,
-        ));
+        return new self($timeoutSeconds);
     }
 
     public function getTimeoutSeconds(): float
     {
-        $message = $this->getMessage();
-
-        if (\preg_match('/after (\d+(?:\.\d+)?) s/', $message, $matches) === 1) {
-            return (float) $matches[1];
-        }
-
-        return 0.0;
+        return $this->timeoutSeconds;
     }
 }

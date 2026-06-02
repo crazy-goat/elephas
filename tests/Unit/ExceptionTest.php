@@ -520,7 +520,7 @@ final class ExceptionTest extends TestCase
         ];
 
         foreach ($exceptionClasses as $class) {
-            $e = new $class();
+            $e = $class === RequestTimeoutException::class ? $class::create(1.0) : new $class();
             $this->assertInstanceOf(\RuntimeException::class, $e);
             $this->assertInstanceOf(ElephasExceptionInterface::class, $e);
         }
