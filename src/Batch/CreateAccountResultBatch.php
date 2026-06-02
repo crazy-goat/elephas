@@ -28,7 +28,16 @@ class CreateAccountResultBatch extends AbstractBatch
 
     public static function fromBuffer(string $buffer): self
     {
-        $count = (int) \ceil(\strlen($buffer) / BinaryHelper::CREATE_ACCOUNT_RESULT_SIZE);
+        $length = \strlen($buffer);
+        $structSize = BinaryHelper::CREATE_ACCOUNT_RESULT_SIZE;
+        if ($length % $structSize !== 0) {
+            throw new \InvalidArgumentException(\sprintf(
+                'CreateAccountResultBatch buffer size must be a multiple of %d bytes, got %d bytes',
+                $structSize,
+                $length,
+            ));
+        }
+        $count = $length / $structSize;
         $batch = new self($count);
         $batch->buffer = $buffer;
         $batch->length = $count;

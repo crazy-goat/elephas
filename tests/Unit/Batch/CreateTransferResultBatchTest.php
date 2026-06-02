@@ -101,6 +101,24 @@ class CreateTransferResultBatchTest extends TestCase
         $this->assertSame(5, $batch->getCapacity());
     }
 
+    public function testFromBufferRejectsMalformedBuffer(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'CreateTransferResultBatch buffer size must be a multiple of 16 bytes, got 5 bytes',
+        );
+
+        CreateTransferResultBatch::fromBuffer(\str_repeat("\0", 5));
+    }
+
+    public function testFromBufferAcceptsEmptyBuffer(): void
+    {
+        $batch = CreateTransferResultBatch::fromBuffer('');
+
+        $this->assertSame(0, $batch->getLength());
+        $this->assertSame(0, $batch->getCapacity());
+    }
+
     public function testCountIsZeroWhenEmpty(): void
     {
         $batch = new CreateTransferResultBatch(10);

@@ -242,6 +242,24 @@ class AccountBatchTest extends TestCase
         $this->assertSame(5, $batch->getCapacity());
     }
 
+    public function testFromBufferRejectsMalformedBuffer(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'AccountBatch buffer size must be a multiple of 128 bytes, got 100 bytes',
+        );
+
+        AccountBatch::fromBuffer(\str_repeat("\0", 100));
+    }
+
+    public function testFromBufferAcceptsEmptyBuffer(): void
+    {
+        $batch = AccountBatch::fromBuffer('');
+
+        $this->assertSame(0, $batch->getLength());
+        $this->assertSame(0, $batch->getCapacity());
+    }
+
     public function testGetBufferRoundtrip(): void
     {
         $id = Uint128::fromString('1000000000000000000000000000000');
