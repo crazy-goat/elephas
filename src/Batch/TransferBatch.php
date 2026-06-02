@@ -39,7 +39,7 @@ class TransferBatch extends AbstractBatch
                 $length,
             ));
         }
-        $count = (int) ($length / $structSize);
+        $count = $length / $structSize;
         $batch = new self($count);
         $batch->buffer = $buffer;
         $batch->length = $count;
