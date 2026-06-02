@@ -728,6 +728,7 @@ class TransferTest extends TestCase
 
             $this->assertSame(1, $transfers->getLength());
             $transfers->rewind();
+            $this->assertFalse($transfers->isFound());
             $this->assertTrue($transfers->getId()->equals(Uint128::zero()));
             $this->assertTrue($transfers->getDebitAccountId()->equals(Uint128::zero()));
             $this->assertTrue($transfers->getCreditAccountId()->equals(Uint128::zero()));
@@ -773,10 +774,12 @@ class TransferTest extends TestCase
             $this->assertSame(2, $transfers->getLength());
 
             $transfers->rewind();
+            $this->assertTrue($transfers->isFound());
             $this->assertTrue($existingId->equals($transfers->getId()));
             $this->assertTrue($transfers->getAmount()->equals(Uint128::fromInt(50)));
 
             $transfers->next();
+            $this->assertFalse($transfers->isFound());
             $this->assertTrue($transfers->getId()->equals(Uint128::zero()));
             $this->assertTrue($transfers->getAmount()->equals(Uint128::zero()));
         } finally {

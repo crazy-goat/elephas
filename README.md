@@ -168,6 +168,30 @@ $client->close();
 | `Id::extractTimestamp(Uint128 $id): int` | Extract millisecond timestamp |
 | `Id::extractRandom(Uint128 $id): string` | Extract random bytes |
 
+### Lookup behaviour
+
+`lookupAccounts()` and `lookupTransfers()` always return exactly one result per requested ID, in the same order.
+
+When a requested record **does not exist**, TigerBeetle returns a **zeroed struct** (all fields set to zero). Use `isFound()` to check whether the current record was found:
+
+```php
+$ids = new IdBatch(2);
+$ids->add();
+$ids->setId(Uint128::fromString('100'));
+$ids->add();
+$ids->setId(Uint128::fromString('999'));
+
+$accounts = $client->lookupAccounts($ids);
+
+$accounts->rewind();
+var_dump($accounts->isFound()); // true  – account 100 exists
+
+$accounts->next();
+var_dump($accounts->isFound()); // false – account 999 does not exist
+```
+
+A found record always has a non-zero ID and a non-zero timestamp (`getTimestamp() > 0`).
+
 ### Batch Classes
 
 All batch classes extend `AbstractBatch` and implement `\Countable`. They are used to pack multiple values into a single request.

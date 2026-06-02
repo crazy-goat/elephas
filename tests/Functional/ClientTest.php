@@ -485,6 +485,7 @@ class ClientTest extends TestCase
 
             $this->assertSame(1, $accounts->getLength());
             $accounts->rewind();
+            $this->assertFalse($accounts->isFound());
             $this->assertTrue($accounts->getId()->equals(Uint128::zero()));
             $this->assertSame(0, $accounts->getLedger());
             $this->assertSame(0, $accounts->getCode());
@@ -524,10 +525,12 @@ class ClientTest extends TestCase
             $this->assertSame(2, $accounts->getLength());
 
             $accounts->rewind();
+            $this->assertTrue($accounts->isFound());
             $this->assertTrue($existingId->equals($accounts->getId()));
             $this->assertSame(1, $accounts->getLedger());
 
             $accounts->next();
+            $this->assertFalse($accounts->isFound());
             $this->assertTrue($accounts->getId()->equals(Uint128::zero()));
             $this->assertSame(0, $accounts->getLedger());
         } finally {

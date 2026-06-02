@@ -56,6 +56,11 @@ class AccountBatch extends AbstractBatch
         return $this->readUint128(self::ID);
     }
 
+    public function isFound(): bool
+    {
+        return $this->isValidPosition() && !$this->getId()->isZero();
+    }
+
     public function getDebitsPending(): Uint128
     {
         return $this->readUint128(self::DEBITS_PENDING);
