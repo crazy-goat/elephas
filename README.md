@@ -192,6 +192,22 @@ var_dump($accounts->isFound()); // false – account 999 does not exist
 
 A found record always has a non-zero ID and a non-zero timestamp (`getTimestamp() > 0`).
 
+### Integer field ranges
+
+The integer setters on mutable batch classes validate that values fit their declared unsigned width
+before binary packing. A value that is out of range raises `IntegerOverflowException` with the
+offending field name and the accepted `[min, max]` range.
+
+| Field width | Setter examples | Accepted range |
+|-------------|-----------------|----------------|
+| `uint16`    | `setCode`, `setFlags` (Account/Transfer) | `[0, 65535]` |
+| `uint32`    | `setUserData32`, `setLedger`, `setTimeout`, `setLimit`, `setFlags` (filter batches) | `[0, 4294967295]` |
+| `uint64`    | `setUserData64`, `setTimestampMin`, `setTimestampMax` | `[0, PHP_INT_MAX]` |
+
+Values that exceed `PHP_INT_MAX` cannot be represented as a PHP signed `int` and must be modelled
+with `Uint128` instead. Negative values that would otherwise be silently reinterpreted as huge
+unsigned values by `pack('P', …)` are rejected up front.
+
 ### Batch Classes
 
 All batch classes extend `AbstractBatch` and implement `\Countable`. They are used to pack multiple values into a single request.

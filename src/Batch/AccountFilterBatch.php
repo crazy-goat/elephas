@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace CrazyGoat\Elephas\Batch;
 
 use CrazyGoat\Elephas\Internal\BinaryHelper;
+use CrazyGoat\Elephas\Internal\BinaryRange;
 use CrazyGoat\Elephas\Uint128\Uint128;
 
 class AccountFilterBatch extends AbstractBatch
@@ -46,6 +47,7 @@ class AccountFilterBatch extends AbstractBatch
 
     public function setUserData64(int $value): void
     {
+        BinaryRange::assertUint64($value, 'user_data_64');
         $this->writeUint64(self::USER_DATA_64, $value);
     }
 
@@ -56,6 +58,7 @@ class AccountFilterBatch extends AbstractBatch
 
     public function setUserData32(int $value): void
     {
+        BinaryRange::assertUint32($value, 'user_data_32');
         $this->writeUint32(self::USER_DATA_32, $value);
     }
 
@@ -66,6 +69,7 @@ class AccountFilterBatch extends AbstractBatch
 
     public function setCode(int $value): void
     {
+        BinaryRange::assertUint16($value, 'code');
         $this->writeUint16(self::CODE, $value);
     }
 
@@ -76,6 +80,7 @@ class AccountFilterBatch extends AbstractBatch
 
     public function setTimestampMin(int $value): void
     {
+        BinaryRange::assertUint64($value, 'timestamp_min');
         $this->writeUint64(self::TIMESTAMP_MIN, $value);
     }
 
@@ -86,6 +91,7 @@ class AccountFilterBatch extends AbstractBatch
 
     public function setTimestampMax(int $value): void
     {
+        BinaryRange::assertUint64($value, 'timestamp_max');
         $this->writeUint64(self::TIMESTAMP_MAX, $value);
     }
 
@@ -96,6 +102,7 @@ class AccountFilterBatch extends AbstractBatch
 
     public function setLimit(int $value): void
     {
+        BinaryRange::assertUint32($value, 'limit');
         $this->writeUint32(self::LIMIT, $value);
     }
 
@@ -106,6 +113,7 @@ class AccountFilterBatch extends AbstractBatch
 
     public function setFlags(int $value): void
     {
+        BinaryRange::assertUint32($value, 'flags');
         $this->writeUint32(self::FLAGS, $value);
     }
 

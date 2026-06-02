@@ -19,4 +19,18 @@ final class IntegerOverflowException extends \RuntimeException implements Elepha
             \sprintf('Value %s exceeds maximum 128-bit unsigned integer (2^128-1)', $value),
         );
     }
+
+    public static function forFieldRange(string $field, int $bits, int $value, int $min, int $max): self
+    {
+        return new self(
+            \sprintf(
+                'Field "%s" value %d is outside the unsigned %d-bit range [%d, %d]',
+                $field,
+                $value,
+                $bits,
+                $min,
+                $max,
+            ),
+        );
+    }
 }
