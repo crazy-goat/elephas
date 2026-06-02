@@ -181,6 +181,24 @@ class QueryFilterBatchTest extends TestCase
         $this->assertSame(5, $batch->getCapacity());
     }
 
+    public function testFromBufferRejectsMalformedBuffer(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'QueryFilterBatch buffer size must be a multiple of 64 bytes, got 50 bytes',
+        );
+
+        QueryFilterBatch::fromBuffer(\str_repeat("\0", 50));
+    }
+
+    public function testFromBufferAcceptsEmptyBuffer(): void
+    {
+        $batch = QueryFilterBatch::fromBuffer('');
+
+        $this->assertSame(0, $batch->getLength());
+        $this->assertSame(0, $batch->getCapacity());
+    }
+
     public function testBinaryHelperRoundtrip(): void
     {
         $batch = new QueryFilterBatch(10);

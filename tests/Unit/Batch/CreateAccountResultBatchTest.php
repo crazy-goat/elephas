@@ -101,6 +101,24 @@ class CreateAccountResultBatchTest extends TestCase
         $this->assertSame(5, $batch->getCapacity());
     }
 
+    public function testFromBufferRejectsMalformedBuffer(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'CreateAccountResultBatch buffer size must be a multiple of 16 bytes, got 5 bytes',
+        );
+
+        CreateAccountResultBatch::fromBuffer(\str_repeat("\0", 5));
+    }
+
+    public function testFromBufferAcceptsEmptyBuffer(): void
+    {
+        $batch = CreateAccountResultBatch::fromBuffer('');
+
+        $this->assertSame(0, $batch->getLength());
+        $this->assertSame(0, $batch->getCapacity());
+    }
+
     public function testCountIsZeroWhenEmpty(): void
     {
         $batch = new CreateAccountResultBatch(10);
