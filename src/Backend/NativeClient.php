@@ -13,7 +13,7 @@ use CrazyGoat\Elephas\PacketStatus;
 
 class NativeClient
 {
-    private const PACKET_PENDING = 0xFFFFFFFF;
+    public const PACKET_PENDING = 0xFFFFFFFF;
 
     private const HEADER = <<<'CPROG'
 typedef unsigned char tb_uint128_t[16];
@@ -65,13 +65,15 @@ void tb_client_submit(tb_client_t* client, tb_packet_t* packet);
 
 CPROG;
 
-    private readonly \FFI $ffi;
+    protected readonly \FFI $ffi;
 
-    private readonly \FFI\CData $noopCallback;
+    protected readonly \FFI\CData $noopCallback;
 
-    private \FFI\CData $client;
+    protected \FFI\CData $client;
 
-    private readonly string $libPath;
+    private bool $initialized = false;
+
+    protected readonly string $libPath;
 
     public function __construct(?string $libPath = null)
     {
@@ -141,21 +143,20 @@ CPROG;
         /** @phpstan-var \FFI\CData $clientPtr */
         $clientPtr = $this->ffi->new('tb_client_t*');
 
-        /** @phpstan-ignore method.notFound */
-        $status = $this->ffi->tb_client_init(
-            \FFI::addr($clientPtr),
+        $status = $this->callTbClientInit(
+            $clientPtr,
             $cClusterId,
             $cAddresses,
             \count($addresses),
-            0,
             $this->noopCallback,
         );
 
-        if ((int) $status !== 0) {
-            throw InitializationException::fromStatus(InitStatus::from((int) $status));
+        if ($status !== 0) {
+            throw InitializationException::fromStatus(InitStatus::from($status));
         }
 
         $this->client = $clientPtr;
+        $this->initialized = true;
     }
 
     public function submit(Operation $operation, string $data): string
@@ -183,8 +184,7 @@ CPROG;
         /** @phpstan-ignore property.notFound */
         $cPacket->callback_context = 0;
 
-        /** @phpstan-ignore method.notFound */
-        $this->ffi->tb_client_submit($this->client, \FFI::addr($cPacket));
+        $this->callTbClientSubmit($this->client, $cPacket);
 
         return $this->pollForCompletion($cPacket);
         // $dataBuffer goes out of scope here, after the response has been
@@ -193,10 +193,9 @@ CPROG;
 
     public function deinit(): void
     {
-        if (isset($this->client)) {
-            /** @phpstan-ignore method.notFound */
-            $this->ffi->tb_client_deinit($this->client);
-            unset($this->client);
+        if ($this->initialized) {
+            $this->callTbClientDeinit($this->client);
+            $this->initialized = false;
         }
     }
 
@@ -205,16 +204,56 @@ CPROG;
         return $this->ffi;
     }
 
-    private function createDataBuffer(string $data): \FFI\CData
+    protected function callTbClientInit(
+        \FFI\CData $clientPtr,
+        \FFI\CData $clusterId,
+        \FFI\CData $addresses,
+        int $addressCount,
+        \FFI\CData $callback,
+    ): int {
+        /** @phpstan-ignore method.notFound */
+        return $this->ffi->tb_client_init(
+            \FFI::addr($clientPtr),
+            $clusterId,
+            $addresses,
+            $addressCount,
+            0,
+            $callback,
+        );
+    }
+
+    protected function callTbClientSubmit(\FFI\CData $client, \FFI\CData $packet): void
     {
+        /** @phpstan-ignore method.notFound */
+        $this->ffi->tb_client_submit($client, \FFI::addr($packet));
+    }
+
+    protected function callTbClientDeinit(\FFI\CData $client): void
+    {
+        /** @phpstan-ignore method.notFound */
+        $this->ffi->tb_client_deinit($client);
+    }
+
+    protected function createDataBuffer(string $data): \FFI\CData
+    {
+        $size = \strlen($data);
+
+        if ($size === 0) {
+            /** @phpstan-var \FFI\CData $buffer */
+            $buffer = $this->ffi->new('uint8_t[1]');
+            \FFI::memset($buffer, 0, 1);
+
+            return $buffer;
+        }
+
         /** @phpstan-var \FFI\CData $buffer */
-        $buffer = $this->ffi->new('uint8_t[' . \strlen($data) . ']');
-        \FFI::memcpy($buffer, $data, \strlen($data));
+        $buffer = $this->ffi->new('uint8_t[' . $size . ']');
+        \FFI::memcpy($buffer, $data, $size);
 
         return $buffer;
     }
 
-    private function pollForCompletion(\FFI\CData $packet): string
+    protected function pollForCompletion(\FFI\CData $packet): string
     {
         $timeout = 30_000_000;
         $elapsed = 0;
@@ -244,7 +283,7 @@ CPROG;
         );
     }
 
-    private function processCompletionResult(int $statusCode, int $dataSize, string $data): string
+    protected function processCompletionResult(int $statusCode, int $dataSize, string $data): string
     {
         if ($statusCode === self::PACKET_PENDING) {
             throw new \RuntimeException('TigerBeetle request timed out');

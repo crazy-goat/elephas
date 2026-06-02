@@ -8,6 +8,7 @@ use CrazyGoat\Elephas\Backend\NativeClient;
 use CrazyGoat\Elephas\Exception\InitializationException;
 use CrazyGoat\Elephas\Exception\RequestException;
 use CrazyGoat\Elephas\Exception\TooMuchDataException;
+use CrazyGoat\Elephas\Operation;
 use CrazyGoat\Elephas\PacketStatus;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
@@ -38,18 +39,8 @@ final class NativeClientTest extends TestCase
     #[Test]
     public function sentinelConstantIsDistinctFromPacketOk(): void
     {
-        $constants = (new \ReflectionClass(NativeClient::class))->getReflectionConstants();
-        $pending = null;
-        foreach ($constants as $c) {
-            if ($c->getName() === 'PACKET_PENDING') {
-                $pending = $c->getValue();
-                break;
-            }
-        }
-
-        $this->assertNotNull($pending, 'PACKET_PENDING constant must exist');
-        $this->assertNotSame(0, $pending);
-        $this->assertNotSame(PacketStatus::OK->value, $pending);
+        $this->assertNotSame(0, NativeClient::PACKET_PENDING);
+        $this->assertNotSame(PacketStatus::OK->value, NativeClient::PACKET_PENDING);
     }
 
     #[Test]
@@ -129,20 +120,10 @@ final class NativeClientTest extends TestCase
         $client = $this->createClientWithoutFfi();
         $method = $this->getProcessCompletionResultMethod();
 
-        $constants = (new \ReflectionClass(NativeClient::class))->getReflectionConstants();
-        $sentinel = null;
-        foreach ($constants as $c) {
-            if ($c->getName() === 'PACKET_PENDING') {
-                $sentinel = $c->getValue();
-                break;
-            }
-        }
-        $this->assertNotNull($sentinel);
-
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('timed out');
 
-        $method->invoke($client, $sentinel, 0, '');
+        $method->invoke($client, NativeClient::PACKET_PENDING, 0, '');
     }
 
     #[Test]
@@ -185,6 +166,214 @@ final class NativeClientTest extends TestCase
         $this->expectException(RequestException::class);
 
         $method->invoke($client, 255, 0, '');
+    }
+
+    // ─── NativeClient lifecycle tests ───────────────────────────────────
+
+    #[Test]
+    public function initCompletesSuccessfully(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 0;
+
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    #[DataProvider('initFailureStatusProvider')]
+    public function initThrowsForFailureStatuses(int $status, string $expectedMessage): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = $status;
+
+        $this->expectException(InitializationException::class);
+        $this->expectExceptionMessage($expectedMessage);
+
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+    }
+
+    /**
+     * @return array<string, array{int, string}>
+     */
+    public static function initFailureStatusProvider(): array
+    {
+        return [
+            'unexpected' => [1, 'Unexpected error during initialization'],
+            'out of memory' => [2, 'Out of memory during initialization'],
+            'invalid address' => [3, 'Invalid cluster address'],
+            'system resources' => [4, 'Insufficient system resources'],
+            'network subsystem' => [5, 'Network subsystem error'],
+        ];
+    }
+
+    #[Test]
+    public function initFailureProducesMeaningfulMessage(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 2;
+
+        $this->expectException(InitializationException::class);
+        $this->expectExceptionMessage('Out of memory');
+
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+    }
+
+    #[Test]
+    public function submitReturnsResponseData(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 0;
+        $client->submitResultData = 'response-data';
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+
+        $result = $client->submit(Operation::CREATE_ACCOUNTS, 'request-data');
+
+        $this->assertSame('response-data', $result);
+    }
+
+    #[Test]
+    public function submitReturnsEmptyStringForEmptyResponse(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 0;
+        $client->submitResultData = '';
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+
+        $result = $client->submit(Operation::PULSE, 'data');
+
+        $this->assertSame('', $result);
+    }
+
+    #[Test]
+    #[DataProvider('submitErrorProvider')]
+    public function submitThrowsForNativeErrors(int $packetStatus, string $exceptionClass): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 0;
+        $client->submitErrorStatus = $packetStatus;
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+
+        /** @var class-string<\Throwable> $exceptionClass */
+        $this->expectException($exceptionClass);
+
+        $client->submit(Operation::CREATE_ACCOUNTS, 'data');
+    }
+
+    /**
+     * @return array<string, array{int, class-string<\Throwable>}>
+     */
+    public static function submitErrorProvider(): array
+    {
+        return [
+            'too much data' => [PacketStatus::TOO_MUCH_DATA->value, TooMuchDataException::class],
+            'invalid operation' => [PacketStatus::INVALID_OPERATION->value, RequestException::class],
+            'invalid data size' => [PacketStatus::INVALID_DATA_SIZE->value, RequestException::class],
+            'zero address' => [PacketStatus::ZERO_ADDRESS->value, RequestException::class],
+            'zero cluster id' => [PacketStatus::ZERO_CLUSTER_ID->value, RequestException::class],
+            'concurrency max exceeded' => [PacketStatus::CONCURRENCY_MAX_EXCEEDED->value, RequestException::class],
+        ];
+    }
+
+    #[Test]
+    public function submitThrowsRequestExceptionForUnknownStatus(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 0;
+        $client->submitErrorStatus = 255;
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+
+        $this->expectException(RequestException::class);
+        $this->expectExceptionMessage('255');
+
+        $client->submit(Operation::CREATE_ACCOUNTS, 'data');
+    }
+
+    #[Test]
+    public function submitThrowsTimeoutWhenPacketNeverCompletes(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 0;
+        $client->submitShouldTimeout = true;
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('timed out');
+
+        $client->submit(Operation::PULSE, 'data');
+    }
+
+    #[Test]
+    public function deinitCallsTbClientDeinit(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 0;
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+
+        $client->deinit();
+
+        $this->assertTrue($client->deinitCalled);
+    }
+
+    #[Test]
+    public function deinitIsIdempotent(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 0;
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+
+        $client->deinit();
+        $client->deinit();
+        $client->deinit();
+
+        $this->assertTrue($client->deinitCalled);
+    }
+
+    #[Test]
+    public function deinitAfterFailedInitDoesNotCallTbClientDeinit(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 1;
+
+        try {
+            $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+        } catch (InitializationException) {
+        }
+
+        $client->deinit();
+
+        $this->assertFalse($client->deinitCalled);
+    }
+
+    #[Test]
+    public function multipleSubmitsAllReturnData(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 0;
+        $client->submitResultData = 'response';
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+
+        for ($i = 0; $i < 5; $i++) {
+            $result = $client->submit(Operation::PULSE, 'data');
+            $this->assertSame('response', $result);
+        }
+    }
+
+    #[Test]
+    public function deinitDoesNotPreventSubsequentInit(): void
+    {
+        $client = new TestableNativeClient();
+        $client->initResult = 0;
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3000']);
+
+        $client->deinit();
+        $this->assertTrue($client->deinitCalled);
+
+        // Reset and init again — should not throw
+        $client->deinitCalled = false;
+        $client->initResult = 0;
+        $client->init(\str_repeat("\0", 16), ['127.0.0.1:3001']);
     }
 
     #[Test]
