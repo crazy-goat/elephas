@@ -27,7 +27,8 @@ final class TestableNativeClient extends NativeClient
 
     public function __construct()
     {
-        $this->libPath = '/dev/null';
+        $ref = new \ReflectionProperty(NativeClient::class, 'libPath');
+        $ref->setValue($this, '/dev/null');
 
         $minimalHeader = <<<'CPROG'
 typedef unsigned char tb_uint128_t[16];
@@ -45,8 +46,11 @@ typedef struct tb_packet_t {
 } tb_packet_t;
 CPROG;
 
-        $this->ffi = \FFI::cdef($minimalHeader);
-        $this->noopCallback = $this->ffi->new('unsigned char');
+        $ffiProp = new \ReflectionProperty(NativeClient::class, 'ffi');
+        $ffiProp->setValue($this, \FFI::cdef($minimalHeader));
+
+        $noopProp = new \ReflectionProperty(NativeClient::class, 'noopCallback');
+        $noopProp->setValue($this, $this->ffi->new('unsigned char'));
     }
 
     public function setClient(\FFI\CData $client): void
