@@ -12,6 +12,7 @@ use CrazyGoat\Elephas\Batch\AccountFilterBatch;
 use CrazyGoat\Elephas\Batch\CreateAccountResultBatch;
 use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
 use CrazyGoat\Elephas\Batch\IdBatch;
+use CrazyGoat\Elephas\Batch\QueryFilterBatch;
 use CrazyGoat\Elephas\Batch\TransferBatch;
 use CrazyGoat\Elephas\Client;
 use CrazyGoat\Elephas\ClientInterface;
@@ -21,6 +22,7 @@ use CrazyGoat\Elephas\Exception\ClientClosedException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 use CrazyGoat\Elephas\Operation;
 use CrazyGoat\Elephas\QueryFilter;
+use CrazyGoat\Elephas\QueryFilterFlags;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -759,6 +761,170 @@ final class ClientTest extends TestCase
         $client->getAccountBalances(new AccountFilterBatch(1));
     }
 
+    public function testQueryAccountsSubmitsQueryFilterBatchBytesToBackend(): void
+    {
+        $userData128 = Uint128::fromInt(0xABCDEF);
+        $filter = new QueryFilter(
+            userData128: $userData128,
+            userData64: 0xDEADBEEF,
+            userData32: 0x12345678,
+            ledger: 42,
+            code: 7,
+            timestampMin: 1_700_000_000_000_000_000,
+            timestampMax: 1_800_000_000_000_000_000,
+            limit: 25,
+            flags: QueryFilterFlags::REVERSED,
+        );
+
+        $expected = $this->buildExpectedQueryFilterBatch($filter);
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::QUERY_ACCOUNTS, $expected->toBytes())
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->queryAccounts($filter);
+
+        $this->assertInstanceOf(AccountBatch::class, $result);
+    }
+
+    public function testQueryAccountsReturnsParsedAccountBatch(): void
+    {
+        $buffer = \implode('', [
+            $this->packAccount(11, 1, 1),
+            $this->packAccount(22, 2, 7),
+        ]);
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn($buffer);
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->queryAccounts(new QueryFilter(Uint128::zero()));
+
+        $this->assertSame(2, $result->getLength());
+
+        $result->rewind();
+        $this->assertTrue($result->getId()->equals(Uint128::fromInt(11)));
+        $this->assertSame(1, $result->getLedger());
+        $this->assertSame(1, $result->getCode());
+
+        $result->next();
+        $this->assertTrue($result->getId()->equals(Uint128::fromInt(22)));
+        $this->assertSame(2, $result->getLedger());
+        $this->assertSame(7, $result->getCode());
+    }
+
+    public function testQueryAccountsEmptyResponseProducesEmptyBatch(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->queryAccounts(new QueryFilter(Uint128::zero()));
+
+        $this->assertSame(0, $result->getLength());
+    }
+
+    public function testQueryAccountsPropagatesBackendException(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willThrowException(new \RuntimeException('boom'));
+
+        $client = Client::withBackend($backend);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('boom');
+
+        $client->queryAccounts(new QueryFilter(Uint128::zero()));
+    }
+
+    public function testQueryTransfersSubmitsQueryFilterBatchBytesToBackend(): void
+    {
+        $userData128 = Uint128::fromInt(0xABCDEF);
+        $filter = new QueryFilter(
+            userData128: $userData128,
+            userData64: 0xDEADBEEF,
+            userData32: 0x12345678,
+            ledger: 42,
+            code: 7,
+            timestampMin: 1_700_000_000_000_000_000,
+            timestampMax: 1_800_000_000_000_000_000,
+            limit: 25,
+            flags: QueryFilterFlags::REVERSED,
+        );
+
+        $expected = $this->buildExpectedQueryFilterBatch($filter);
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->expects($this->once())
+            ->method('submit')
+            ->with(Operation::QUERY_TRANSFERS, $expected->toBytes())
+            ->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->queryTransfers($filter);
+
+        $this->assertInstanceOf(TransferBatch::class, $result);
+    }
+
+    public function testQueryTransfersReturnsParsedTransferBatch(): void
+    {
+        $buffer = \implode('', [
+            $this->packTransfer(11, 1, 1),
+            $this->packTransfer(22, 2, 7),
+        ]);
+
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn($buffer);
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->queryTransfers(new QueryFilter(Uint128::zero()));
+
+        $this->assertSame(2, $result->getLength());
+
+        $result->rewind();
+        $this->assertTrue($result->getId()->equals(Uint128::fromInt(11)));
+        $this->assertSame(1, $result->getLedger());
+        $this->assertSame(1, $result->getCode());
+
+        $result->next();
+        $this->assertTrue($result->getId()->equals(Uint128::fromInt(22)));
+        $this->assertSame(2, $result->getLedger());
+        $this->assertSame(7, $result->getCode());
+    }
+
+    public function testQueryTransfersEmptyResponseProducesEmptyBatch(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willReturn('');
+
+        $client = Client::withBackend($backend);
+
+        $result = $client->queryTransfers(new QueryFilter(Uint128::zero()));
+
+        $this->assertSame(0, $result->getLength());
+    }
+
+    public function testQueryTransfersPropagatesBackendException(): void
+    {
+        $backend = $this->createMock(BackendInterface::class);
+        $backend->method('submit')->willThrowException(new \RuntimeException('boom'));
+
+        $client = Client::withBackend($backend);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('boom');
+
+        $client->queryTransfers(new QueryFilter(Uint128::zero()));
+    }
+
     public function testQueryAccountsAfterCloseThrowsClientClosedException(): void
     {
         $client = $this->createClientWithMockBackend();
@@ -846,5 +1012,22 @@ final class ClientTest extends TestCase
             'credits_posted' => Uint128::fromInt($creditsPosted),
             'timestamp' => $timestamp,
         ]);
+    }
+
+    private function buildExpectedQueryFilterBatch(QueryFilter $filter): QueryFilterBatch
+    {
+        $batch = new QueryFilterBatch(1);
+        $batch->add();
+        $batch->setUserData128($filter->getUserData128());
+        $batch->setUserData64($filter->getUserData64());
+        $batch->setUserData32($filter->getUserData32());
+        $batch->setLedger($filter->getLedger());
+        $batch->setCode($filter->getCode());
+        $batch->setTimestampMin($filter->getTimestampMin());
+        $batch->setTimestampMax($filter->getTimestampMax());
+        $batch->setLimit($filter->getLimit());
+        $batch->setFlags($filter->getFlags());
+
+        return $batch;
     }
 }

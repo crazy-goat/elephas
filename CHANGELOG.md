@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CrazyGoat\Elephas\Exception\InvalidBatchCursorException` thrown by batch getters and setters when the cursor position is outside the populated range (#119)
 - `Client::withTimeout()` factory and `RequestTimeoutException` for configurable, domain-specific request timeouts (#122)
 - `NativeClient` accepts a `$timeoutSeconds` constructor parameter forwarded through `BackendFactory` and `FfiBackend` (#122)
+- `Client::queryAccounts()` and `Client::queryTransfers()` now implement the full `QueryFilter` round-trip (pack `QueryFilter` → submit `QUERY_ACCOUNTS`/`QUERY_TRANSFERS` → decode `AccountBatch`/`TransferBatch`), resolving the misleading "not implemented" public contract (#114)
 
 ### Changed
 - Replaced `assert()` calls with explicit exception-throwing validation at public and native boundaries so that validation cannot be silently disabled by PHP assertion settings (#121)

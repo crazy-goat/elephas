@@ -133,8 +133,8 @@ $client->close();
 | `lookupTransfers(IdBatch $ids): TransferBatch` | Lookup transfers by ID | `TransferBatch` |
 | `getAccountTransfers(AccountFilterBatch $filter): TransferBatch` | Get transfers for an account | `TransferBatch` |
 | `getAccountBalances(AccountFilterBatch $filter): AccountBalanceBatch` | Get account balances | `AccountBalanceBatch` |
-| `queryAccounts(QueryFilter $filter): AccountBatch` | Query accounts (not yet implemented) | `AccountBatch` |
-| `queryTransfers(QueryFilter $filter): TransferBatch` | Query transfers (not yet implemented) | `TransferBatch` |
+| `queryAccounts(QueryFilter $filter): AccountBatch` | Query accounts by filter | `AccountBatch` |
+| `queryTransfers(QueryFilter $filter): TransferBatch` | Query transfers by filter | `TransferBatch` |
 
 ### Request Timeout
 
@@ -232,6 +232,40 @@ var_dump($accounts->isFound()); // false – account 999 does not exist
 ```
 
 A found record always has a non-zero ID and a non-zero timestamp (`getTimestamp() > 0`).
+
+### Querying accounts and transfers
+
+`queryAccounts()` and `queryTransfers()` stream records that match a `QueryFilter` across the
+cluster. A `QueryFilter` field set to `0` (or `Uint128::zero()` for `user_data_128`) acts as a
+wildcard; non-zero values are exact-match predicates. Combine `REVERSED` with `QueryFilterFlags::REVERSED`
+to iterate events in newest-first order, and use `limit` to cap the number of returned records.
+
+```php
+use CrazyGoat\Elephas\QueryFilter;
+use CrazyGoat\Elephas\QueryFilterFlags;
+use CrazyGoat\Elephas\Uint128\Uint128;
+
+// Accounts with a specific user_data_128, oldest first, capped at 100 results.
+$filter = new QueryFilter(
+    userData128: Uint128::fromInt(0xABCDEF),
+    limit: 100,
+    flags: 0,
+);
+
+$accounts = $client->queryAccounts($filter);
+$accounts->rewind();
+while ($accounts->valid()) {
+    $id = $accounts->getId();
+    $ledger = $accounts->getLedger();
+    // ...
+    $accounts->next();
+}
+
+// Transfers, newest first.
+$reversed = $client->queryTransfers(
+    new QueryFilter(flags: QueryFilterFlags::REVERSED),
+);
+```
 
 ### Integer field ranges
 

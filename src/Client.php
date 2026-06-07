@@ -12,6 +12,7 @@ use CrazyGoat\Elephas\Batch\AccountFilterBatch;
 use CrazyGoat\Elephas\Batch\CreateAccountResultBatch;
 use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
 use CrazyGoat\Elephas\Batch\IdBatch;
+use CrazyGoat\Elephas\Batch\QueryFilterBatch;
 use CrazyGoat\Elephas\Batch\TransferBatch;
 use CrazyGoat\Elephas\Exception\ClientClosedException;
 use CrazyGoat\Elephas\Uint128\Uint128;
@@ -167,16 +168,35 @@ final class Client implements ClientInterface
     {
         $this->ensureNotClosed();
 
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $response = $this->backend->submit(Operation::QUERY_ACCOUNTS, $this->buildQueryFilterBatch($filter)->toBytes());
+
+        return AccountBatch::fromBuffer($response);
     }
 
     public function queryTransfers(QueryFilter $filter): TransferBatch
     {
         $this->ensureNotClosed();
 
-        // TODO: implement
-        throw new \RuntimeException('Not implemented');
+        $response = $this->backend->submit(Operation::QUERY_TRANSFERS, $this->buildQueryFilterBatch($filter)->toBytes());
+
+        return TransferBatch::fromBuffer($response);
+    }
+
+    private function buildQueryFilterBatch(QueryFilter $filter): QueryFilterBatch
+    {
+        $batch = new QueryFilterBatch(1);
+        $batch->add();
+        $batch->setUserData128($filter->getUserData128());
+        $batch->setUserData64($filter->getUserData64());
+        $batch->setUserData32($filter->getUserData32());
+        $batch->setLedger($filter->getLedger());
+        $batch->setCode($filter->getCode());
+        $batch->setTimestampMin($filter->getTimestampMin());
+        $batch->setTimestampMax($filter->getTimestampMax());
+        $batch->setLimit($filter->getLimit());
+        $batch->setFlags($filter->getFlags());
+
+        return $batch;
     }
 
     public function getClusterId(): Uint128
