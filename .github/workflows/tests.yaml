@@ -113,7 +113,7 @@ jobs:
         run: |
           php -r '
             require "vendor/autoload.php";
-            
+
             // Test 1: Direct NativeClient construction
             try {
               $nc = new \CrazyGoat\Elephas\Backend\NativeClient();
@@ -177,6 +177,24 @@ jobs:
             echo "Waiting for TigerBeetle... ($i/30)"
             sleep 1
           done
+
+      - name: Debug NativeClient before functional tests
+        run: |
+          php -r '
+            require "vendor/autoload.php";
+            echo "Before functional tests:\n";
+            echo "FFI loaded: " . (extension_loaded("ffi") ? "yes" : "no") . "\n";
+            try {
+              $nc = new \CrazyGoat\Elephas\Backend\NativeClient();
+              echo "NativeClient created: yes\n";
+              echo "BackendFactory::isFfiAvailable(): " . (\CrazyGoat\Elephas\Backend\BackendFactory::isFfiAvailable() ? "true" : "false") . "\n";
+            } catch (\Throwable $e) {
+              echo "NativeClient created: no\n";
+              echo "Error: " . get_class($e) . ": " . $e->getMessage() . "\n";
+            }
+          ' 2>&1
+        env:
+          XDEBUG_MODE: off
 
       - name: Run functional tests
         run: vendor/bin/phpunit --testsuite=functional
