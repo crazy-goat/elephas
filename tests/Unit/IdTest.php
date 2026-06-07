@@ -607,4 +607,22 @@ final class IdTest extends TestCase
 
         $this->assertGreaterThan($id1->toHex(), $id2->toHex(), 'Later timestamp must produce larger hex value');
     }
+
+    // ──────────────────────────────────────────────
+    //  Documentation contract tests
+    // ──────────────────────────────────────────────
+
+    public function testFromStringReturnsUint128(): void
+    {
+        // Documented contract: fromString() returns Uint128
+        $result = Id::fromString('00000000000000000000000000');
+        $this->assertInstanceOf(Uint128::class, $result);
+    }
+
+    public function testToStringReturnsString(): void
+    {
+        // Documented contract: toString() returns 26-character ULID string
+        $result = Id::toString(Uint128::zero());
+        $this->assertSame(26, \strlen($result));
+    }
 }
