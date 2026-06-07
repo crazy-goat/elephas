@@ -113,15 +113,34 @@ jobs:
         run: |
           php -r '
             require "vendor/autoload.php";
+            
+            // Test 1: Direct NativeClient construction
             try {
               $nc = new \CrazyGoat\Elephas\Backend\NativeClient();
-              echo "NativeClient created successfully\n";
-              echo "Timeout: " . $nc->getTimeoutSeconds() . "\n";
+              echo "Test 1 - NativeClient created successfully\n";
+              echo "Test 1 - Timeout: " . $nc->getTimeoutSeconds() . "\n";
             } catch (\Throwable $e) {
-              echo "Error: " . get_class($e) . ": " . $e->getMessage() . "\n";
-              echo "File: " . $e->getFile() . ":" . $e->getLine() . "\n";
-              echo "Trace:\n" . $e->getTraceAsString() . "\n";
+              echo "Test 1 - Error: " . get_class($e) . ": " . $e->getMessage() . "\n";
+              echo "Test 1 - File: " . $e->getFile() . ":" . $e->getLine() . "\n";
+              echo "Test 1 - Trace:\n" . $e->getTraceAsString() . "\n";
             }
+
+            // Test 2: Test the exact isFfiBackendAvailable logic
+            echo "Test 2 - FFI loaded: " . (extension_loaded("ffi") ? "yes" : "no") . "\n";
+            try {
+              $nc = new \CrazyGoat\Elephas\Backend\NativeClient();
+              echo "Test 2 - NativeClient created: yes\n";
+            } catch (\Throwable $e) {
+              echo "Test 2 - NativeClient created: no\n";
+              echo "Test 2 - Error: " . get_class($e) . ": " . $e->getMessage() . "\n";
+            }
+
+            // Test 3: BackendFactory::isFfiAvailable()
+            echo "Test 3 - BackendFactory::isFfiAvailable(): " . (\CrazyGoat\Elephas\Backend\BackendFactory::isFfiAvailable() ? "true" : "false") . "\n";
+
+            // Test 4: Check if the library file exists
+            $libPath = dirname((new ReflectionClass(\CrazyGoat\Elephas\Backend\NativeClient::class))->getFileName(), 2) . "/resources/lib/linux-amd64/libtb_client.so";
+            echo "Test 4 - Library file exists: " . (file_exists($libPath) ? "yes ($libPath)" : "no") . "\n";
           ' 2>&1
         env:
           XDEBUG_MODE: off
