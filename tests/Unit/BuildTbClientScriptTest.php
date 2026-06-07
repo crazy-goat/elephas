@@ -176,7 +176,10 @@ final class BuildTbClientScriptTest extends TestCase
         } finally {
             // Clean up the temporary directory.
             if (is_dir($tmpDir)) {
-                array_map('unlink', glob($tmpDir . '/*'));
+                $files = glob($tmpDir . '/*');
+                if ($files !== false) {
+                    array_map(unlink(...), $files);
+                }
                 rmdir($tmpDir);
             }
         }
