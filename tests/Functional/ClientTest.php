@@ -115,10 +115,13 @@ class ClientTest extends TestCase
             $this->markTestSkipped('TigerBeetle or FFI not available');
         }
 
+        $this->assertSame(0, $client->getClusterId()->toInt(), 'Client must be usable before close');
+
         $client->close();
 
-        /** @phpstan-ignore method.alreadyNarrowedType */
-        $this->assertTrue(true);
+        // After close, any operation must throw ClientClosedException.
+        $this->expectException(ClientClosedException::class);
+        $client->createAccounts(new AccountBatch(1));
     }
 
     public function testCloseIsIdempotent(): void
@@ -128,12 +131,14 @@ class ClientTest extends TestCase
             $this->markTestSkipped('TigerBeetle or FFI not available');
         }
 
+        // Multiple close() calls must not throw.
         $client->close();
         $client->close();
         $client->close();
 
-        /** @phpstan-ignore method.alreadyNarrowedType */
-        $this->assertTrue(true);
+        // After multiple closes, the client must remain in closed state.
+        $this->expectException(ClientClosedException::class);
+        $client->createAccounts(new AccountBatch(1));
     }
 
     public function testWithBackendCreatesClient(): void

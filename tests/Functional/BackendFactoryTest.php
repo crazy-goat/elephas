@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Test\Functional;
 
 use CrazyGoat\Elephas\Backend\BackendFactory;
 use CrazyGoat\Elephas\Backend\FfiBackend;
+use CrazyGoat\Elephas\Exception\ClientClosedException;
 use CrazyGoat\Elephas\Operation;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\TestCase;
@@ -57,10 +58,13 @@ class BackendFactoryTest extends TestCase
         $backend = BackendFactory::create(Uint128::zero(), [$address]);
 
         $this->assertInstanceOf(FfiBackend::class, $backend);
-
         $backend->submit(Operation::PULSE, '');
+        $this->assertInstanceOf(FfiBackend::class, $backend);
+
         $backend->close();
 
-        $this->assertInstanceOf(FfiBackend::class, $backend);
+        // After close, submitting must throw ClientClosedException.
+        $this->expectException(ClientClosedException::class);
+        $backend->submit(Operation::PULSE, '');
     }
 }
