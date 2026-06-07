@@ -192,7 +192,7 @@ try {
 | `toInt(): int` | Convert to signed 64-bit integer |
 | `toFloat(): float` | Convert to float |
 | `toString(): string` | Convert to decimal string |
-| `toHex(): string` | Convert to hex string (with `0x` prefix) |
+| `toHex(): string` | Convert to hex string (lowercase, no prefix) |
 | `toBytes(): string` | Convert to 16-byte little-endian binary |
 | `toArray(): array{low: int, high: int}` | Convert to low/high parts |
 | `equals(self $other): bool` | Equality check |
@@ -205,7 +205,7 @@ try {
 |--------|-------------|
 | `Id::generate(): Uint128` | Generate a monotonic ULID |
 | `Id::toString(Uint128 $id): string` | Encode ULID to Crockford Base32 |
-| `Id::fromString(string $ulid): string` | Parse Crockford Base32 to ULID |
+| `Id::fromString(string $ulid): Uint128` | Parse Crockford Base32 to Uint128 |
 | `Id::extractTimestamp(Uint128 $id): int` | Extract millisecond timestamp |
 | `Id::extractRandom(Uint128 $id): string` | Extract random bytes |
 

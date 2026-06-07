@@ -580,4 +580,23 @@ class Uint128Test extends TestCase
         // Round-trip via toString
         $this->assertSame('18446744073709551615', Uint128::fromString('18446744073709551615')->toString());
     }
+
+    // ──────────────────────────────────────────────
+    //  Documentation contract tests
+    // ──────────────────────────────────────────────
+
+    public function testToHexReturnsWithoutPrefix(): void
+    {
+        // Documented contract: toHex() returns hex string without 0x prefix
+        $this->assertStringNotContainsString('0x', Uint128::zero()->toHex());
+        $this->assertStringNotContainsString('0x', Uint128::fromInt(255)->toHex());
+        $this->assertStringNotContainsString('0x', Uint128::fromParts(-1, -1)->toHex());
+    }
+
+    public function testToHexReturnsLowercase(): void
+    {
+        // Documented contract: toHex() returns lowercase hex
+        $hex = Uint128::fromInt(0xABCDEF)->toHex();
+        $this->assertSame(\strtolower($hex), $hex);
+    }
 }

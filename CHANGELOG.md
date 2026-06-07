@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NativeClient` accepts a `$timeoutSeconds` constructor parameter forwarded through `BackendFactory` and `FfiBackend` (#122)
 - `Client::queryAccounts()` and `Client::queryTransfers()` now implement the full `QueryFilter` round-trip (pack `QueryFilter` → submit `QUERY_ACCOUNTS`/`QUERY_TRANSFERS` → decode `AccountBatch`/`TransferBatch`), resolving the misleading "not implemented" public contract (#114)
 
+### Fixed
+- Corrected `Uint128::toHex()` documentation in README (no `0x` prefix) and `Id::fromString()` return type (now `Uint128` instead of `string`) (#116)
+
 ### Changed
 - Replaced `assert()` calls with explicit exception-throwing validation at public and native boundaries so that validation cannot be silently disabled by PHP assertion settings (#121)
 - `NativeClient` FFI calls (`tb_client_init`, `tb_client_submit`, `tb_client_deinit`) extracted to overridable protected methods, enabling controlled test doubles without a real native library (#134)
