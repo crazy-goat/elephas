@@ -118,12 +118,14 @@ jobs:
 
       - name: Start TigerBeetle
         run: |
-          docker run --rm --privileged \
+          docker run --rm \
+            --security-opt seccomp=${{ github.workspace }}/.github/seccomp/tigerbeetle.json \
             -v /tmp/tb:/tmp/tb \
             ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
             format --cluster=0 --replica=0 --replica-count=1 /tmp/tb/data
 
-          docker run -d --name tigerbeetle --rm --privileged \
+          docker run -d --name tigerbeetle --rm \
+            --security-opt seccomp=${{ github.workspace }}/.github/seccomp/tigerbeetle.json \
             -p 3000:3000 \
             -v /tmp/tb:/tmp/tb \
             ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
