@@ -39,10 +39,12 @@ class FfiBackendTest extends TestCase
             $this->markTestSkipped('TigerBeetle or FFI not available');
         }
 
+        // Closing the backend must not throw.
         $backend->close();
 
-        /** @phpstan-ignore method.alreadyNarrowedType */
-        $this->assertTrue(true);
+        // After close, submitting any operation must throw ClientClosedException.
+        $this->expectException(\CrazyGoat\Elephas\Exception\ClientClosedException::class);
+        $backend->submit(\CrazyGoat\Elephas\Operation::PULSE, '');
     }
 
     public function testSubmitCreateAccounts(): void
@@ -53,10 +55,18 @@ class FfiBackendTest extends TestCase
         }
 
         $result = $backend->submit(Operation::CREATE_ACCOUNTS, \str_repeat("\0", 128));
+
+        // 128 zero bytes = 1 account with all-defaults. TigerBeetle returns
+        // one 16-byte CreateAccountResult. We don't assert the status here
+        // (it's likely LINKED_EVENT_FAILED due to zero ID/ledger/code), but
+        // the raw result size confirms the backend processed the request.
+        $this->assertSame(16, \strlen($result), 'CreateAccounts result must be 16 bytes for 1 account');
+
         $backend->close();
 
-        /** @phpstan-ignore method.alreadyNarrowedType */
-        $this->assertIsString($result);
+        // After close, submitting must throw.
+        $this->expectException(\CrazyGoat\Elephas\Exception\ClientClosedException::class);
+        $backend->submit(Operation::PULSE, '');
     }
 
     public function testMultipleSequentialSubmits(): void
@@ -68,13 +78,13 @@ class FfiBackendTest extends TestCase
 
         for ($i = 0; $i < 10; $i++) {
             $result = $backend->submit(Operation::PULSE, '');
-            /** @phpstan-ignore method.alreadyNarrowedType */
-            $this->assertIsString($result);
+            $this->assertSame('', $result, 'PULSE operation must return empty response');
         }
 
         $backend->close();
 
-        /** @phpstan-ignore method.alreadyNarrowedType */
-        $this->assertTrue(true);
+        // After close, submitting must throw.
+        $this->expectException(\CrazyGoat\Elephas\Exception\ClientClosedException::class);
+        $backend->submit(Operation::PULSE, '');
     }
 }
