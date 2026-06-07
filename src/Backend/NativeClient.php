@@ -173,7 +173,13 @@ CPROG;
         );
 
         if ($status !== 0) {
-            throw InitializationException::fromStatus(InitStatus::from($status));
+            try {
+                throw InitializationException::fromStatus(InitStatus::from($status));
+            } catch (\ValueError) {
+                throw InitializationException::create(
+                    \sprintf('Unknown initialization status %d from native library', $status),
+                );
+            }
         }
 
         $this->client = $clientPtr;

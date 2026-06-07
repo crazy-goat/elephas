@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Batch;
 
 use CrazyGoat\Elephas\CreateAccountResult;
 use CrazyGoat\Elephas\CreateAccountStatus;
+use CrazyGoat\Elephas\Exception\UnknownStatusException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 
 class CreateAccountResultBatch extends AbstractBatch
@@ -51,6 +52,10 @@ class CreateAccountResultBatch extends AbstractBatch
         $data = \substr($this->buffer, $offset, $this->getStructSize());
         $unpacked = BinaryHelper::unpackCreateAccountResult($data);
 
-        return new CreateAccountResult($unpacked['timestamp'], CreateAccountStatus::from($unpacked['status']));
+        try {
+            return new CreateAccountResult($unpacked['timestamp'], CreateAccountStatus::from($unpacked['status']));
+        } catch (\ValueError) {
+            throw UnknownStatusException::forEnum(CreateAccountStatus::class, $unpacked['status']);
+        }
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace CrazyGoat\Elephas\Test\Unit;
 
+use CrazyGoat\Elephas\CreateAccountStatus;
+use CrazyGoat\Elephas\CreateTransferStatus;
 use CrazyGoat\Elephas\Exception\ClientClosedException;
 use CrazyGoat\Elephas\Exception\ClientEvictedException;
 use CrazyGoat\Elephas\Exception\ClientReleaseException;
@@ -13,6 +15,7 @@ use CrazyGoat\Elephas\Exception\IntegerOverflowException;
 use CrazyGoat\Elephas\Exception\RequestException;
 use CrazyGoat\Elephas\Exception\RequestTimeoutException;
 use CrazyGoat\Elephas\Exception\TooMuchDataException;
+use CrazyGoat\Elephas\Exception\UnknownStatusException;
 use CrazyGoat\Elephas\InitStatus;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\Test;
@@ -478,6 +481,75 @@ final class ExceptionTest extends TestCase
     }
 
     // ──────────────────────────────────────────────
+    //  UnknownStatusException
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function unknownStatusExceptionImplementsInterface(): void
+    {
+        $e = UnknownStatusException::forEnum(CreateAccountStatus::class, 999);
+
+        $this->assertInstanceOf(ElephasExceptionInterface::class, $e);
+    }
+
+    #[Test]
+    public function unknownStatusExceptionExtendsRuntimeException(): void
+    {
+        $e = UnknownStatusException::forEnum(CreateAccountStatus::class, 999);
+
+        $this->assertInstanceOf(\RuntimeException::class, $e);
+    }
+
+    #[Test]
+    public function unknownStatusExceptionMessageIncludesClassAndValue(): void
+    {
+        $e = UnknownStatusException::forEnum(CreateAccountStatus::class, 42);
+
+        $this->assertStringContainsString('CreateAccountStatus', $e->getMessage());
+        $this->assertStringContainsString('42', $e->getMessage());
+    }
+
+    #[Test]
+    public function unknownStatusExceptionMessageIncludesKnownValues(): void
+    {
+        $e = UnknownStatusException::forEnum(CreateAccountStatus::class, 999);
+
+        $this->assertStringContainsString('Known values:', $e->getMessage());
+        // Should list at least some of the known enum values
+        $this->assertStringContainsString('4294967295', $e->getMessage()); // CREATED = 0xFFFFFFFF
+    }
+
+    #[Test]
+    public function unknownStatusExceptionForCreateTransferStatus(): void
+    {
+        $e = UnknownStatusException::forEnum(CreateTransferStatus::class, 999);
+
+        $this->assertStringContainsString('CreateTransferStatus', $e->getMessage());
+        $this->assertStringContainsString('999', $e->getMessage());
+        $this->assertStringContainsString('Known values:', $e->getMessage());
+    }
+
+    #[Test]
+    public function unknownStatusExceptionCatchedAsInterface(): void
+    {
+        try {
+            throw UnknownStatusException::forEnum(CreateAccountStatus::class, 42);
+        } catch (ElephasExceptionInterface $e) {
+            $this->assertInstanceOf(UnknownStatusException::class, $e);
+        }
+    }
+
+    #[Test]
+    public function unknownStatusExceptionCatchedAsRuntimeException(): void
+    {
+        try {
+            throw UnknownStatusException::forEnum(CreateAccountStatus::class, 42);
+        } catch (\RuntimeException $e) {
+            $this->assertInstanceOf(UnknownStatusException::class, $e);
+        }
+    }
+
+    // ──────────────────────────────────────────────
     //  All exception classes are final
     // ──────────────────────────────────────────────
 
@@ -493,6 +565,7 @@ final class ExceptionTest extends TestCase
             RequestException::class,
             RequestTimeoutException::class,
             TooMuchDataException::class,
+            UnknownStatusException::class,
         ];
 
         foreach ($exceptionClasses as $class) {
@@ -517,10 +590,15 @@ final class ExceptionTest extends TestCase
             RequestException::class,
             RequestTimeoutException::class,
             TooMuchDataException::class,
+            UnknownStatusException::class,
         ];
 
         foreach ($exceptionClasses as $class) {
-            $e = $class === RequestTimeoutException::class ? $class::create(1.0) : new $class();
+            $e = match ($class) {
+                RequestTimeoutException::class => $class::create(1.0),
+                UnknownStatusException::class => $class::forEnum(CreateAccountStatus::class, 42),
+                default => new $class(),
+            };
             $this->assertInstanceOf(\RuntimeException::class, $e);
             $this->assertInstanceOf(ElephasExceptionInterface::class, $e);
         }
