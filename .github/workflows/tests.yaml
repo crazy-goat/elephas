@@ -109,6 +109,29 @@ jobs:
           TB_VERSION: ${{ env.TB_VERSION }}
           ZIG_VERSION: ${{ env.ZIG_VERSION }}
 
+      - name: Debug NativeClient availability
+        run: |
+          php -r '
+            try {
+              $nc = new \CrazyGoat\Elephas\Backend\NativeClient();
+              echo "NativeClient created successfully\n";
+              echo "Timeout: " . $nc->getTimeoutSeconds() . "\n";
+            } catch (\Throwable $e) {
+              echo "Error: " . get_class($e) . ": " . $e->getMessage() . "\n";
+              echo "File: " . $e->getFile() . ":" . $e->getLine() . "\n";
+            }
+          ' 2>&1
+        env:
+          XDEBUG_MODE: off
+
+      - name: Debug library file existence
+        run: |
+          echo "=== resources/lib contents ==="
+          find resources/lib/ -type f -ls 2>/dev/null || echo "resources/lib/ not found"
+          echo "=== workspace ==="
+          pwd
+          ls -la resources/lib/linux-amd64/ 2>/dev/null || echo "no linux-amd64 dir"
+
       - name: Run unit tests
         run: vendor/bin/phpunit --testsuite=unit
 
