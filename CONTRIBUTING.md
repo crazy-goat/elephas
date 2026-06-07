@@ -43,11 +43,12 @@ composer test
 # Install dependencies
 composer install
 
-# Install the pre-push Git hook
-php bin/install-git-hook.php
+# Install the pre-push Git hook (opt-in – run manually when you want it)
+php bin/install-git-hook.php --force
 ```
 
 The pre-push hook runs `composer lint` before every push, so you catch issues early.
+Use `php bin/install-git-hook.php --uninstall` to remove it later.
 
 ## Coding Standards
 

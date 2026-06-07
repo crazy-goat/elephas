@@ -44,10 +44,17 @@ The library is auto-detected at these paths:
 
 > **Note:** The native library is **not** distributed via Composer. You must download it separately for your target platform.
 
-A Git pre-push hook is installed automatically on `composer install` / `composer update` to run linting before push. To install it manually:
+A Git pre-push hook is available to run linting before push. It is **not** installed automatically – you need to opt in:
 
 ```bash
+# Install the pre-push hook (prompts before overwriting existing hooks)
 php bin/install-git-hook.php
+
+# Force overwrite (backs up any existing hook)
+php bin/install-git-hook.php --force
+
+# Remove the installed hook
+php bin/install-git-hook.php --uninstall
 ```
 
 ## Quick Start
