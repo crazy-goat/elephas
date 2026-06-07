@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Fully implemented `ChangeEventsFilterBatch` with `setAccountId()`/`getAccountId()` methods for filtering change events by account (#117)
 - CI workflow now executes both unit and functional PHPUnit suites, with distinct steps for each (#107)
 - CI provisions a version-pinned (0.17.4) `tb_client` native library before running functional tests, ensuring FFI-backed tests no longer silently skip in CI (#108)
 - `AccountBatch::isFound()` and `TransferBatch::isFound()` methods for detecting missing records in lookup results (#112)
@@ -22,16 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Replaced `assert()` calls with explicit exception-throwing validation at public and native boundaries so that validation cannot be silently disabled by PHP assertion settings (#121)
 - `NativeClient` FFI calls (`tb_client_init`, `tb_client_submit`, `tb_client_deinit`) extracted to overridable protected methods, enabling controlled test doubles without a real native library (#134)
-
-### Fixed
-- All batch `fromBuffer()` factories now reject malformed buffers whose size is not an exact multiple of the expected struct size, preventing partial-record deserialization (#113)
-- Batch getters and setters on `AccountBatch`, `TransferBatch`, `IdBatch`, `AccountFilterBatch`, `QueryFilterBatch`, `AccountBalanceBatch`, `CreateAccountResultBatch`, and `CreateTransferResultBatch` now fail fast with a dedicated `InvalidBatchCursorException` when called before `add()` (or on a buffer created from an empty response), instead of silently writing into or reading from the pre-allocated buffer while the logical length remains zero (#119)
-- Integer setters on `AccountBatch`, `TransferBatch`, `QueryFilterBatch`, and `AccountFilterBatch` now validate that values fit their declared unsigned width (`uint8`/`uint16`/`uint32`/`uint64`) before binary packing. Negative or oversized values now raise `IntegerOverflowException` with the offending field name and accepted range, instead of being silently reinterpreted by `pack()` (#120)
-
-### Changed
 - `CreateAccountResult` and `CreateTransferResult` no longer expose a synthetic `getId()` derived from the TigerBeetle-assigned timestamp. Both classes now provide `getTimestamp(): int` reflecting the actual timestamp returned by TigerBeetle for each created or rejected event. This aligns the public API with the native TigerBeetle `tb_create_account_result_t` / `tb_create_transfer_result_t` struct contract (TB 0.17.x) where each result carries a `uint64_t timestamp` and a `uint32_t status` (#111)
 - `NativeClient` request completion no longer confuses `TB_PACKET_OK` (status 0) with an incomplete/pending packet. A sentinel status value (`0xFFFFFFFF`) is now used to track the pending state, allowing status 0 to be correctly interpreted as a successful response (#109)
 - `NativeClient::submit()` now retains a PHP reference to the FFI data buffer for the full native request lifetime, preventing a potential use-after-free when the CData backing the request payload is garbage-collected while `tb_client` still holds the raw pointer (#110)
+
+### Fixed
+- Removed stale `TODO: implement` comments from `Transfer`, `Account`, and `ChangeEventsFilterBatch` public DTO classes (#117)
+- All batch `fromBuffer()` factories now reject malformed buffers whose size is not an exact multiple of the expected struct size, preventing partial-record deserialization (#113)
+- Batch getters and setters on `AccountBatch`, `TransferBatch`, `IdBatch`, `AccountFilterBatch`, `QueryFilterBatch`, `AccountBalanceBatch`, `CreateAccountResultBatch`, and `CreateTransferResultBatch` now fail fast with a dedicated `InvalidBatchCursorException` when called before `add()` (or on a buffer created from an empty response), instead of silently writing into or reading from the pre-allocated buffer while the logical length remains zero (#119)
+- Integer setters on `AccountBatch`, `TransferBatch`, `QueryFilterBatch`, and `AccountFilterBatch` now validate that values fit their declared unsigned width (`uint8`/`uint16`/`uint32`/`uint64`) before binary packing. Negative or oversized values now raise `IntegerOverflowException` with the offending field name and accepted range, instead of being silently reinterpreted by `pack()` (#120)
 
 ## [0.4.0] – Polish – 2026-06-02
 
