@@ -37,10 +37,7 @@ trait PrerequisiteTrait
         }
 
         try {
-            new \CrazyGoat\Elephas\Backend\FfiBackend(
-                \CrazyGoat\Elephas\Uint128\Uint128::zero(),
-                ['127.0.0.1:1'],
-            );
+            new \CrazyGoat\Elephas\Backend\NativeClient();
 
             return true;
         } catch (\Throwable) {
