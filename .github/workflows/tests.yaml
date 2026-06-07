@@ -85,7 +85,7 @@ jobs:
           php-version: ${{ matrix.php-version }}
           tools: composer:v2
           extensions: ffi, gmp, bcmath
-          coverage: none
+          coverage: pcov
 
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist
@@ -109,8 +109,12 @@ jobs:
           TB_VERSION: ${{ env.TB_VERSION }}
           ZIG_VERSION: ${{ env.ZIG_VERSION }}
 
-      - name: Run unit tests
-        run: vendor/bin/phpunit --testsuite=unit
+      - name: Run unit tests with coverage
+        run: vendor/bin/phpunit --testsuite=unit --coverage-clover=coverage/clover.xml
+
+      - name: Check coverage threshold
+        if: matrix.php-version == '8.2'
+        run: php bin/check-coverage.php coverage/clover.xml 80
 
       - name: Start TigerBeetle
         run: |
