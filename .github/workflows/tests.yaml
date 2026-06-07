@@ -9,6 +9,7 @@ on:
 env:
   TB_VERSION: 0.17.4
   ZIG_VERSION: 0.14.1
+  CACHE_VERSION: v2
 
 jobs:
   lint:
@@ -51,10 +52,10 @@ jobs:
           path: |
             resources/lib
             ~/.cache/elephas
-          key: tb-client-${{ runner.os }}-${{ runner.arch }}-${{ env.TB_VERSION }}-${{ env.ZIG_VERSION }}
+          key: tb-client-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-${{ env.TB_VERSION }}-${{ env.ZIG_VERSION }}
           restore-keys: |
-            tb-client-${{ runner.os }}-${{ runner.arch }}-${{ env.TB_VERSION }}-
-            tb-client-${{ runner.os }}-${{ runner.arch }}-
+            tb-client-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-${{ env.TB_VERSION }}-
+            tb-client-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build native tb_client library
         if: steps.cache-restore.outputs.cache-hit != 'true'
@@ -96,10 +97,10 @@ jobs:
           path: |
             resources/lib
             ~/.cache/elephas
-          key: tb-client-${{ runner.os }}-${{ runner.arch }}-${{ env.TB_VERSION }}-${{ env.ZIG_VERSION }}
+          key: tb-client-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-${{ env.TB_VERSION }}-${{ env.ZIG_VERSION }}
           restore-keys: |
-            tb-client-${{ runner.os }}-${{ runner.arch }}-${{ env.TB_VERSION }}-
-            tb-client-${{ runner.os }}-${{ runner.arch }}-
+            tb-client-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-${{ env.TB_VERSION }}-
+            tb-client-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build native tb_client library (cache miss fallback)
         if: steps.cache-restore.outputs.cache-hit != 'true'
