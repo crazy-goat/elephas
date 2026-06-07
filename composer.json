@@ -53,8 +53,6 @@
         }
     },
     "scripts": {
-        "post-install-cmd": "php bin/install-git-hook.php",
-        "post-update-cmd": "php bin/install-git-hook.php",
         "test": [
             "@test-unit",
             "@test-functional"
