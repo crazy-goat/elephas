@@ -52,7 +52,18 @@ final class BackendFactoryTest extends TestCase
             $this->markTestSkipped('FFI not available, cannot test backend creation');
         }
 
-        $backend = BackendFactory::create(Uint128::zero(), ['127.0.0.1:3000']);
+        // Creating a backend requires a running TigerBeetle instance.
+        // If TigerBeetle is not available, skip the test gracefully.
+        try {
+            $backend = BackendFactory::create(Uint128::zero(), ['127.0.0.1:3000']);
+        } catch (\RuntimeException $e) {
+            if (\str_contains($e->getMessage(), 'No backend available')) {
+                $this->markTestSkipped(
+                    'TigerBeetle is not running, cannot test backend creation',
+                );
+            }
+            throw $e;
+        }
 
         $this->assertInstanceOf(BackendInterface::class, $backend);
 
