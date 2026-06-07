@@ -150,15 +150,38 @@ final class BuildTbClientScriptTest extends TestCase
 
     public function testCleanFlagIsIdempotent(): void
     {
-        // Running --clean twice should not error: once clears, the second
-        // observes a missing cache dir and is a no-op.
-        $first = [];
-        exec(escapeshellarg(self::SCRIPT) . ' --clean 2>&1', $first, $exit1);
-        $this->assertSame(0, $exit1, 'first --clean must succeed');
+        // Use a temporary output directory so we don't delete the real
+        // library files that functional tests depend on.
+        $tmpDir = sys_get_temp_dir() . '/elephas-clean-test-' . uniqid();
+        mkdir($tmpDir, 0777, true);
+        // Create a dummy file so --clean has something to remove.
+        touch($tmpDir . '/dummy.so');
 
-        $second = [];
-        exec(escapeshellarg(self::SCRIPT) . ' --clean 2>&1', $second, $exit2);
-        $this->assertSame(0, $exit2, 'second --clean must also succeed (idempotent)');
+        try {
+            $first = [];
+            exec(
+                'OUTPUT_DIR=' . escapeshellarg($tmpDir) . ' ' . escapeshellarg(self::SCRIPT) . ' --clean 2>&1',
+                $first,
+                $exit1,
+            );
+            $this->assertSame(0, $exit1, 'first --clean must succeed');
+
+            $second = [];
+            exec(
+                'OUTPUT_DIR=' . escapeshellarg($tmpDir) . ' ' . escapeshellarg(self::SCRIPT) . ' --clean 2>&1',
+                $second,
+                $exit2,
+            );
+            $this->assertSame(0, $exit2, 'second --clean must also succeed (idempotent)');
+        } finally {
+            // Clean up the temporary directory.
+            if (is_dir($tmpDir)) {
+                array_map('unlink', glob($tmpDir . '/*'));
+                rmdir($tmpDir);
+            }
+        }
+
+        $this->assertDirectoryDoesNotExist($tmpDir);
     }
 
     public function testScriptAdvertisesCliFlagsInHelp(): void
