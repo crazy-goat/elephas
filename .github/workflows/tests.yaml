@@ -180,10 +180,14 @@ jobs:
 
       - name: Debug NativeClient before functional tests
         run: |
+          echo "=== Check files after TigerBeetle start ==="
+          ls -la resources/lib/linux-amd64/ 2>/dev/null || echo "no linux-amd64 dir"
+          echo "=== Check NativeClient ==="
           php -r '
             require "vendor/autoload.php";
             echo "Before functional tests:\n";
             echo "FFI loaded: " . (extension_loaded("ffi") ? "yes" : "no") . "\n";
+            echo "pwd: " . getcwd() . "\n";
             try {
               $nc = new \CrazyGoat\Elephas\Backend\NativeClient();
               echo "NativeClient created: yes\n";
