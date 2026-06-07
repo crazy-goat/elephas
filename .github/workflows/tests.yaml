@@ -112,6 +112,7 @@ jobs:
       - name: Debug NativeClient availability
         run: |
           php -r '
+            require "vendor/autoload.php";
             try {
               $nc = new \CrazyGoat\Elephas\Backend\NativeClient();
               echo "NativeClient created successfully\n";
@@ -119,6 +120,7 @@ jobs:
             } catch (\Throwable $e) {
               echo "Error: " . get_class($e) . ": " . $e->getMessage() . "\n";
               echo "File: " . $e->getFile() . ":" . $e->getLine() . "\n";
+              echo "Trace:\n" . $e->getTraceAsString() . "\n";
             }
           ' 2>&1
         env:
