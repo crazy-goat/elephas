@@ -7,6 +7,7 @@ namespace CrazyGoat\Elephas\Test\Unit\Batch;
 use CrazyGoat\Elephas\Batch\CreateAccountResultBatch;
 use CrazyGoat\Elephas\CreateAccountStatus;
 use CrazyGoat\Elephas\Exception\InvalidBatchCursorException;
+use CrazyGoat\Elephas\Exception\UnknownStatusException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 use PHPUnit\Framework\TestCase;
 
@@ -135,7 +136,7 @@ class CreateAccountResultBatchTest extends TestCase
         $this->assertSame(3, $batch->count());
     }
 
-    public function testGetResultThrowsValueErrorForUnknownStatus(): void
+    public function testGetResultThrowsUnknownStatusExceptionForUnknownStatus(): void
     {
         $batch = CreateAccountResultBatch::fromBuffer(
             \pack('PVV', 0, 999, 0),
@@ -143,7 +144,9 @@ class CreateAccountResultBatchTest extends TestCase
 
         $batch->rewind();
 
-        $this->expectException(\ValueError::class);
+        $this->expectException(UnknownStatusException::class);
+        $this->expectExceptionMessage('Unknown CrazyGoat\Elephas\CreateAccountStatus value 999');
+        $this->expectExceptionMessage('Known values:');
         $batch->getResult();
     }
 
@@ -204,4 +207,98 @@ class CreateAccountResultBatchTest extends TestCase
 
         $batch->getResult();
     }
+
+    public function testGetResultThrowsUnknownStatusExceptionForZeroStatus(): void
+    {
+        $batch = CreateAccountResultBatch::fromBuffer(
+            \pack('PVV', 0, 0, 0),
+        );
+
+        $batch->rewind();
+
+        $this->expectException(UnknownStatusException::class);
+        $this->expectExceptionMessage('Unknown CrazyGoat\Elephas\CreateAccountStatus value 0');
+        $batch->getResult();
+    }
+
+    public function testGetResultThrowsUnknownStatusExceptionForLargeStatus(): void
+    {
+        $batch = CreateAccountResultBatch::fromBuffer(
+            \pack('PVV', 0, 0x7FFFFFFF, 0),
+        );
+
+        $batch->rewind();
+
+        $this->expectException(UnknownStatusException::class);
+        $this->expectExceptionMessage('Unknown CrazyGoat\Elephas\CreateAccountStatus value');
+        $batch->getResult();
+    }
+
+    public function testAllCreatedResults(): void
+    {
+        $buffer = \implode('', [
+            \pack('PVV', 100, 0xFFFFFFFF, 0),
+            \pack('PVV', 200, 0xFFFFFFFF, 0),
+            \pack('PVV', 300, 0xFFFFFFFF, 0),
+        ]);
+        $batch = CreateAccountResultBatch::fromBuffer($buffer);
+
+        $this->assertSame(3, $batch->getLength());
+
+        $batch->rewind();
+        $this->assertTrue($batch->getResult()->isCreated());
+        $batch->next();
+        $this->assertTrue($batch->getResult()->isCreated());
+        $batch->next();
+        $this->assertTrue($batch->getResult()->isCreated());
+    }
+
+    public function testAllErrorResults(): void
+    {
+        $buffer = \implode('', [
+            \pack('PVV', 0, 1, 0),
+            \pack('PVV', 0, 9, 0),
+            \pack('PVV', 0, 18, 0),
+        ]);
+        $batch = CreateAccountResultBatch::fromBuffer($buffer);
+
+        $this->assertSame(3, $batch->getLength());
+
+        $batch->rewind();
+        $this->assertFalse($batch->getResult()->isCreated());
+        $this->assertSame(CreateAccountStatus::LINKED_EVENT_FAILED, $batch->getResult()->getStatus());
+
+        $batch->next();
+        $this->assertFalse($batch->getResult()->isCreated());
+        $this->assertSame(CreateAccountStatus::ID_MUST_NOT_BE_ZERO, $batch->getResult()->getStatus());
+
+        $batch->next();
+        $this->assertFalse($batch->getResult()->isCreated());
+        $this->assertSame(CreateAccountStatus::OVERFLOWS_DEBITS, $batch->getResult()->getStatus());
+    }
+
+    public function testZeroTimestampWithCreatedStatus(): void
+    {
+        $batch = CreateAccountResultBatch::fromBuffer(
+            \pack('PVV', 0, 0xFFFFFFFF, 0),
+        );
+
+        $batch->rewind();
+        $result = $batch->getResult();
+
+        $this->assertSame(0, $result->getTimestamp());
+        $this->assertTrue($result->isCreated());
+    }
+
+    public function testFromBufferRejectsBufferWithExtraByte(): void
+    {
+        $validBuffer = \pack('PVV', 100, 0xFFFFFFFF, 0);
+        $corruptedBuffer = $validBuffer . "\x01";
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('multiple of 16 bytes');
+
+        CreateAccountResultBatch::fromBuffer($corruptedBuffer);
+    }
+
 }

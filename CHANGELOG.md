@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed unused `CrazyGoat\Elephas\Internal\Packet` class and its test (`PacketTest`) — the native request flow uses `tb_packet_t` directly via FFI, making the PHP-level Packet abstraction redundant (#124)
 
 ### Added
+- `UnknownStatusException` for clear, actionable error messages when native library returns an unrecognized enum status value during response parsing (#133)
+- `CreateAccountResultBatch::getResult()` and `CreateTransferResultBatch::getResult()` now throw `UnknownStatusException` instead of raw `\ValueError` when a status value is unknown (#133)
+- `NativeClient` initialization now handles unknown `InitStatus` values gracefully, throwing `InitializationException` instead of `\ValueError` (#133)
+- Unit tests covering unknown enum status handling for all response batch types, malformed buffer edge cases, and clear error message verification (#133)
 - CI generates source coverage reports (clover XML) during unit test execution and enforces a minimum 80% element coverage threshold (#135)
 - `bin/check-coverage.php` script to validate coverage percentage against a configurable threshold in CI (#135)
 - Fully implemented `ChangeEventsFilterBatch` with `setAccountId()`/`getAccountId()` methods for filtering change events by account (#117)

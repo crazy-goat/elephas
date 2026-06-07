@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Batch;
 
 use CrazyGoat\Elephas\CreateTransferResult;
 use CrazyGoat\Elephas\CreateTransferStatus;
+use CrazyGoat\Elephas\Exception\UnknownStatusException;
 use CrazyGoat\Elephas\Internal\BinaryHelper;
 
 class CreateTransferResultBatch extends AbstractBatch
@@ -51,6 +52,10 @@ class CreateTransferResultBatch extends AbstractBatch
         $data = \substr($this->buffer, $offset, $this->getStructSize());
         $unpacked = BinaryHelper::unpackCreateTransferResult($data);
 
-        return new CreateTransferResult($unpacked['timestamp'], CreateTransferStatus::from($unpacked['status']));
+        try {
+            return new CreateTransferResult($unpacked['timestamp'], CreateTransferStatus::from($unpacked['status']));
+        } catch (\ValueError) {
+            throw UnknownStatusException::forEnum(CreateTransferStatus::class, $unpacked['status']);
+        }
     }
 }
