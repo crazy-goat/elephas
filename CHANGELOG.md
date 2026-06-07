@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NativeClient::submit()` now retains a PHP reference to the FFI data buffer for the full native request lifetime, preventing a potential use-after-free when the CData backing the request payload is garbage-collected while `tb_client` still holds the raw pointer (#110)
 
 ### Fixed
+- PHPStan memory limit set to 512M in `composer lint` script to prevent out-of-memory failures during static analysis (#138)
 - Removed stale `TODO: implement` comments from `Transfer`, `Account`, and `ChangeEventsFilterBatch` public DTO classes (#117)
 - All batch `fromBuffer()` factories now reject malformed buffers whose size is not an exact multiple of the expected struct size, preventing partial-record deserialization (#113)
 - Batch getters and setters on `AccountBatch`, `TransferBatch`, `IdBatch`, `AccountFilterBatch`, `QueryFilterBatch`, `AccountBalanceBatch`, `CreateAccountResultBatch`, and `CreateTransferResultBatch` now fail fast with a dedicated `InvalidBatchCursorException` when called before `add()` (or on a buffer created from an empty response), instead of silently writing into or reading from the pre-allocated buffer while the logical length remains zero (#119)

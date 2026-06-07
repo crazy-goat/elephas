@@ -65,7 +65,7 @@
         "test:functional": "@test-functional",
         "lint": [
             "vendor/bin/php-cs-fixer fix -v --dry-run",
-            "vendor/bin/phpstan analyse",
+            "vendor/bin/phpstan analyse --memory-limit=512M",
             "vendor/bin/rector process --dry-run"
         ],
         "lint-fix": [
