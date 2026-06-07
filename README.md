@@ -297,7 +297,7 @@ All batch classes extend `AbstractBatch` and implement `\Countable`. They are us
 | `CreateAccountResultBatch` | 16 bytes | No (read-only) | Account creation results |
 | `CreateTransferResultBatch` | 16 bytes | No (read-only) | Transfer creation results |
 | `QueryFilterBatch` | 64 bytes | Yes | Query filter parameters |
-| `ChangeEventsFilterBatch` | 16 bytes | Yes | Change events stub (not yet implemented) |
+| `ChangeEventsFilterBatch` | 16 bytes | Yes | Change events filter by account ID |
 
 **Common methods:** `add()`, `next(): bool`, `prev(): bool`, `rewind(): void`, `count(): int`, `getLength(): int`, `getCapacity(): int`
 

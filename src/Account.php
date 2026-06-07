@@ -13,9 +13,6 @@ use CrazyGoat\Elephas\Uint128\Uint128;
  */
 final readonly class Account
 {
-    /**
-     * TODO: implement
-     */
     public function __construct(
         private Uint128 $id,
         private Uint128 $userData128,

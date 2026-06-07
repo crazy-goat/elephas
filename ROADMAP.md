@@ -95,9 +95,9 @@ Native PHP extension, query operations, and improved error handling.
 
 - [ ] `ExtensionBackend` — native PHP extension (`ext-elephas`) backend
 - [ ] `BackendFactory::isExtensionAvailable()` — detection for `ext-elephas`
-- [ ] `Client::queryAccounts` — `QueryFilterBatch` → `AccountBatch`
-- [ ] `Client::queryTransfers` — `QueryFilterBatch` → `TransferBatch`
-- [ ] `ChangeEventsFilterBatch` — change events support
+- [x] `Client::queryAccounts` — `QueryFilterBatch` → `AccountBatch`
+- [x] `Client::queryTransfers` — `QueryFilterBatch` → `TransferBatch`
+- [x] `ChangeEventsFilterBatch` — change events support
 - [ ] `Client::getAccountBalances` with `QueryFilterFlags`
 - [ ] Streaming/batched result iteration for large result sets
 - [ ] Improved error messages with TigerBeetle status descriptions
