@@ -6,19 +6,22 @@ namespace CrazyGoat\Elephas\Test\Functional;
 
 use CrazyGoat\Elephas\Backend\FfiBackend;
 use CrazyGoat\Elephas\Operation;
+use CrazyGoat\Elephas\Test\Helper\PrerequisiteTrait;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\TestCase;
 
 class FfiBackendTest extends TestCase
 {
+    use PrerequisiteTrait;
+
     private function createBackend(): ?FfiBackend
     {
-        $address = \getenv('TIGERBEETLE_ADDRESS');
-        if ($address === false || $address === '') {
+        $address = $this->getTigerBeetleAddress();
+        if ($address === null) {
             return null;
         }
 
-        if (!\extension_loaded('ffi')) {
+        if (!$this->isFfiBackendAvailable()) {
             return null;
         }
 
@@ -36,7 +39,7 @@ class FfiBackendTest extends TestCase
     {
         $backend = $this->createBackend();
         if (!$backend instanceof \CrazyGoat\Elephas\Backend\FfiBackend) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         $backend->close();
@@ -49,7 +52,7 @@ class FfiBackendTest extends TestCase
     {
         $backend = $this->createBackend();
         if (!$backend instanceof \CrazyGoat\Elephas\Backend\FfiBackend) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         $result = $backend->submit(Operation::CREATE_ACCOUNTS, \str_repeat("\0", 128));
@@ -63,7 +66,7 @@ class FfiBackendTest extends TestCase
     {
         $backend = $this->createBackend();
         if (!$backend instanceof \CrazyGoat\Elephas\Backend\FfiBackend) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         for ($i = 0; $i < 10; $i++) {

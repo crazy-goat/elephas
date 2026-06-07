@@ -6,7 +6,6 @@ namespace CrazyGoat\Elephas\Test\Functional;
 
 use CrazyGoat\Elephas\AccountFilterFlags;
 use CrazyGoat\Elephas\AccountFlags;
-use CrazyGoat\Elephas\Backend\FfiBackend;
 use CrazyGoat\Elephas\Batch\AccountBatch;
 use CrazyGoat\Elephas\Batch\AccountFilterBatch;
 use CrazyGoat\Elephas\Batch\CreateTransferResultBatch;
@@ -16,6 +15,7 @@ use CrazyGoat\Elephas\Client;
 use CrazyGoat\Elephas\CreateTransferStatus;
 use CrazyGoat\Elephas\Exception\ClientClosedException;
 use CrazyGoat\Elephas\Id;
+use CrazyGoat\Elephas\Test\Helper\PrerequisiteTrait;
 use CrazyGoat\Elephas\TransferFlags;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\TestCase;
@@ -28,34 +28,11 @@ use PHPUnit\Framework\TestCase;
  */
 class TransferTest extends TestCase
 {
-    private function tigerBeetleAddress(): ?string
-    {
-        $address = \getenv('TIGERBEETLE_ADDRESS');
-        if (!\is_string($address) || $address === '') {
-            return null;
-        }
-
-        return $address;
-    }
-
-    private function isFfiBackendAvailable(): bool
-    {
-        if (!\extension_loaded('ffi')) {
-            return false;
-        }
-
-        try {
-            new FfiBackend(Uint128::zero(), ['127.0.0.1:1']);
-
-            return true;
-        } catch (\Throwable) {
-            return false;
-        }
-    }
+    use PrerequisiteTrait;
 
     private function createClient(): ?Client
     {
-        $address = $this->tigerBeetleAddress();
+        $address = $this->getTigerBeetleAddress();
         if ($address === null) {
             return null;
         }
@@ -98,7 +75,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -136,7 +113,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -186,7 +163,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -225,7 +202,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -277,7 +254,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -329,7 +306,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -362,7 +339,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -396,7 +373,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -430,7 +407,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -470,7 +447,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -513,7 +490,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -555,7 +532,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -596,7 +573,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -612,7 +589,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         $client->close();
@@ -626,7 +603,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -666,7 +643,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -716,7 +693,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -745,7 +722,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -791,7 +768,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -807,7 +784,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         $client->close();
@@ -821,7 +798,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -951,7 +928,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -987,7 +964,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1014,7 +991,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1039,7 +1016,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1085,7 +1062,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1128,7 +1105,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1153,7 +1130,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1176,7 +1153,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         $client->close();
@@ -1190,7 +1167,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1231,7 +1208,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1274,7 +1251,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1300,7 +1277,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1325,7 +1302,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1369,7 +1346,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {
@@ -1392,7 +1369,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         $client->close();
@@ -1406,7 +1383,7 @@ class TransferTest extends TestCase
     {
         $client = $this->createClient();
         if (!$client instanceof Client) {
-            $this->markTestSkipped('TigerBeetle or FFI not available');
+            $this->failOrMarkTestSkipped('TigerBeetle or FFI not available');
         }
 
         try {

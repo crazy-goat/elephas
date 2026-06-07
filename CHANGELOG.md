@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Fail CI when required functional dependencies are unavailable (#131)
 - Fully implemented `ChangeEventsFilterBatch` with `setAccountId()`/`getAccountId()` methods for filtering change events by account (#117)
 - CI workflow now executes both unit and functional PHPUnit suites, with distinct steps for each (#107)
 - CI provisions a version-pinned (0.17.4) `tb_client` native library before running functional tests, ensuring FFI-backed tests no longer silently skip in CI (#108)
