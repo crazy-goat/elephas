@@ -6,3 +6,4 @@
 /.case/
 /package-lock.json
 /resources/lib/
+/coverage/
