@@ -54,6 +54,7 @@ class CITest extends TestCase
             );
         }
 
+        $this->assertNotFalse($socket, sprintf('TigerBeetle must be reachable at %s:%d', $host, $port));
         fclose($socket);
     }
 }
