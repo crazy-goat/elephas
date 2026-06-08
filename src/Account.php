@@ -10,20 +10,17 @@ use CrazyGoat\Elephas\Uint128\Uint128;
  * TigerBeetle account data structure.
  *
  * Represents a financial account with balance tracking.
+ * Fields map to the native tb_account_t struct.
  */
 final readonly class Account
 {
     public function __construct(
         private Uint128 $id,
+        private Uint128 $debitsPending,
+        private Uint128 $debitsPosted,
+        private Uint128 $creditsPending,
+        private Uint128 $creditsPosted,
         private Uint128 $userData128,
-        private int $debitPending = 0,
-        private int $creditPending = 0,
-        private int $debitPosted = 0,
-        private int $creditPosted = 0,
-        private int $debitsReserved = 0,
-        private int $creditsReserved = 0,
-        private int $debitsAccepted = 0,
-        private int $creditsAccepted = 0,
         private int $userData64 = 0,
         private int $userData32 = 0,
         private int $ledger = 0,
@@ -38,44 +35,24 @@ final readonly class Account
         return $this->id;
     }
 
-    public function getDebitPending(): int
+    public function getDebitsPending(): Uint128
     {
-        return $this->debitPending;
+        return $this->debitsPending;
     }
 
-    public function getCreditPending(): int
+    public function getCreditsPending(): Uint128
     {
-        return $this->creditPending;
+        return $this->creditsPending;
     }
 
-    public function getDebitPosted(): int
+    public function getDebitsPosted(): Uint128
     {
-        return $this->debitPosted;
+        return $this->debitsPosted;
     }
 
-    public function getCreditPosted(): int
+    public function getCreditsPosted(): Uint128
     {
-        return $this->creditPosted;
-    }
-
-    public function getDebitsReserved(): int
-    {
-        return $this->debitsReserved;
-    }
-
-    public function getCreditsReserved(): int
-    {
-        return $this->creditsReserved;
-    }
-
-    public function getDebitsAccepted(): int
-    {
-        return $this->debitsAccepted;
-    }
-
-    public function getCreditsAccepted(): int
-    {
-        return $this->creditsAccepted;
+        return $this->creditsPosted;
     }
 
     public function getUserData128(): Uint128

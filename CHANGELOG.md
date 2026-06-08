@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `Account` DTO fields `debitsPending`, `debitsPosted`, `creditsPending`, `creditsPosted` changed from `int` to `Uint128` to match TigerBeetle 128-bit ranges (#118)
+- `Transfer` DTO field `amount` changed from `int` to `Uint128` to match TigerBeetle 128-bit range (#118)
+- Removed bogus fields `debitsReserved`, `creditsReserved`, `debitsAccepted`, `creditsAccepted` from `Account` DTO — these fields do not exist in the native `tb_account_t` struct (#118)
+
 ### Added
 - Unit tests for `AccountBalance` DTO class covering constructor, getters, default values, readonly nature, zero values, max timestamp, and edge cases (#176)
 - `Uint128` now implements `\Stringable` interface with `__toString()` delegating to `toString()`, enabling string interpolation and `string|Stringable` type hint usage (#168)
