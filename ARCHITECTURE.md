@@ -639,18 +639,17 @@ jobs:
 ### Container security
 
 The CI workflow runs TigerBeetle inside a Docker container for functional
-tests.  The container _does not_ use `--privileged` — instead, only the
-minimum Linux capabilities required by TigerBeetle are granted:
+tests.  The container _does not_ use `--privileged` — instead, we:
 
-- `IPC_LOCK` — allows `mlock()` for locking process memory.
-- `SYS_RAWIO` — allows `io_uring` syscalls (kernel ≥5.19).
+1. Disable only the seccomp profile (`--security-opt seccomp=unconfined`),
+   because Docker's default seccomp profile blocks the `io_uring` syscalls
+   that TigerBeetle requires.
+2. Grant only the minimum Linux capabilities required by TigerBeetle:
+   - `IPC_LOCK` — allows `mlock()` for locking process memory.
+   - `SYS_RAWIO` — allows `io_uring` syscalls (kernel ≥5.19).
 
-These are documented in the workflow YAML inline comments and are
-significantly narrower than `--privileged`, which would grant all
-capabilities and disable all security isolation.  The `--development`
-flag passed to TigerBeetle disables direct I/O, so `io_uring` is not
-strictly needed; the capabilities are added as a safety net for kernels
-that support them.
+This is significantly narrower than `--privileged`, which would grant
+_all_ capabilities, disable seccomp, and give access to all host devices.
 
 The `format` command (which only creates a data file) runs with no
-additional capabilities at all.
+additional capabilities or seccomp overrides at all.

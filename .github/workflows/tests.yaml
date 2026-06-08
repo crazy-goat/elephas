@@ -125,12 +125,14 @@ jobs:
             ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
             format --cluster=0 --replica=0 --replica-count=1 /tmp/tb/data
 
-          # The start command runs with --development which disables direct I/O,
-          # so io_uring capabilities are not strictly needed.  We add IPC_LOCK
-          # (for mlock) and SYS_RAWIO (for io_uring if the kernel supports it)
-          # as a safety net — this is the documented minimum set for TigerBeetle
-          # and is far narrower than --privileged.
+          # The start command needs io_uring, which Docker's default seccomp
+          # profile blocks.  We disable seccomp (--security-opt seccomp=unconfined)
+          # and grant only the minimum Linux capabilities (IPC_LOCK for mlock,
+          # SYS_RAWIO for io_uring on kernel ≥5.19) — far narrower than
+          # --privileged which would grant all capabilities and disable all
+          # security isolation.
           docker run -d --name tigerbeetle --rm \
+            --security-opt seccomp=unconfined \
             --cap-add=IPC_LOCK \
             --cap-add=SYS_RAWIO \
             -p 3000:3000 \
