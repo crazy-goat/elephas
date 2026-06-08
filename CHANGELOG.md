@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed unused `CrazyGoat\Elephas\Internal\Packet` class and its test (`PacketTest`) — the native request flow uses `tb_packet_t` directly via FFI, making the PHP-level Packet abstraction redundant (#124)
 
 ### Added
+- Unit tests for `AccountBalance` DTO class covering constructor, getters, default values, readonly nature, zero values, max timestamp, and edge cases (#176)
 - `Uint128` now implements `\Stringable` interface with `__toString()` delegating to `toString()`, enabling string interpolation and `string|Stringable` type hint usage (#168)
 - `Client` lifecycle, concurrency, and `close()` behaviour documented in README, including long-running process considerations and thread-safety guidance (#137)
 - Unit tests in `DocumentationTest` verifying the presence of lifecycle/concurrency/timeout sections in README (#137)
