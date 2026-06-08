@@ -7,13 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- Updated `ROADMAP.md` — moved `ROADMAP.md` and community health files (`.github/SECURITY.md`, issue/PR templates) from "Remaining" to "Completed" in the v0.4.0 milestone, reflecting their actual implementation status (#169)
-
-### Removed
-- Removed unused `CrazyGoat\Elephas\Internal\Packet` class and its test (`PacketTest`) — the native request flow uses `tb_packet_t` directly via FFI, making the PHP-level Packet abstraction redundant (#124)
-
 ### Added
+- Unit tests for `AccountBalance` DTO class covering constructor, getters, default values, readonly nature, zero values, max timestamp, and edge cases (#176)
 - `Uint128` now implements `\Stringable` interface with `__toString()` delegating to `toString()`, enabling string interpolation and `string|Stringable` type hint usage (#168)
 - `Client` lifecycle, concurrency, and `close()` behaviour documented in README, including long-running process considerations and thread-safety guidance (#137)
 - Unit tests in `DocumentationTest` verifying the presence of lifecycle/concurrency/timeout sections in README (#137)
@@ -36,17 +31,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `NativeClient` accepts a `$timeoutSeconds` constructor parameter forwarded through `BackendFactory` and `FfiBackend` (#122)
 - `Client::queryAccounts()` and `Client::queryTransfers()` now implement the full `QueryFilter` round-trip (pack `QueryFilter` → submit `QUERY_ACCOUNTS`/`QUERY_TRANSFERS` → decode `AccountBatch`/`TransferBatch`), resolving the misleading "not implemented" public contract (#114)
 
-### Fixed
-- Corrected `Uint128::toHex()` documentation in README (no `0x` prefix) and `Id::fromString()` return type (now `Uint128` instead of `string`) (#116)
-
 ### Changed
+- Updated `ROADMAP.md` — moved `ROADMAP.md` and community health files (`.github/SECURITY.md`, issue/PR templates) from "Remaining" to "Completed" in the v0.4.0 milestone, reflecting their actual implementation status (#169)
 - Replaced `assert()` calls with explicit exception-throwing validation at public and native boundaries so that validation cannot be silently disabled by PHP assertion settings (#121)
 - `NativeClient` FFI calls (`tb_client_init`, `tb_client_submit`, `tb_client_deinit`) extracted to overridable protected methods, enabling controlled test doubles without a real native library (#134)
 - `CreateAccountResult` and `CreateTransferResult` no longer expose a synthetic `getId()` derived from the TigerBeetle-assigned timestamp. Both classes now provide `getTimestamp(): int` reflecting the actual timestamp returned by TigerBeetle for each created or rejected event. This aligns the public API with the native TigerBeetle `tb_create_account_result_t` / `tb_create_transfer_result_t` struct contract (TB 0.17.x) where each result carries a `uint64_t timestamp` and a `uint32_t status` (#111)
 - `NativeClient` request completion no longer confuses `TB_PACKET_OK` (status 0) with an incomplete/pending packet. A sentinel status value (`0xFFFFFFFF`) is now used to track the pending state, allowing status 0 to be correctly interpreted as a successful response (#109)
 - `NativeClient::submit()` now retains a PHP reference to the FFI data buffer for the full native request lifetime, preventing a potential use-after-free when the CData backing the request payload is garbage-collected while `tb_client` still holds the raw pointer (#110)
 
+### Removed
+- Removed unused `CrazyGoat\Elephas\Internal\Packet` class and its test (`PacketTest`) — the native request flow uses `tb_packet_t` directly via FFI, making the PHP-level Packet abstraction redundant (#124)
+
 ### Fixed
+- Corrected `Uint128::toHex()` documentation in README (no `0x` prefix) and `Id::fromString()` return type (now `Uint128` instead of `string`) (#116)
 - PHPStan memory limit set to 512M in `composer lint` script to prevent out-of-memory failures during static analysis (#138)
 - Removed stale `TODO: implement` comments from `Transfer`, `Account`, and `ChangeEventsFilterBatch` public DTO classes (#117)
 - All batch `fromBuffer()` factories now reject malformed buffers whose size is not an exact multiple of the expected struct size, preventing partial-record deserialization (#113)
