@@ -195,6 +195,8 @@ If you use a multi-threaded runtime (e.g. `ext-parallel`), each thread **must**
 create its own `Client` instance. Sharing a single client across threads is
 **not safe** and may lead to undefined behaviour in the native library.
 
+## API Reference
+
 ### Client
 
 | Method | Description | Returns |
