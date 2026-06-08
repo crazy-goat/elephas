@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `Uint128` now implements `\Stringable` interface with `__toString()` delegating to `toString()`, enabling string interpolation and `string|Stringable` type hint usage (#168)
+- `Client` lifecycle, concurrency, and `close()` behaviour documented in README, including long-running process considerations and thread-safety guidance (#137)
+- Unit tests in `DocumentationTest` verifying the presence of lifecycle/concurrency/timeout sections in README (#137)
 - `UnknownStatusException` for clear, actionable error messages when native library returns an unrecognized enum status value during response parsing (#133)
 - `CreateAccountResultBatch::getResult()` and `CreateTransferResultBatch::getResult()` now throw `UnknownStatusException` instead of raw `\ValueError` when a status value is unknown (#133)
 - `NativeClient` initialization now handles unknown `InitStatus` values gracefully, throwing `InitializationException` instead of `\ValueError` (#133)
