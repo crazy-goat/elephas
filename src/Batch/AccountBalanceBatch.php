@@ -27,28 +27,13 @@ class AccountBalanceBatch extends AbstractBatch
 
     public static function fromBuffer(string $buffer): self
     {
-        $length = \strlen($buffer);
-        $structSize = BinaryHelper::ACCOUNT_BALANCE_SIZE;
-        if ($length % $structSize !== 0) {
-            throw new \InvalidArgumentException(\sprintf(
-                'AccountBalanceBatch buffer size must be a multiple of %d bytes, got %d bytes',
-                $structSize,
-                $length,
-            ));
-        }
-        $count = $length / $structSize;
-        $batch = new self($count);
-        $batch->buffer = $buffer;
-        $batch->length = $count;
-
-        return $batch;
+        return self::fromBufferInternal($buffer, BinaryHelper::ACCOUNT_BALANCE_SIZE);
     }
 
     public function getBalance(): AccountBalance
     {
         $this->requireValidPosition('read field');
-        $offset = $this->currentPosition * $this->getStructSize();
-        $data = \substr($this->buffer, $offset, $this->getStructSize());
+        $data = $this->getBufferAtPosition($this->currentPosition);
         $unpacked = BinaryHelper::unpackAccountBalance($data);
 
         return new AccountBalance(
