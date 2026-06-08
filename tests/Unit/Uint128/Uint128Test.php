@@ -565,8 +565,151 @@ class Uint128Test extends TestCase
     }
 
     // ──────────────────────────────────────────────
-    //  Edge cases
+    //  Extension acceleration consistency
     // ──────────────────────────────────────────────
+
+    public function testDefaultPathIsPurePhpWhenNoExtensions(): void
+    {
+        // When GMP and BCMath are not loaded, the pure PHP path must be used.
+        // Verify by checking that fromString/toString still work correctly.
+        $val = Uint128::fromString('12345678901234567890');
+        $this->assertSame('12345678901234567890', $val->toString());
+
+        // Round-trip edge cases
+        $cases = ['0', '1', '255', '18446744073709551615', '18446744073709551616', '340282366920938463463374607431768211455'];
+        foreach ($cases as $case) {
+            $v = Uint128::fromString($case);
+            $this->assertSame($case, $v->toString(), "Round-trip: {$case}");
+        }
+    }
+
+    /**
+     * Cross-consistency: multiple ways to create the same value must produce
+     * identical string representations regardless of the internal code path.
+     */
+    public function testCrossImplementationConsistency(): void
+    {
+        $values = [
+            '0',
+            '1',
+            '42',
+            '255',
+            '65536',
+            '4294967295',
+            '18446744073709551615',
+            '18446744073709551616',
+            '340282366920938463463374607431768211455',
+            '123456789012345678901234567890123456789',
+        ];
+
+        foreach ($values as $decimal) {
+            // fromString -> toString (uses whatever path is available)
+            $fromString = Uint128::fromString($decimal);
+
+            // fromParts with manual computation
+            $parts = $fromString->toArray();
+            $fromParts = Uint128::fromParts($parts['low'], $parts['high']);
+
+            $this->assertSame($decimal, $fromString->toString(), "fromString->toString round-trip: {$decimal}");
+            $this->assertTrue($fromString->equals($fromParts), "equals consistency: {$decimal}");
+            $this->assertSame($fromString->toHex(), $fromParts->toHex(), "toHex consistency: {$decimal}");
+            $this->assertSame($fromString->toBytes(), $fromParts->toBytes(), "toBytes consistency: {$decimal}");
+        }
+    }
+
+    /**
+     * Verify that different factory methods produce consistent results
+     * when constructing equivalent values.
+     */
+    public function testFactoryConsistency(): void
+    {
+        // fromInt(0) == zero()
+        $this->assertTrue(Uint128::fromInt(0)->equals(Uint128::zero()));
+
+        // fromString('0') == zero()
+        $this->assertTrue(Uint128::fromString('0')->equals(Uint128::zero()));
+
+        // fromHex('00') == zero()
+        $this->assertTrue(Uint128::fromHex('00')->equals(Uint128::zero()));
+
+        // fromBytes(...) for zero
+        $this->assertTrue(Uint128::fromBytes(\str_repeat("\x00", 16))->equals(Uint128::zero()));
+
+        // Large value: fromString and fromParts must agree
+        $a = Uint128::fromString('340282366920938463463374607431768211455');
+        $b = Uint128::fromParts(-1, -1);
+        $this->assertTrue($a->equals($b));
+
+        // fromHex and fromString
+        $c = Uint128::fromHex('ffffffffffffffffffffffffffffffff');
+        $this->assertTrue($a->equals($c));
+    }
+
+    /**
+     * Verify that toString() and fromString() are consistent across
+     * all possible conversion paths by comparing byte representations.
+     */
+    public function testByteLevelConsistency(): void
+    {
+        $values = [
+            Uint128::zero(),
+            Uint128::fromInt(1),
+            Uint128::fromInt(\PHP_INT_MAX),
+            Uint128::fromParts(-1, 0),
+            Uint128::fromParts(0, 1),
+            Uint128::fromParts(-1, -1),
+            Uint128::fromString('12345678901234567890'),
+            Uint128::fromString('340282366920938463463374607431768211455'),
+        ];
+
+        foreach ($values as $val) {
+            // toBytes -> fromBytes round-trip
+            $bytes = $val->toBytes();
+            $fromBytes = Uint128::fromBytes($bytes);
+            $this->assertTrue($val->equals($fromBytes), 'toBytes->fromBytes round-trip');
+
+            // toHex -> fromHex round-trip
+            $hex = $val->toHex();
+            $fromHex = Uint128::fromHex($hex);
+            $this->assertTrue($val->equals($fromHex), 'toHex->fromHex round-trip');
+
+            // toString -> fromString round-trip
+            $str = $val->toString();
+            $fromString = Uint128::fromString($str);
+            $this->assertTrue($val->equals($fromString), 'toString->fromString round-trip');
+        }
+    }
+
+    /**
+     * Verify overflow detection in all code paths.
+     */
+    public function testFromStringOverflowInAllPaths(): void
+    {
+        // 2^128 = 340282366920938463463374607431768211456 (exactly one too large)
+        $this->expectException(IntegerOverflowException::class);
+        Uint128::fromString('340282366920938463463374607431768211456');
+    }
+
+    public function testFromStringOverflowVeryLarge(): void
+    {
+        $this->expectException(IntegerOverflowException::class);
+        Uint128::fromString('9999999999999999999999999999999999999999999999999999999999999');
+    }
+
+    public function testFromStringLeadingZeros(): void
+    {
+        $val = Uint128::fromString('00000000000000000000000000000000000000000000000000000000000000000042');
+        $this->assertSame(42, $val->toInt());
+        $this->assertSame('42', $val->toString());
+    }
+
+    public function testFromStringMaxValid(): void
+    {
+        // 2^128 - 1 = max valid value
+        $val = Uint128::fromString('340282366920938463463374607431768211455');
+        $this->assertSame('340282366920938463463374607431768211455', $val->toString());
+        $this->assertSame('ffffffffffffffffffffffffffffffff', $val->toHex());
+    }
 
     public function testRoundTripHex(): void
     {

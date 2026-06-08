@@ -259,7 +259,7 @@ try {
 |---------|-------------|
 | `Uint128::zero(): self` | Returns zero |
 | `Uint128::fromInt(int $value): self` | From signed 64-bit integer |
-| `Uint128::fromString(string $decimal): self` | From decimal string |
+| `Uint128::fromString(string $decimal): self` | From decimal string (GMP/BCMath accelerated when available) |
 | `Uint128::fromParts(int $low, int $high): self` | From low/high 64-bit parts |
 | `Uint128::fromBytes(string $bytes): self` | From 16-byte little-endian binary |
 | `Uint128::fromHex(string $hex): self` | From hexadecimal string |
@@ -268,13 +268,23 @@ try {
 |--------|-------------|
 | `toInt(): int` | Convert to signed 64-bit integer |
 | `toFloat(): float` | Convert to float |
-| `toString(): string` | Convert to decimal string |
+| `toString(): string` | Convert to decimal string (GMP/BCMath accelerated when available) |
 | `toHex(): string` | Convert to hex string (lowercase, no prefix) |
 | `toBytes(): string` | Convert to 16-byte little-endian binary |
 | `toArray(): array{low: int, high: int}` | Convert to low/high parts |
 | `equals(self $other): bool` | Equality check |
 | `compareTo(self $other): int` | Comparison (-1, 0, 1) |
 | `isZero(): bool` | Check if zero |
+
+`Uint128::fromString()` and `Uint128::toString()` automatically use the fastest
+available implementation:
+1. **GMP** – fastest, native C 128-bit arithmetic via `ext-gmp`
+2. **BCMath** – secondary acceleration via `ext-bcmath`
+3. **Pure PHP** – byte-level arithmetic using only core PHP
+
+No configuration is needed; the class detects available extensions at runtime
+and transparently selects the best path. Results are identical regardless of
+which path is used.
 
 ### Id (ULID)
 

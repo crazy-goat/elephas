@@ -19,6 +19,36 @@ final readonly class Uint128 implements \Stringable
     }
 
     // ──────────────────────────────────────────────
+    //  Extension availability
+    // ──────────────────────────────────────────────
+
+    /**
+     * Returns true if the GMP extension is available for accelerated arithmetic.
+     */
+    private static function gmpAvailable(): bool
+    {
+        static $available = null;
+        if ($available === null) {
+            $available = \extension_loaded('gmp');
+        }
+
+        return $available;
+    }
+
+    /**
+     * Returns true if the BCMath extension is available for accelerated arithmetic.
+     */
+    private static function bcmathAvailable(): bool
+    {
+        static $available = null;
+        if ($available === null) {
+            $available = \extension_loaded('bcmath');
+        }
+
+        return $available;
+    }
+
+    // ──────────────────────────────────────────────
     //  Factory methods
     // ──────────────────────────────────────────────
 
@@ -39,9 +69,88 @@ final readonly class Uint128 implements \Stringable
     /**
      * Create from a decimal string representation of an unsigned 128-bit integer.
      *
+     * When the GMP extension is available, it is used for accelerated parsing.
+     * Falls back to BCMath if available, then to pure-PHP arithmetic.
+     *
      * @throws IntegerOverflowException if the value exceeds 2^128-1
      */
     public static function fromString(string $decimal): self
+    {
+        if (self::gmpAvailable()) {
+            return self::fromStringGmp($decimal);
+        }
+        if (self::bcmathAvailable()) {
+            return self::fromStringBcmath($decimal);
+        }
+
+        return self::fromStringPhp($decimal);
+    }
+
+    /**
+     * GMP-accelerated fromString.
+     */
+    private static function fromStringGmp(string $decimal): self
+    {
+        $gmp = \gmp_init($decimal, 10);
+        // gmp_export with GMP_LSW_FIRST exports least-significant word first (little-endian)
+        $bytes = \gmp_export($gmp, 16, \GMP_LSW_FIRST | \GMP_NATIVE_ENDIAN);
+
+        if (\strlen($bytes) > 16) {
+            throw IntegerOverflowException::forValue($decimal);
+        }
+
+        // Pad to exactly 16 bytes (gmp_export may return fewer if leading zeros are trimmed)
+        $bytes = \str_pad($bytes, 16, "\x00", \STR_PAD_RIGHT);
+
+        $parts = \unpack('Plow/Phigh', $bytes);
+        \assert($parts !== false);
+
+        return new self($parts['low'], $parts['high']);
+    }
+
+    /**
+     * BCMath-accelerated fromString.
+     *
+     * Keeps the running value as a bcmath string and converts to bytes only at the end.
+     */
+    private static function fromStringBcmath(string $decimal): self
+    {
+        $current = '0';
+
+        for ($i = 0, $len = \strlen($decimal); $i < $len; ++$i) {
+            $digit = \ord($decimal[$i]) - 48;
+
+            if ($digit < 0 || $digit > 9) {
+                throw new \ValueError("Invalid decimal character: {$decimal[$i]}");
+            }
+
+            // multiply by 10, add digit
+            $current = \bcadd(\bcmul($current, '10'), (string) $digit);
+        }
+
+        // Check overflow: 2^128 = 340282366920938463463374607431768211456
+        if (\bccomp($current, '340282366920938463463374607431768211456') >= 0) {
+            throw IntegerOverflowException::forValue($decimal);
+        }
+
+        // Convert decimal string to 16-byte big-endian array
+        $bytes = array_fill(0, 16, 0);
+        for ($j = 15; $j >= 0 && \bccomp($current, '0') > 0; --$j) {
+            $bytes[$j] = (int) \bcmod($current, '256');
+            $current = \bcdiv($current, '256', 0);
+        }
+
+        // Convert big-endian bytes to low/high parts
+        $high = self::bytesToUint64(\array_reverse(\array_slice($bytes, 0, 8)));
+        $low = self::bytesToUint64(\array_reverse(\array_slice($bytes, 8, 8)));
+
+        return new self($low, $high);
+    }
+
+    /**
+     * Pure-PHP fromString (original implementation).
+     */
+    private static function fromStringPhp(string $decimal): self
     {
         $bytes = array_fill(0, 16, 0);
 
@@ -171,8 +280,69 @@ final readonly class Uint128 implements \Stringable
 
     /**
      * Convert to decimal string representation.
+     *
+     * When the GMP extension is available, it is used for accelerated formatting.
+     * Falls back to BCMath if available, then to pure-PHP arithmetic.
      */
     public function toString(): string
+    {
+        if (self::gmpAvailable()) {
+            return $this->toStringGmp();
+        }
+        if (self::bcmathAvailable()) {
+            return $this->toStringBcmath();
+        }
+
+        return $this->toStringPhp();
+    }
+
+    /**
+     * GMP-accelerated toString.
+     */
+    private function toStringGmp(): string
+    {
+        $bytes = $this->toBytes();
+        $gmp = \gmp_import($bytes, 16, \GMP_LSW_FIRST | \GMP_NATIVE_ENDIAN);
+
+        return \gmp_strval($gmp, 10);
+    }
+
+    /**
+     * BCMath-accelerated toString.
+     */
+    private function toStringBcmath(): string
+    {
+        // Use BCMath for the division-by-10 loop on the full 128-bit value
+        $high = $this->high;
+        $low = $this->low;
+
+        // Convert unsigned low/high to decimal string using bcmath.
+        // When a PHP int is negative, its unsigned value = value + 2^64.
+        $highStr = $high < 0 ? \bcadd((string) $high, '18446744073709551616') : (string) $high;
+        $lowStr = $low < 0 ? \bcadd((string) $low, '18446744073709551616') : (string) $low;
+
+        // value = high * 2^64 + low
+        // 2^64 = 18446744073709551616
+        $value = \bcadd(\bcmul($highStr, '18446744073709551616'), $lowStr);
+
+        if (\bccomp($value, '0') === 0) {
+            return '0';
+        }
+
+        $result = '';
+        while (\bccomp($value, '0') > 0) {
+            $remainder = \bcmod($value, '10');
+            $result = $remainder . $result;
+            $value = \bcdiv($value, '10', 0);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Pure-PHP toString (original implementation).
+     */
+    private function toStringPhp(): string
     {
         if ($this->low === 0 && $this->high === 0) {
             return '0';
