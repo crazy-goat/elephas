@@ -146,6 +146,55 @@ $transfers = $client->getAccountTransfers($filters);
 $client->close();
 ```
 
+## Client Lifecycle and Concurrency
+
+### Creating and Closing a Client
+
+A `Client` instance represents a connection to a TigerBeetle cluster. It holds native
+resources (FFI-backed C library), which **must** be released explicitly via `close()`:
+
+```php
+use CrazyGoat\Elephas\Client;
+use CrazyGoat\Elephas\Uint128\Uint128;
+
+$client = new Client(Uint128::zero(), '127.0.0.1:3000');
+
+// Use the client…
+$accounts = $client->lookupAccounts(/* … */);
+
+// Release native resources
+$client->close();
+```
+
+After `close()` is called, any further operation on the client throws
+`CrazyGoat\Elephas\Exception\ClientClosedException`. Calling `close()` multiple
+times is safe – the second and subsequent calls are no-ops.
+
+### When to Close
+
+- **Short-lived scripts** (e.g. CLI commands, cron jobs): close the client when
+  you are done with all operations. The native library releases internal memory,
+  packet pools, and I/O resources.
+- **Long-running processes** (e.g. PHP-FPM, RoadRunner, Swoole workers): create
+  one client at worker start and re-use it for the lifetime of the worker. Close
+  it during shutdown (e.g. in a `register_shutdown_function` callback).
+- **Unit / functional tests**: close the client in `tearDown()` to avoid leaking
+  native resources between test cases.
+
+> **Note:** PHP's `ext-ffi` does **not** automatically release native handles
+> when the wrapping object goes out of scope. Always call `close()` or use a
+> `try`/`finally` block.
+
+### Concurrency
+
+The client is **not** designed for concurrent use. PHP applications typically
+use a single-threaded request-response model (e.g. PHP-FPM), where this is not
+a limitation.
+
+If you use a multi-threaded runtime (e.g. `ext-parallel`), each thread **must**
+create its own `Client` instance. Sharing a single client across threads is
+**not safe** and may lead to undefined behaviour in the native library.
+
 ## API Reference
 
 ### Client

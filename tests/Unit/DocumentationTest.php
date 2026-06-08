@@ -88,9 +88,55 @@ final class DocumentationTest extends TestCase
         $this->assertStringContainsString('pre-push', $content);
     }
 
+    public function testReadmeFileExists(): void
+    {
+        $this->assertFileExists($this->projectRoot . '/README.md');
+    }
+
+    public function testReadmeHasClientLifecycleSection(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('Client Lifecycle and Concurrency', $content);
+    }
+
+    public function testReadmeHasRequestTimeoutSection(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('Request Timeout', $content);
+    }
+
+    public function testReadmeHasCloseDocumentation(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('close()', $content);
+    }
+
+    public function testReadmeMentionsConcurrency(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('Concurrency', $content);
+    }
+
+    public function testReadmeMentionsClientClosedException(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('ClientClosedException', $content);
+    }
+
     private function getContributingContent(): string
     {
         $path = $this->projectRoot . '/CONTRIBUTING.md';
+        $this->assertFileExists($path);
+
+        $content = \file_get_contents($path);
+        $this->assertNotFalse($content);
+
+        return $content;
+    }
+
+    private function getReadmeContent(): string
+    {
+        $path = $this->projectRoot . '/README.md';
         $this->assertFileExists($path);
 
         $content = \file_get_contents($path);
