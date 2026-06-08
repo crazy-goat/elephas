@@ -36,21 +36,39 @@ mkdir -p resources/lib/x86_64-linux-gnu
 curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-x86_64-linux-gnu.so \
   -o resources/lib/x86_64-linux-gnu/libtb_client.so
 
+# Verify the checksum (recommended)
+curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-x86_64-linux-gnu.so.sha256 \
+  -o resources/lib/x86_64-linux-gnu/libtb_client.so.sha256
+(cd resources/lib/x86_64-linux-gnu && sha256sum -c libtb_client.so.sha256)
+
 # Linux ARM64 (glibc) — e.g. Graviton, Raspberry Pi 4/5 with 64-bit OS
 # mkdir -p resources/lib/aarch64-linux-gnu
 # curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-aarch64-linux-gnu.so \
 #   -o resources/lib/aarch64-linux-gnu/libtb_client.so
+# curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-aarch64-linux-gnu.so.sha256 \
+#   -o resources/lib/aarch64-linux-gnu/libtb_client.so.sha256
+# (cd resources/lib/aarch64-linux-gnu && sha256sum -c libtb_client.so.sha256)
 
 # macOS x86_64 (Intel)
 # mkdir -p resources/lib/x86_64-macos
 # curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-x86_64-macos.dylib \
 #   -o resources/lib/x86_64-macos/libtb_client.dylib
+# curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-x86_64-macos.dylib.sha256 \
+#   -o resources/lib/x86_64-macos/libtb_client.dylib.sha256
+# (cd resources/lib/x86_64-macos && sha256sum -c libtb_client.dylib.sha256)
 
 # macOS ARM64 (Apple Silicon)
 # mkdir -p resources/lib/aarch64-macos
 # curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-aarch64-macos.dylib \
 #   -o resources/lib/aarch64-macos/libtb_client.dylib
+# curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-aarch64-macos.dylib.sha256 \
+#   -o resources/lib/aarch64-macos/libtb_client.dylib.sha256
+# (cd resources/lib/aarch64-macos && sha256sum -c libtb_client.dylib.sha256)
 ```
+
+> **Important:** After downloading, verify the SHA-256 checksum as shown above
+> to ensure the library has not been corrupted or tampered with. See
+> [Verifying release artifacts](#verifying-release-artifacts) for details.
 
 The library is auto-detected at these project-local paths:
 - `resources/lib/{platform-dir}/libtb_client.so` (or `.dylib` on macOS)
@@ -623,6 +641,41 @@ or an attacker.
 | File permissions | Restrict read access to the library file to the PHP process user |
 | Integrity | Verify the library's SHA-256 checksum against the published release checksums |
 | Companion library | `libelephas_noop.so` (if present) must come from the same trusted source as `tb_client` |
+
+### Verifying release artifacts
+
+Every GitHub Release includes SHA-256 checksums for all native library assets
+so you can verify their integrity before use.
+
+**Per-file checksum** — each asset has a corresponding `.sha256` file:
+
+```bash
+# Download a library and its checksum file
+curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-x86_64-linux-gnu.so \
+  -o resources/lib/x86_64-linux-gnu/libtb_client.so
+curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-x86_64-linux-gnu.so.sha256 \
+  -o resources/lib/x86_64-linux-gnu/libtb_client.so.sha256
+
+# Verify the checksum
+cd resources/lib/x86_64-linux-gnu
+sha256sum -c libtb_client.so.sha256
+```
+
+**Combined checksum file** — the release also includes a `SHA256SUMS.txt`
+containing checksums for all platform assets:
+
+```bash
+# Download the combined checksum file
+curl -L https://github.com/crazy-goat/elephas/releases/latest/download/SHA256SUMS.txt \
+  -o /tmp/SHA256SUMS.txt
+
+# Verify all downloaded libraries at once
+cd resources/lib
+sha256sum -c /tmp/SHA256SUMS.txt --ignore-missing
+```
+
+If the checksum does not match, **do not use the library**. The file may have
+been corrupted during download or tampered with. Report the issue immediately.
 
 ## Architecture
 

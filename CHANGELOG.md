@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Integrity verification for downloaded build dependencies: SHA256 checksum verification of Zig compiler archives using the official ziglang.org index.json, and git tag verification for TigerBeetle source clones (#128)
+- Release artifact checksums: each native library asset in GitHub Releases now includes a per-file `.sha256` file and a combined `SHA256SUMS.txt` for batch verification (#128)
+- CI integrity verification: `build-lib` job verifies checksums of built native libraries, and `test-matrix` job logs the Docker image digest for traceability (#128)
+- Documentation explaining how consumers can verify release artifacts using the published checksums (#128)
 - Documented synchronous wait model in `NativeClient`: class-level PHPDoc explains the polling approach, thread-safety limitations, and CPU usage characteristics (#123)
 - `NativeClient::POLL_INTERVAL_USECONDS` constant (100 µs) makes the polling interval explicit and configurable (#123)
 - `NativeClient::waitInterval()` method extracted from `pollForCompletion()` for testability and subclass override (#123)

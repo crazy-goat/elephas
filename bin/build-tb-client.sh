@@ -17,6 +17,7 @@
 #                   locate the built library (default: auto-detected)
 #   ZIG_BIN         Path to a zig executable (skips auto-install)
 #   SKIP_ZIG_INSTALL=1  Fail if zig is not on PATH instead of downloading
+#   SKIP_CHECKSUM_VERIFY=1  Skip SHA256 integrity check of downloaded zig archive
 #   SKIP_CLONE=1        Reuse a previously cloned TB_SRC_DIR
 #   TB_SRC_DIR      Path to an existing tigerbeetle source tree
 #
@@ -28,6 +29,7 @@
 #   4  clone failed
 #   5  zig build failed
 #   6  built library not found at expected path
+#   7  integrity check failed (sha256 mismatch or signature verification)
 
 set -euo pipefail
 
@@ -42,6 +44,7 @@ TB_TARGET="${TB_TARGET:-}"
 ZIG_BIN="${ZIG_BIN:-}"
 TB_SRC_DIR="${TB_SRC_DIR:-}"
 SKIP_ZIG_INSTALL="${SKIP_ZIG_INSTALL:-}"
+SKIP_CHECKSUM_VERIFY="${SKIP_CHECKSUM_VERIFY:-}"
 SKIP_CLONE="${SKIP_CLONE:-}"
 
 TB_REPO="https://github.com/tigerbeetle/tigerbeetle.git"
@@ -67,6 +70,7 @@ Environment variables (override defaults):
   ZIG_BIN         Path to a zig executable       (default: auto-installed)
   TB_SRC_DIR      Reuse an existing tigerbeetle source checkout.
   SKIP_ZIG_INSTALL=1   Fail if zig is missing instead of downloading.
+  SKIP_CHECKSUM_VERIFY=1  Skip SHA256 integrity check of downloaded zig archive.
   SKIP_CLONE=1         Reuse TB_SRC_DIR without re-cloning.
 
 USAGE
@@ -199,6 +203,124 @@ zig_minimal_path() {
     fi
 }
 
+# ---------------------------------------------------------------------------
+# Integrity verification helpers
+# ---------------------------------------------------------------------------
+
+# zig_expected_sha256 fetches the expected SHA256 checksum for a given Zig
+# archive from ziglang.org's index.json.  The index is served over HTTPS so
+# we get transport-layer integrity; the returned hash is used to verify the
+# downloaded archive before extraction.
+zig_expected_sha256() {
+    local host_os="$1"
+    local host_arch="$2"
+    local arch_key os_key
+
+    case "$host_os" in
+        linux)  os_key=linux  ;;
+        darwin) os_key=macos  ;;
+        *) die --code 1 "no zig checksum for host: $host_os/$host_arch" ;;
+    esac
+
+    case "$host_arch" in
+        x86_64|amd64)  arch_key=x86_64  ;;
+        aarch64|arm64) arch_key=aarch64 ;;
+        *) die --code 1 "no zig checksum for host: $host_os/$host_arch" ;;
+    esac
+
+    local index_url="$ZIG_BASE_URL/$ZIG_VERSION/index.json"
+    local platform_key="${arch_key}-${os_key}"
+
+    log "fetching checksum from $index_url"
+    if ! curl --fail --location --silent --show-error "$index_url" 2>/dev/null \
+        | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    plat = data.get('$platform_key', {})
+    shasum = plat.get('shasum', '')
+    if shasum:
+        print(shasum)
+    else:
+        sys.exit(1)
+except Exception:
+    sys.exit(1)
+" 2>/dev/null; then
+        # Fallback: try to parse from the source tarball entry if platform key missing
+        curl --fail --location --silent --show-error "$index_url" 2>/dev/null \
+            | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    # Fallback: use the 'src' tarball shasum
+    src = data.get('src', {})
+    shasum = src.get('shasum', '')
+    if shasum:
+        print(shasum)
+    else:
+        sys.exit(1)
+except Exception:
+    sys.exit(1)
+" 2>/dev/null || {
+            log "WARNING: could not fetch SHA256 checksum for $ZIG_VERSION from ziglang.org"
+            printf ''
+        }
+    fi
+}
+
+# verify_sha256 computes the SHA256 digest of a file and compares it to an
+# expected hex string.  Dies with exit code 7 on mismatch.
+verify_sha256() {
+    local file="$1"
+    local expected="$2"
+
+    if [ -z "$expected" ]; then
+        log "SKIP: no expected checksum provided for $(basename "$file")"
+        return 0
+    fi
+
+    require_cmd sha256sum
+
+    local actual
+    actual="$(sha256sum "$file" | cut -d' ' -f1)"
+    if [ "$actual" != "$expected" ]; then
+        die --code 7 \
+            "SHA256 mismatch for $(basename "$file"): expected $expected, got $actual"
+    fi
+    log "SHA256 OK: $(basename "$file") matches expected checksum"
+}
+
+# verify_git_tag checks that the given tag in a git repository matches
+# an optionally expected annotated tag signature or commit hash.
+# Currently verifies that the tag exists and is reachable.
+verify_git_tag() {
+    local repo_dir="$1"
+    local tag="$2"
+    local expected_commit="${3:-}"
+
+    if [ ! -d "$repo_dir/.git" ]; then
+        log "SKIP: not a git repository, skipping tag verification for $tag"
+        return 0
+    fi
+
+    ( cd "$repo_dir" && git rev-parse --verify "refs/tags/$tag^{commit}" >/dev/null 2>&1 ) \
+        || die --code 7 "tag '$tag' not found in repository $repo_dir"
+
+    if [ -n "$expected_commit" ]; then
+        local actual_commit
+        actual_commit="$(cd "$repo_dir" && git rev-parse "refs/tags/$tag^{commit}" 2>/dev/null)"
+        if [ "$actual_commit" != "$expected_commit" ]; then
+            die --code 7 \
+                "commit SHA mismatch for tag '$tag': expected $expected_commit, got $actual_commit"
+        fi
+        log "git tag '$tag' points to expected commit $expected_commit"
+    else
+        local full_ref
+        full_ref="$(cd "$repo_dir" && git rev-parse "refs/tags/$tag^{commit}" 2>/dev/null)"
+        log "git tag '$tag' verified (commit $full_ref)"
+    fi
+}
+
 ensure_zig() {
     if [ -n "$ZIG_BIN" ] && [ -x "$ZIG_BIN" ]; then
         log "using zig from ZIG_BIN: $(zig_minimal_path "$ZIG_BIN")"
@@ -251,6 +373,19 @@ ensure_zig() {
         die --code 3 "failed to download zig from $url"
     fi
 
+    # --- Integrity verification: SHA256 checksum ---
+    if [ -z "$SKIP_CHECKSUM_VERIFY" ]; then
+        local expected_sha256
+        expected_sha256="$(zig_expected_sha256 "$host_os" "$host_arch")"
+        if [ -n "$expected_sha256" ]; then
+            verify_sha256 "$tmp_tar" "$expected_sha256"
+        else
+            log "WARNING: could not verify SHA256 for $(basename "$tmp_tar") — no checksum available"
+        fi
+    else
+        log "SKIP: checksum verification disabled via SKIP_CHECKSUM_VERIFY"
+    fi
+
     log "extracting $(basename "$tmp_tar")"
     local tmp_extract
     tmp_extract="$(mktemp -d "$cache_dir/extract.XXXX")"
@@ -282,6 +417,8 @@ ensure_zig() {
 ensure_source() {
     if [ -n "$TB_SRC_DIR" ] && [ -f "$TB_SRC_DIR/build.zig" ]; then
         log "using existing source at $TB_SRC_DIR"
+        # Verify tag of existing checkout
+        verify_git_tag "$TB_SRC_DIR" "$TB_VERSION"
         return 0
     fi
 
@@ -307,6 +444,9 @@ ensure_source() {
     else
         log "reusing existing checkout at $TB_SRC_DIR"
     fi
+
+    # Verify the tag points to a valid commit
+    verify_git_tag "$TB_SRC_DIR" "$TB_VERSION"
 }
 
 run_build() {

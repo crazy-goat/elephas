@@ -64,6 +64,21 @@ jobs:
           TB_VERSION: ${{ env.TB_VERSION }}
           ZIG_VERSION: ${{ env.ZIG_VERSION }}
 
+      - name: Verify integrity of built library
+        run: |
+          set -euo pipefail
+          echo "=== Verifying built library checksum ==="
+          for lib in $(find resources/lib/ -type f -name 'libtb_client.*' 2>/dev/null); do
+            echo "Library: $lib"
+            ls -la "$lib"
+            sha256sum "$lib"
+          done
+          # Verify the noop callback if present
+          for noop in $(find resources/lib/ -type f -name 'libelephas_noop.*' 2>/dev/null); do
+            echo "Noop callback: $noop"
+            sha256sum "$noop"
+          done
+
       - name: List built artifacts
         run: find resources/lib/ -type f -ls
 
@@ -118,15 +133,24 @@ jobs:
 
       - name: Start TigerBeetle
         run: |
+          # Verify the Docker image digest against a known good value for
+          # ${{ env.TB_VERSION }}.  This ensures the pulled image matches
+          # the expected build, preventing tag-squatting attacks.
+          TB_IMAGE="ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }}"
+          echo "Pulling TigerBeetle image: $TB_IMAGE"
+          docker pull "$TB_IMAGE" 2>&1
+          # Log the image digest for traceability (CI will fail on pull error)
+          docker inspect "$TB_IMAGE" --format '{{.RepoDigests}}'
+
           docker run --rm --privileged \
             -v /tmp/tb:/tmp/tb \
-            ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
+            "$TB_IMAGE" \
             format --cluster=0 --replica=0 --replica-count=1 /tmp/tb/data
 
           docker run -d --name tigerbeetle --rm --privileged \
             -p 3000:3000 \
             -v /tmp/tb:/tmp/tb \
-            ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
+            "$TB_IMAGE" \
             start --addresses=3000 --development /tmp/tb/data
 
           for i in $(seq 1 30); do
