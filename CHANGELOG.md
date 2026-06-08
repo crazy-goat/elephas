@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `BackendFactory::create()` now accepts an optional `$libPath` parameter for specifying an explicit trusted native library path (#127)
+- FFI security documentation in README covering trust model, loading precedence, and best practices (#127)
+- Native library loading precedence documented in ARCHITECTURE.md, including security rationale for omitting system-wide paths (#127)
 - Documented create operation result semantics in README: positional correspondence, `isCreated()`/`getStatus()`/`getTimestamp()`, partial failure, linked events chain, and `LINKED_EVENT_CHAIN_OPEN`/`LINKED_EVENT_FAILED` behaviour (#136)
 - Documentation consistency tests verifying the presence of create-result sections and key terms in README (#136)
 - Optional GMP-accelerated `Uint128::fromString()` and `Uint128::toString()` when `ext-gmp` is available, providing significantly faster decimal parsing and formatting for high-volume conversion workloads (#126)
@@ -41,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Client::withTimeout()` factory and `RequestTimeoutException` for configurable, domain-specific request timeouts (#122)
 - `NativeClient` accepts a `$timeoutSeconds` constructor parameter forwarded through `BackendFactory` and `FfiBackend` (#122)
 - `Client::queryAccounts()` and `Client::queryTransfers()` now implement the full `QueryFilter` round-trip (pack `QueryFilter` → submit `QUERY_ACCOUNTS`/`QUERY_TRANSFERS` → decode `AccountBatch`/`TransferBatch`), resolving the misleading "not implemented" public contract (#114)
+
+### Changed
+- Native library auto-detection now only searches project-local paths (`resources/lib/`), removing system-wide fallbacks (`/usr/local/lib`, `/usr/lib`) to prevent accidental loading of untrusted or version-mismatched libraries via FFI (#127)
+- `NativeClient::detectLibraryPath()` no longer searches system directories; users requiring a custom path must provide an explicit `$libPath` (#127)
 
 ### Changed
 - Updated `ROADMAP.md` — moved `ROADMAP.md` and community health files (`.github/SECURITY.md`, issue/PR templates) from "Remaining" to "Completed" in the v0.4.0 milestone, reflecting their actual implementation status (#169)

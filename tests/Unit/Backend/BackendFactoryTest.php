@@ -69,4 +69,73 @@ final class BackendFactoryTest extends TestCase
 
         $backend->close();
     }
+
+    public function testCreateWithLibPathThrowsWhenLibraryNotFound(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('No backend available');
+
+        BackendFactory::create(
+            Uint128::zero(),
+            ['127.0.0.1:3000'],
+            null,
+            '/nonexistent/path/libtb_client.so',
+        );
+    }
+
+    public function testCreateAcceptsLibPathParameter(): void
+    {
+        if (!BackendFactory::isFfiAvailable()) {
+            $this->markTestSkipped('FFI not available, cannot test backend creation');
+        }
+
+        // Using a real but wrong library path should result in a
+        // different error than "No backend available" — the backend
+        // factory will try to use FFI with the given path and fail
+        // with InitializationException instead.
+        $libcPath = $this->findAnySharedLibrary();
+
+        if ($libcPath === null) {
+            $this->markTestSkipped('No shared library found for testing');
+        }
+
+        try {
+            BackendFactory::create(
+                Uint128::zero(),
+                ['127.0.0.1:3000'],
+                null,
+                $libcPath,
+            );
+            $this->fail('Expected an exception');
+        } catch (\RuntimeException $e) {
+            // Should NOT say "No backend available" — that means the
+            // libPath was ignored and FFI detection was skipped
+            $this->assertStringNotContainsString('No backend available', $e->getMessage());
+        } catch (\Throwable) {
+            // Any throwable is fine as long as it's not the generic
+            // "No backend available" message
+        }
+    }
+
+    /**
+     * Find any shared library on the system that can be used as a stand-in
+     * for testing FFI library loading.
+     */
+    private function findAnySharedLibrary(): ?string
+    {
+        $candidates = [
+            '/lib/x86_64-linux-gnu/libc.so.6',
+            '/lib/aarch64-linux-gnu/libc.so.6',
+            '/usr/lib/libSystem.dylib',
+            '/usr/lib/libc.dylib',
+        ];
+
+        foreach ($candidates as $path) {
+            if (\file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
 }

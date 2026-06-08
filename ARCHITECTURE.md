@@ -365,14 +365,43 @@ class BackendFactory {
     public static function create(
         Uint128 $clusterId,
         array $replicaAddresses,
+        ?float $timeoutSeconds = null,
+        ?string $libPath = null,
     ): BackendInterface;
 }
 ```
 
 Kolejność detekcji:
 1. `ext-ffi` + `tb_client.so` istnieje → `FfiBackend`
-2. `ext-elephas` → `ExtensionBackend`  
+2. `ext-elephas` → `ExtensionBackend` (future)
 3. Rzuca wyjątkiem jeśli żaden backend niedostępny
+
+**Native library loading precedence:**
+
+Gdy `$libPath` nie jest określony, `NativeClient::detectLibraryPath()` przeszukuje tylko
+ścieżki lokalne projektu w następującej kolejności:
+
+1. `resources/lib/{platform}/libtb_client.so`
+2. `resources/lib/{platform}/libtb_client.dylib`
+
+Systemowe ścieżki globalne (`/usr/local/lib`, `/usr/lib`, itp.) **nie są** przeszukiwane
+automatycznie — zostałoby to uznane za zagrożenie bezpieczeństwa, ponieważ FFI ładuje
+kod natywny bezpośrednio do procesu PHP (patrz sekcja bezpieczeństwa poniżej).
+
+**Bezpieczeństwo FFI (🔒):**
+
+Ponieważ PHP FFI wykonuje kod natywny w procesie PHP, biblioteka `tb_client` (oraz
+towarzysząca `libelephas_noop.so`) **musi** pochodzić z zaufanego źródła.
+- W środowisku produkcyjnym zawsze używaj **jawnej, zaufanej ścieżki** do biblioteki
+  poprzez `$libPath` w `BackendFactory::create()`.
+- Pobieraj pre-built biblioteki tylko z oficjalnych
+  [release assets](https://github.com/crazy-goat/elephas/releases) projektu.
+- Nie ładuj bibliotek z niezaufanych lokalizacji — złośliwa biblioteka może uzyskać
+  pełną kontrolę nad procesem PHP.
+- `loadNoopCallback()` ładuje `libelephas_noop.so` z tego samego katalogu co
+  `tb_client` — obie biblioteki muszą pochodzić z tego samego zaufanego źródła.
+  W razie braku pliku `libelephas_noop.so` używane jest bezpieczne fallback
+  `free(NULL)` z glibc (no-op przy dodatkowych argumentach rejestrowych na x86_64).
 
 ---
 

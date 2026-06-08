@@ -52,16 +52,16 @@ curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_cli
 #   -o resources/lib/aarch64-macos/libtb_client.dylib
 ```
 
-The library is auto-detected at these paths:
+The library is auto-detected at these project-local paths:
 - `resources/lib/{platform-dir}/libtb_client.so` (or `.dylib` on macOS)
-- `/usr/local/lib/libtb_client.so`
-- `/usr/lib/libtb_client.so`
 
 Where `{platform-dir}` is one of:
 - `x86_64-linux-gnu` — Linux x86_64 (glibc)
 - `aarch64-linux-gnu` — Linux ARM64 (glibc)
 - `x86_64-macos` — macOS Intel
 - `aarch64-macos` — macOS Apple Silicon
+
+> **Note:** System-wide paths (`/usr/local/lib`, `/usr/lib`, etc.) are **not** searched for security reasons — see the [FFI Security](#ffi-security) section below. If you need a custom location, use the `$libPath` parameter of `BackendFactory::create()`.
 
 > **Note:** The native library is **not** distributed via Composer. You must download it separately for your target platform.
 
@@ -573,6 +573,56 @@ composer lint
 # Auto-fix code style (PHP-CS-Fixer + Rector)
 composer lint-fix
 ```
+
+## FFI Security
+
+Elephas uses PHP's [FFI](https://www.php.net/manual/en/book.ffi.php) (Foreign Function Interface) to load and execute
+the native `tb_client` shared library. Because FFI runs native code directly inside the PHP process, the native library
+**must** come from a trusted source.
+
+### Trust model
+
+- The `tb_client` library (and the companion `libelephas_noop.so`) is loaded into the PHP process address space.
+  A compromised or malicious library can execute arbitrary code, read process memory, and access all data the PHP
+  process has access to.
+- Only load libraries downloaded from the official
+  [GitHub Releases](https://github.com/crazy-goat/elephas/releases) or built from the trusted source repository
+  ([crazy-goat/elephas](https://github.com/crazy-goat/elephas)).
+- In production, **always specify an explicit, trusted library path** using the `$libPath` parameter:
+
+  ```php
+  use CrazyGoat\Elephas\Backend\BackendFactory;
+  use CrazyGoat\Elephas\Client;
+  use CrazyGoat\Elephas\Uint128\Uint128;
+
+  $backend = BackendFactory::create(
+      clusterId: Uint128::fromInt(0),
+      replicaAddresses: ['127.0.0.1:3000'],
+      libPath: '/opt/elephas/resources/lib/x86_64-linux-gnu/libtb_client.so',
+  );
+  $client = Client::withBackend($backend);
+  ```
+
+### Loading precedence
+
+When `$libPath` is not specified, only project-local paths under `resources/lib/` are searched:
+
+1. `resources/lib/{platform-dir}/libtb_client.so`
+2. `resources/lib/{platform-dir}/libtb_client.dylib`
+
+System-wide paths (`/usr/local/lib`, `/usr/lib`, etc.) are **not** searched automatically. This prevents accidental
+loading of an untrusted or version-mismatched library that could be placed in a system directory by another package
+or an attacker.
+
+### Best practices
+
+| Practice | Recommendation |
+|----------|---------------|
+| Library source | Download from official GitHub Releases only |
+| Explicit path | Use `$libPath` in `BackendFactory::create()` in production |
+| File permissions | Restrict read access to the library file to the PHP process user |
+| Integrity | Verify the library's SHA-256 checksum against the published release checksums |
+| Companion library | `libelephas_noop.so` (if present) must come from the same trusted source as `tb_client` |
 
 ## Architecture
 

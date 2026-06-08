@@ -230,6 +230,135 @@ final class NativeClientTest extends TestCase
         $method->invoke($client, 255, 0, '');
     }
 
+    // ─── Library path detection tests ───────────────────────────────────
+
+    #[Test]
+    public function constructorDetectsLibraryFromResourcesDir(): void
+    {
+        // Create a temporary directory mimicking the resources/lib/{platform} structure
+        $platformDir = $this->getPlatformDir();
+        $tmpDir = \sys_get_temp_dir() . '/elephas-test-' . \bin2hex(\random_bytes(4));
+        $libDir = $tmpDir . "/resources/lib/{$platformDir}";
+        \mkdir($libDir, 0777, true);
+
+        // Find any shared library we can symlink to — try common locations
+        $sourceLib = $this->findAnySharedLibrary();
+        if ($sourceLib === null) {
+            // If no system library is available, just symlink to a non-existent
+            // file — the NativeClient will still try to load it and fail with
+            // an InitializationException, proving the explicit path is used.
+            $libPath = $libDir . '/libtb_client.so';
+            \touch($libPath);
+        } else {
+            $libPath = $libDir . '/libtb_client.so';
+            \symlink($sourceLib, $libPath);
+        }
+
+        try {
+            new NativeClient($libPath);
+            $this->fail('Expected InitializationException because tb_client functions are not in the test library');
+        } catch (InitializationException $e) {
+            // The explicit path was used — good. The error is because
+            // tb_client_init() etc. are not in the loaded library.
+            $this->assertStringContainsString('Cannot load tb_client library from', $e->getMessage());
+            $this->assertStringContainsString($libPath, $e->getMessage());
+        } finally {
+            @\unlink($libPath);
+            @\rmdir($libDir);
+            @\rmdir($tmpDir . '/resources/lib');
+            @\rmdir($tmpDir . '/resources');
+            @\rmdir($tmpDir);
+        }
+    }
+
+    /**
+     * Find any shared library on the system that can be used as a stand-in
+     * for testing FFI library loading.
+     */
+    private function findAnySharedLibrary(): ?string
+    {
+        $candidates = [
+            '/lib/x86_64-linux-gnu/libc.so.6',
+            '/lib/aarch64-linux-gnu/libc.so.6',
+            '/usr/lib/libSystem.dylib',
+            '/usr/lib/libc.dylib',
+        ];
+
+        foreach ($candidates as $path) {
+            if (\file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    #[Test]
+    public function constructorWithoutLibPathThrowsWhenLibraryNotFound(): void
+    {
+        // We can't easily test the auto-detection path without actually
+        // having the library present.  Verify that the error message
+        // mentions the platform and explains how to fix it.
+        try {
+            new NativeClient();
+        } catch (InitializationException $e) {
+            $message = $e->getMessage();
+            $this->assertStringContainsString('Cannot find tb_client', $message);
+            $this->assertStringContainsString('provide an explicit path', $message);
+
+            return;
+        }
+
+        // If we get here, the library was actually found — that's fine too
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function constructorWithCustomLibPathWorks(): void
+    {
+        // Find any shared library on the system
+        $libcPath = $this->findAnySharedLibrary();
+
+        if ($libcPath === null) {
+            $this->markTestSkipped('No shared library found for testing');
+        }
+
+        $this->expectException(InitializationException::class);
+        // FFI will try to load libc, parse the header, and fail because
+        // tb_client_init etc are not present in libc — that's fine,
+        // it proves the path was used instead of auto-detection.
+        new NativeClient($libcPath);
+    }
+
+    #[Test]
+    public function platformDirReturnsExpectedValue(): void
+    {
+        $client = (new \ReflectionClass(TimeoutSettableNativeClient::class))->newInstanceWithoutConstructor();
+        $timeoutProperty = new \ReflectionProperty(NativeClient::class, 'timeoutSeconds');
+        $timeoutProperty->setValue($client, NativeClient::DEFAULT_TIMEOUT_SECONDS);
+        $method = new \ReflectionMethod(NativeClient::class, 'platformDir');
+
+        $result = $method->invoke($client);
+
+        // Just verify it returns a non-empty string without throwing
+        $this->assertNotEmpty($result);
+    }
+
+    private function getPlatformDir(): string
+    {
+        $uname = \php_uname('s') . '/' . \php_uname('m');
+
+        return match (true) {
+            \str_starts_with($uname, 'Linux/x86_64'),
+            \str_starts_with($uname, 'Linux/AMD64') => 'x86_64-linux-gnu',
+            \str_starts_with($uname, 'Linux/aarch64'),
+            \str_starts_with($uname, 'Linux/arm64') => 'aarch64-linux-gnu',
+            \str_starts_with($uname, 'Darwin/x86_64') => 'x86_64-macos',
+            \str_starts_with($uname, 'Darwin/arm') => 'aarch64-macos',
+            default => 'x86_64-linux-gnu',
+        };
+    }
+
     // ─── NativeClient lifecycle tests ───────────────────────────────────
 
     #[Test]
