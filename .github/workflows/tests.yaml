@@ -118,11 +118,15 @@ jobs:
 
       - name: Start TigerBeetle
         run: |
-          # TigerBeetle requires io_uring.  GitHub Actions runners may have
-          # io_uring disabled via sysctl (kernel.io_uring_disabled=1).  We
-          # enable it at the host level first so the container doesn't need
-          # --privileged just to change this sysctl.
-          sudo sysctl -w kernel.io_uring_disabled=0 2>/dev/null || true
+          # TigerBeetle requires io_uring for I/O.  Docker's default seccomp
+          # profile blocks io_uring syscalls, and the default AppArmor profile
+          # may also restrict them on Ubuntu-based runners.  We disable both
+          # and grant only the minimum Linux capabilities — far narrower than
+          # --privileged which would grant all capabilities and disable all
+          # security isolation.
+          #
+          # Reference: https://docs.docker.com/engine/security/seccomp/
+          #            https://docs.docker.com/engine/security/apparmor/
 
           # The format command only creates a data file — no special capabilities
           # are required.
@@ -131,14 +135,9 @@ jobs:
             ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
             format --cluster=0 --replica=0 --replica-count=1 /tmp/tb/data
 
-          # The start command needs io_uring, which Docker's default seccomp
-          # profile blocks.  We disable seccomp (--security-opt seccomp=unconfined)
-          # and grant only the minimum Linux capabilities (IPC_LOCK for mlock,
-          # SYS_RAWIO for io_uring on kernel ≥5.19) — far narrower than
-          # --privileged which would grant all capabilities and disable all
-          # security isolation.
           docker run -d --name tigerbeetle --rm \
             --security-opt seccomp=unconfined \
+            --security-opt apparmor=unconfined \
             --cap-add=IPC_LOCK \
             --cap-add=SYS_RAWIO \
             -p 3000:3000 \
