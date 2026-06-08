@@ -253,6 +253,124 @@ try {
 }
 ```
 
+### Create Operation Results
+
+`createAccounts()` and `createTransfers()` each return a **result batch** with one
+entry per item in the request, in the same positional order:
+
+> `$result->getResult()` position *i* corresponds to the *i*-th item added to the
+> request batch.
+
+Each result carries:
+- **`getTimestamp(): int`** — the TigerBeetle-assigned timestamp (nanoseconds since
+  the TigerBeetle epoch). Only meaningful when the operation succeeded.
+- **`getStatus(): CreateAccountStatus|CreateTransferStatus`** — the outcome of the
+  operation. `CREATED` (value `0xFFFFFFFF`) means success; any other value is a
+  specific error code.
+- **`isCreated(): bool`** — shorthand for `getStatus() === CreateAccountStatus::CREATED`
+  (or the transfer equivalent).
+
+#### Success and Partial Failure
+
+A batch of 100 accounts may have 95 created successfully and 5 that fail with
+distinct error codes. Each result is independent — one failure does **not** prevent
+other items in the same batch from succeeding.
+
+```php
+use CrazyGoat\Elephas\Batch\AccountBatch;
+use CrazyGoat\Elephas\Uint128\Uint128;
+
+$batch = new AccountBatch(3);
+$batch->add();
+$batch->setId(Uint128::fromString('1'));
+$batch->setLedger(1);
+$batch->setCode(1);
+
+$batch->add();
+$batch->setId(Uint128::fromString('2'));
+$batch->setLedger(1);
+$batch->setCode(1);
+
+$batch->add();
+$batch->setId(Uint128::fromString('1')); // duplicate ID – will fail
+
+$results = $client->createAccounts($batch);
+
+for ($i = 0; $i < count($results); $i++) {
+    $result = $results->getResult();
+    if ($result->isCreated()) {
+        printf("Account #%d created (timestamp=%d)\n", $i, $result->getTimestamp());
+    } else {
+        printf("Account #%d failed: %s\n", $i, $result->getStatus()->name);
+    }
+    $results->next();
+}
+```
+
+#### Linked Events
+
+TigerBeetle supports **linked events**: when you set `AccountFlags::LINKED` or
+`TransferFlags::LINKED` on an event, the following event in the batch executes
+only if the linked event succeeds. If the linked event fails, subsequent events
+in the chain receive status `LINKED_EVENT_FAILED` and are skipped.
+
+```php
+use CrazyGoat\Elephas\AccountFlags;
+use CrazyGoat\Elephas\CreateAccountStatus;
+
+$batch = new AccountBatch(3);
+$batch->add();
+$batch->setId(Uint128::fromString('10'));
+$batch->setLedger(1);
+$batch->setCode(1);
+$batch->setFlags(AccountFlags::LINKED);          // #10 linked → #11 runs only if #10 succeeds
+
+$batch->add();
+$batch->setId(Uint128::fromString('11'));
+$batch->setLedger(1);
+$batch->setCode(1);
+$batch->setFlags(AccountFlags::LINKED);          // #11 linked → #12 runs only if #11 succeeds
+
+$batch->add();
+$batch->setId(Uint128::fromString('12'));
+$batch->setLedger(1);
+$batch->setCode(1);
+// no LINKED → chain ends here
+
+$results = $client->createAccounts($batch);
+
+for ($i = 0; $i < count($results); $i++) {
+    $result = $results->getResult();
+    $status = $result->getStatus();
+
+    match ($status) {
+        CreateAccountStatus::CREATED => printf("#%d: created (ts=%d)\n", $i, $result->getTimestamp()),
+        CreateAccountStatus::LINKED_EVENT_FAILED => printf("#%d: skipped – linked to a failed event\n", $i),
+        CreateAccountStatus::LINKED_EVENT_CHAIN_OPEN => printf("#%d: last linked event has no successor\n", $i),
+        default => printf("#%d: failed – %s\n", $i, $status->name),
+    };
+
+    $results->next();
+}
+```
+
+> **Important:** If the last event in a batch has `LINKED` set, TigerBeetle
+> returns `LINKED_EVENT_CHAIN_OPEN` for that event because the chain is
+> unterminated. Always ensure the final linked event is followed by an
+> unlinked event (even a dummy one) or does not carry the `LINKED` flag.
+
+#### Result Semantics Summary
+
+| Aspect | Behaviour |
+|--------|-----------|
+| **Positional correspondence** | Result *i* corresponds to request item *i* |
+| **Timestamp** | Valid only when `isCreated()` is true; zero otherwise |
+| **Success status** | `CreateAccountStatus::CREATED` / `CreateTransferStatus::CREATED` (value `0xFFFFFFFF`) |
+| **Error status** | Any other enum value indicates a specific failure reason |
+| **Partial failure** | Some items may succeed while others fail in the same batch |
+| **Linked events** | A failed linked event causes subsequent linked events to be skipped |
+| **Unterminated chain** | The last linked event must be followed by an unlinked event, or it receives `LINKED_EVENT_CHAIN_OPEN` |
+
 ### Uint128
 
 | Factory | Description |

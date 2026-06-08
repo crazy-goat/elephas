@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Documented create operation result semantics in README: positional correspondence, `isCreated()`/`getStatus()`/`getTimestamp()`, partial failure, linked events chain, and `LINKED_EVENT_CHAIN_OPEN`/`LINKED_EVENT_FAILED` behaviour (#136)
+- Documentation consistency tests verifying the presence of create-result sections and key terms in README (#136)
 - Optional GMP-accelerated `Uint128::fromString()` and `Uint128::toString()` when `ext-gmp` is available, providing significantly faster decimal parsing and formatting for high-volume conversion workloads (#126)
 - Optional BCMath-accelerated `Uint128::fromString()` and `Uint128::toString()` when `ext-bcmath` is available, providing a secondary acceleration path when GMP is not installed (#126)
 - Transparent fallback: `Uint128` automatically selects GMP → BCMath → pure-PHP based on extension availability, with consistent results across all paths (#126)
