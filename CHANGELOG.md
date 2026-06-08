@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented create operation result semantics in README: positional correspondence, `isCreated()`/`getStatus()`/`getTimestamp()`, partial failure, linked events chain, and `LINKED_EVENT_CHAIN_OPEN`/`LINKED_EVENT_FAILED` behaviour (#136)
 - Documentation consistency tests verifying the presence of create-result sections and key terms in README (#136)
 - Optional GMP-accelerated `Uint128::fromString()` and `Uint128::toString()` when `ext-gmp` is available, providing significantly faster decimal parsing and formatting for high-volume conversion workloads (#126)
+
+### Changed
+- CI TigerBeetle containers: investigated removing `--privileged`; determined it is still required for both `format` and `start` commands due to `io_uring` restrictions in the GitHub Actions CI environment. Findings documented in ARCHITECTURE.md (#130)
 - Optional BCMath-accelerated `Uint128::fromString()` and `Uint128::toString()` when `ext-bcmath` is available, providing a secondary acceleration path when GMP is not installed (#126)
 - Transparent fallback: `Uint128` automatically selects GMP → BCMath → pure-PHP based on extension availability, with consistent results across all paths (#126)
 - Unit tests verifying cross-implementation consistency, byte-level round-trips, overflow detection, and factory method agreement across all conversion paths (#126)

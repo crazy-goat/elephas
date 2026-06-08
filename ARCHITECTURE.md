@@ -635,3 +635,22 @@ jobs:
     - Create GitHub Release with assets
     - Publish to Packagist (opcjonalnie)
 ```
+
+### Container security
+
+The CI workflow runs TigerBeetle inside Docker containers for functional
+tests.  Both the `format` and `start` commands currently require
+`--privileged` because TigerBeetle uses the `io_uring` system call for
+its I/O engine.  On GitHub Actions runners, Docker's default seccomp
+and AppArmor profiles block `io_uring` syscalls, and the kernel-level
+`kernel.io_uring_disabled` sysctl further restricts access.
+
+Attempts to replace `--privileged` with individual capabilities
+(`--cap-add=IPC_LOCK,SYS_RAWIO,SYS_ADMIN` or `--cap-add=ALL`) combined
+with `--security-opt seccomp=unconfined --security-opt apparmor=unconfined`
+were unsuccessful — only `--privileged` makes `io_uring` available in
+this CI environment.
+
+The use of `--privileged` is documented and tracked in issue #130.
+If a future TigerBeetle version or a different CI environment removes
+the need for it, this should be revisited.
