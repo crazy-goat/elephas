@@ -6,7 +6,7 @@ namespace CrazyGoat\Elephas\Uint128;
 
 use CrazyGoat\Elephas\Exception\IntegerOverflowException;
 
-final readonly class Uint128
+final readonly class Uint128 implements \Stringable
 {
     /**
      * @param int $low  Least significant 64 bits (unsigned, stored as signed int64)
@@ -207,6 +207,17 @@ final readonly class Uint128
         }
 
         return $result;
+    }
+
+    /**
+     * Convert to decimal string representation.
+     *
+     * This method implements \Stringable to allow Uint128 instances to be used
+     * in string interpolation ("$value") and contexts that expect string|Stringable.
+     */
+    public function __toString(): string
+    {
+        return $this->toString();
     }
 
     /**

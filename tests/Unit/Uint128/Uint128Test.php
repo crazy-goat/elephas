@@ -257,6 +257,55 @@ class Uint128Test extends TestCase
         }
     }
 
+    // ──────────────────────────────────────────────
+    //  __toString() / Stringable
+    // ──────────────────────────────────────────────
+
+    public function testToStringDelegatesFromToString(): void
+    {
+        $val = Uint128::fromParts(-1, -1);
+        $this->assertSame($val->toString(), $val->__toString());
+    }
+
+    public function testStringableImplementation(): void
+    {
+        $val = Uint128::fromInt(42);
+        $this->assertInstanceOf(\Stringable::class, $val);
+    }
+
+    public function testStringableInStringInterpolation(): void
+    {
+        $val = Uint128::fromString('12345678901234567890');
+        $interpolated = "Value: {$val}";
+        $this->assertSame('Value: 12345678901234567890', $interpolated);
+    }
+
+    public function testStringableWithZero(): void
+    {
+        $val = Uint128::zero();
+        $this->assertSame('0', $val->__toString());
+        $this->assertSame('0', "{$val}");
+    }
+
+    public function testStringableWithMaxValue(): void
+    {
+        $val = Uint128::fromParts(-1, -1);
+        $expected = '340282366920938463463374607431768211455';
+        $this->assertSame($expected, $val->__toString());
+        $this->assertSame($expected, "{$val}");
+    }
+
+    public function testStringableTypeHint(): void
+    {
+        $val = Uint128::fromInt(7);
+
+        $fn = static function (string|\Stringable $value): string {
+            return (string) $value;
+        };
+
+        $this->assertSame('7', $fn($val));
+    }
+
     public function testToHex(): void
     {
         $this->assertSame('00000000000000000000000000000000', Uint128::zero()->toHex());
