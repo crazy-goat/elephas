@@ -393,7 +393,7 @@ kod natywny bezpośrednio do procesu PHP (patrz sekcja bezpieczeństwa poniżej)
 Ponieważ PHP FFI wykonuje kod natywny w procesie PHP, biblioteka `tb_client` (oraz
 towarzysząca `libelephas_noop.so`) **musi** pochodzić z zaufanego źródła.
 - W środowisku produkcyjnym zawsze używaj **jawnej, zaufanej ścieżki** do biblioteki
-  poprzez `$libPath` w `BackendFactory::create()` lub `Client::withTimeout()`.
+  poprzez `$libPath` w `BackendFactory::create()`.
 - Pobieraj pre-built biblioteki tylko z oficjalnych
   [release assets](https://github.com/crazy-goat/elephas/releases) projektu.
 - Nie ładuj bibliotek z niezaufanych lokalizacji — złośliwa biblioteka może uzyskać

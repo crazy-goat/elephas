@@ -61,7 +61,7 @@ Where `{platform-dir}` is one of:
 - `x86_64-macos` — macOS Intel
 - `aarch64-macos` — macOS Apple Silicon
 
-> **Note:** System-wide paths (`/usr/local/lib`, `/usr/lib`, etc.) are **not** searched for security reasons — see the [FFI Security](#ffi-security) section below. If you need a custom location, use the `$libPath` parameter of `BackendFactory::create()` or `Client::withTimeout()`.
+> **Note:** System-wide paths (`/usr/local/lib`, `/usr/lib`, etc.) are **not** searched for security reasons — see the [FFI Security](#ffi-security) section below. If you need a custom location, use the `$libPath` parameter of `BackendFactory::create()`.
 
 > **Note:** The native library is **not** distributed via Composer. You must download it separately for your target platform.
 
@@ -591,14 +591,16 @@ the native `tb_client` shared library. Because FFI runs native code directly ins
 - In production, **always specify an explicit, trusted library path** using the `$libPath` parameter:
 
   ```php
+  use CrazyGoat\Elephas\Backend\BackendFactory;
   use CrazyGoat\Elephas\Client;
   use CrazyGoat\Elephas\Uint128\Uint128;
 
-  $client = Client::withTimeout(
+  $backend = BackendFactory::create(
       clusterId: Uint128::fromInt(0),
+      replicaAddresses: ['127.0.0.1:3000'],
       libPath: '/opt/elephas/resources/lib/x86_64-linux-gnu/libtb_client.so',
-      replicaAddresses: '127.0.0.1:3000',
   );
+  $client = Client::withBackend($backend);
   ```
 
 ### Loading precedence
@@ -617,7 +619,7 @@ or an attacker.
 | Practice | Recommendation |
 |----------|---------------|
 | Library source | Download from official GitHub Releases only |
-| Explicit path | Use `$libPath` in `BackendFactory::create()` or `Client::withTimeout()` in production |
+| Explicit path | Use `$libPath` in `BackendFactory::create()` in production |
 | File permissions | Restrict read access to the library file to the PHP process user |
 | Integrity | Verify the library's SHA-256 checksum against the published release checksums |
 | Companion library | `libelephas_noop.so` (if present) must come from the same trusted source as `tb_client` |

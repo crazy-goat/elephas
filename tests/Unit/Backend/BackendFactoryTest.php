@@ -93,10 +93,10 @@ final class BackendFactoryTest extends TestCase
         // different error than "No backend available" — the backend
         // factory will try to use FFI with the given path and fail
         // with InitializationException instead.
-        $libcPath = \PHP_OS_FAMILY === 'Linux' ? '/lib/x86_64-linux-gnu/libc.so.6' : '/usr/lib/libSystem.dylib';
+        $libcPath = $this->findAnySharedLibrary();
 
-        if (!\file_exists($libcPath)) {
-            $this->markTestSkipped("Test library not found at {$libcPath}");
+        if ($libcPath === null) {
+            $this->markTestSkipped('No shared library found for testing');
         }
 
         try {
@@ -115,5 +115,27 @@ final class BackendFactoryTest extends TestCase
             // Any throwable is fine as long as it's not the generic
             // "No backend available" message
         }
+    }
+
+    /**
+     * Find any shared library on the system that can be used as a stand-in
+     * for testing FFI library loading.
+     */
+    private function findAnySharedLibrary(): ?string
+    {
+        $candidates = [
+            '/lib/x86_64-linux-gnu/libc.so.6',
+            '/lib/aarch64-linux-gnu/libc.so.6',
+            '/usr/lib/libSystem.dylib',
+            '/usr/lib/libc.dylib',
+        ];
+
+        foreach ($candidates as $path) {
+            if (\file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 }

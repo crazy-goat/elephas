@@ -241,17 +241,25 @@ final class NativeClientTest extends TestCase
         $libDir = $tmpDir . "/resources/lib/{$platformDir}";
         \mkdir($libDir, 0777, true);
 
-        // Create a minimal shared library for FFI to load (use libc as stand-in)
-        $libPath = $libDir . '/libtb_client.so';
-        \symlink('/lib/x86_64-linux-gnu/libc.so.6', $libPath);
+        // Find any shared library we can symlink to — try common locations
+        $sourceLib = $this->findAnySharedLibrary();
+        if ($sourceLib === null) {
+            // If no system library is available, just symlink to a non-existent
+            // file — the NativeClient will still try to load it and fail with
+            // an InitializationException, proving the explicit path is used.
+            $libPath = $libDir . '/libtb_client.so';
+            \touch($libPath);
+        } else {
+            $libPath = $libDir . '/libtb_client.so';
+            \symlink($sourceLib, $libPath);
+        }
 
         try {
             new NativeClient($libPath);
-            $this->fail('Expected InitializationException because tb_client functions are not in libc');
+            $this->fail('Expected InitializationException because tb_client functions are not in the test library');
         } catch (InitializationException $e) {
             // The explicit path was used — good. The error is because
-            // tb_client_init() etc. are not in libc, which proves the
-            // path resolution worked.
+            // tb_client_init() etc. are not in the loaded library.
             $this->assertStringContainsString('Cannot load tb_client library from', $e->getMessage());
             $this->assertStringContainsString($libPath, $e->getMessage());
         } finally {
@@ -261,6 +269,28 @@ final class NativeClientTest extends TestCase
             @\rmdir($tmpDir . '/resources');
             @\rmdir($tmpDir);
         }
+    }
+
+    /**
+     * Find any shared library on the system that can be used as a stand-in
+     * for testing FFI library loading.
+     */
+    private function findAnySharedLibrary(): ?string
+    {
+        $candidates = [
+            '/lib/x86_64-linux-gnu/libc.so.6',
+            '/lib/aarch64-linux-gnu/libc.so.6',
+            '/usr/lib/libSystem.dylib',
+            '/usr/lib/libc.dylib',
+        ];
+
+        foreach ($candidates as $path) {
+            if (\file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     #[Test]
@@ -286,13 +316,11 @@ final class NativeClientTest extends TestCase
     #[Test]
     public function constructorWithCustomLibPathWorks(): void
     {
-        // Using system libc as a dummy library — FFI::cdef will parse the
-        // header but the tb_client functions won't be found, causing a
-        // different error than "not found".
-        $libcPath = \PHP_OS_FAMILY === 'Linux' ? '/lib/x86_64-linux-gnu/libc.so.6' : '/usr/lib/libSystem.dylib';
+        // Find any shared library on the system
+        $libcPath = $this->findAnySharedLibrary();
 
-        if (!\file_exists($libcPath)) {
-            $this->markTestSkipped("Test library not found at {$libcPath}");
+        if ($libcPath === null) {
+            $this->markTestSkipped('No shared library found for testing');
         }
 
         $this->expectException(InitializationException::class);
