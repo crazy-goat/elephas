@@ -8,10 +8,18 @@ use PHPUnit\Framework\TestCase;
 
 class CITest extends TestCase
 {
+    private function isCi(): bool
+    {
+        return getenv('CI') !== false || getenv('GITHUB_ACTIONS') !== false;
+    }
+
     public function testTigerBeetleAddressEnvIsSet(): void
     {
         $address = getenv('TIGERBEETLE_ADDRESS');
         if ($address === false) {
+            if ($this->isCi()) {
+                $this->fail('TIGERBEETLE_ADDRESS env var is not set (required in CI)');
+            }
             $this->markTestSkipped('TIGERBEETLE_ADDRESS env var is not set (not in CI)');
         }
         $this->assertNotEmpty($address, 'TIGERBEETLE_ADDRESS env var must not be empty');
@@ -21,6 +29,9 @@ class CITest extends TestCase
     {
         $address = getenv('TIGERBEETLE_ADDRESS');
         if ($address === false) {
+            if ($this->isCi()) {
+                $this->fail('TIGERBEETLE_ADDRESS env var is not set (required in CI)');
+            }
             $this->markTestSkipped('TIGERBEETLE_ADDRESS env var is not set (not in CI)');
         }
 
@@ -32,11 +43,18 @@ class CITest extends TestCase
         $errstr = '';
         $socket = @fsockopen($host, $port, $errno, $errstr, 5);
 
-        $this->assertNotFalse(
-            $socket,
-            sprintf('Cannot connect to TigerBeetle at %s:%d (%s)', $host, $port, $errstr),
-        );
+        if ($socket === false) {
+            if ($this->isCi()) {
+                $this->fail(
+                    sprintf('Cannot connect to TigerBeetle at %s:%d (%s) – required in CI', $host, $port, $errstr),
+                );
+            }
+            $this->markTestSkipped(
+                sprintf('Cannot connect to TigerBeetle at %s:%d (%s)', $host, $port, $errstr),
+            );
+        }
 
+        $this->assertNotFalse($socket, sprintf('TigerBeetle must be reachable at %s:%d', $host, $port));
         fclose($socket);
     }
 }
