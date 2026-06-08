@@ -635,3 +635,22 @@ jobs:
     - Create GitHub Release with assets
     - Publish to Packagist (opcjonalnie)
 ```
+
+### Container security
+
+The CI workflow runs TigerBeetle inside a Docker container for functional
+tests.  The container _does not_ use `--privileged` — instead, only the
+minimum Linux capabilities required by TigerBeetle are granted:
+
+- `IPC_LOCK` — allows `mlock()` for locking process memory.
+- `SYS_RAWIO` — allows `io_uring` syscalls (kernel ≥5.19).
+
+These are documented in the workflow YAML inline comments and are
+significantly narrower than `--privileged`, which would grant all
+capabilities and disable all security isolation.  The `--development`
+flag passed to TigerBeetle disables direct I/O, so `io_uring` is not
+strictly needed; the capabilities are added as a safety net for kernels
+that support them.
+
+The `format` command (which only creates a data file) runs with no
+additional capabilities at all.

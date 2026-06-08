@@ -118,12 +118,21 @@ jobs:
 
       - name: Start TigerBeetle
         run: |
-          docker run --rm --privileged \
+          # The format command only creates a data file — no special capabilities
+          # are required.
+          docker run --rm \
             -v /tmp/tb:/tmp/tb \
             ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
             format --cluster=0 --replica=0 --replica-count=1 /tmp/tb/data
 
-          docker run -d --name tigerbeetle --rm --privileged \
+          # The start command runs with --development which disables direct I/O,
+          # so io_uring capabilities are not strictly needed.  We add IPC_LOCK
+          # (for mlock) and SYS_RAWIO (for io_uring if the kernel supports it)
+          # as a safety net — this is the documented minimum set for TigerBeetle
+          # and is far narrower than --privileged.
+          docker run -d --name tigerbeetle --rm \
+            --cap-add=IPC_LOCK \
+            --cap-add=SYS_RAWIO \
             -p 3000:3000 \
             -v /tmp/tb:/tmp/tb \
             ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
