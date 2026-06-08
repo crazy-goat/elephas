@@ -355,8 +355,8 @@ CPROG;
         return match (true) {
             \str_starts_with($uname, 'Linux/x86_64'),
             \str_starts_with($uname, 'Linux/AMD64') => 'x86_64-linux-gnu',
-            \str_starts_with($uname, 'Linux/arm'),
-            \str_starts_with($uname, 'Linux/aarch64') => 'aarch64-linux-gnu',
+            \str_starts_with($uname, 'Linux/aarch64'),
+            \str_starts_with($uname, 'Linux/arm64') => 'aarch64-linux-gnu',
             \str_starts_with($uname, 'Darwin/x86_64') => 'x86_64-macos',
             \str_starts_with($uname, 'Darwin/arm') => 'aarch64-macos',
             default => throw InitializationException::create(
