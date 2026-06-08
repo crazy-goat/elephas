@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Documented synchronous wait model in `NativeClient`: class-level PHPDoc explains the polling approach, thread-safety limitations, and CPU usage characteristics (#123)
+- `NativeClient::POLL_INTERVAL_USECONDS` constant (100 µs) makes the polling interval explicit and configurable (#123)
+- `NativeClient::waitInterval()` method extracted from `pollForCompletion()` for testability and subclass override (#123)
+- Unit tests verifying polling interval constant values, `waitInterval()` sleep duration, and `pollForCompletion()` deadline enforcement (#123)
 - `BackendFactory::create()` now accepts an optional `$libPath` parameter for specifying an explicit trusted native library path (#127)
 - FFI security documentation in README covering trust model, loading precedence, and best practices (#127)
 - Native library loading precedence documented in ARCHITECTURE.md, including security rationale for omitting system-wide paths (#127)
