@@ -638,19 +638,19 @@ jobs:
 
 ### Container security
 
-The CI workflow runs TigerBeetle inside a Docker container for functional
-tests.  The `format` command (which only creates a data file) runs with
-no special Docker permissions.
+The CI workflow runs TigerBeetle inside Docker containers for functional
+tests.  Both the `format` and `start` commands currently require
+`--privileged` because TigerBeetle uses the `io_uring` system call for
+its I/O engine.  On GitHub Actions runners, Docker's default seccomp
+and AppArmor profiles block `io_uring` syscalls, and the kernel-level
+`kernel.io_uring_disabled` sysctl further restricts access.
 
-The `start` command still requires `--privileged` because TigerBeetle's
-`io_uring` I/O engine cannot be enabled without it in the GitHub Actions
-environment.  Even explicitly granting all capabilities and disabling
-seccomp/AppArmor does not allow `io_uring` — only `--privileged` makes
-it work.  This is a known limitation of the GitHub Actions runner's
-kernel configuration.
+Attempts to replace `--privileged` with individual capabilities
+(`--cap-add=IPC_LOCK,SYS_RAWIO,SYS_ADMIN` or `--cap-add=ALL`) combined
+with `--security-opt seccomp=unconfined --security-opt apparmor=unconfined`
+were unsuccessful — only `--privileged` makes `io_uring` available in
+this CI environment.
 
-To reduce the attack surface, the `format` command runs separately
-_without_ `--privileged`, limiting the privileged scope to the long-
-running `start` process only.  If a future TigerBeetle version or a
-different CI environment removes the need for `--privileged`, this
-should be revisited.
+The use of `--privileged` is documented and tracked in issue #130.
+If a future TigerBeetle version or a different CI environment removes
+the need for it, this should be revisited.

@@ -118,25 +118,12 @@ jobs:
 
       - name: Start TigerBeetle
         run: |
-          # The format command only creates a data file — no special
-          # permissions are required.
-          docker run --rm \
+          docker run --rm --privileged \
             -v /tmp/tb:/tmp/tb \
             ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
             format --cluster=0 --replica=0 --replica-count=1 /tmp/tb/data
 
-          # The start command requires --privileged because TigerBeetle
-          # uses the io_uring system call for its I/O engine.  On GitHub
-          # Actions runners, io_uring is blocked by Docker's default
-          # seccomp and AppArmor profiles.  Even with all capabilities
-          # granted and seccomp/AppArmor disabled, io_uring remains
-          # inaccessible — only --privileged makes it work.  This is a
-          # known limitation of the GitHub Actions environment.
-          #
-          # The format command above does NOT need --privileged, so we
-          # keep it separate to limit the privileged scope.
-          docker run -d --name tigerbeetle --rm \
-            --privileged \
+          docker run -d --name tigerbeetle --rm --privileged \
             -p 3000:3000 \
             -v /tmp/tb:/tmp/tb \
             ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
