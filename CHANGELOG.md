@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional GMP-accelerated `Uint128::fromString()` and `Uint128::toString()` when `ext-gmp` is available, providing significantly faster decimal parsing and formatting for high-volume conversion workloads (#126)
 
 ### Changed
-- CI TigerBeetle containers no longer use `--privileged`; the `format` command uses no special permissions, and the `start` command disables seccomp/AppArmor and adds `--cap-add=ALL` (#130)
+- CI TigerBeetle containers: `format` command no longer uses `--privileged`; `start` command still requires `--privileged` due to `io_uring` limitations on GitHub Actions runners, documented in ARCHITECTURE.md (#130)
 - Optional BCMath-accelerated `Uint128::fromString()` and `Uint128::toString()` when `ext-bcmath` is available, providing a secondary acceleration path when GMP is not installed (#126)
 - Transparent fallback: `Uint128` automatically selects GMP → BCMath → pure-PHP based on extension availability, with consistent results across all paths (#126)
 - Unit tests verifying cross-implementation consistency, byte-level round-trips, overflow detection, and factory method agreement across all conversion paths (#126)

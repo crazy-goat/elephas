@@ -118,17 +118,6 @@ jobs:
 
       - name: Start TigerBeetle
         run: |
-          # TigerBeetle requires io_uring for its I/O engine.  Docker's
-          # default seccomp and AppArmor profiles block the io_uring syscalls;
-          # additionally, on kernels <5.19 the CAP_SYS_ADMIN capability is
-          # required.  We disable both security profiles and grant all
-          # capabilities (--cap-add=ALL) — this is still narrower than
-          # --privileged, which would also give access to all host devices
-          # and mount writable /sys and /proc paths.
-          #
-          # Reference: https://docs.docker.com/engine/security/seccomp/
-          #            https://docs.docker.com/engine/security/apparmor/
-
           # The format command only creates a data file — no special
           # permissions are required.
           docker run --rm \
@@ -136,10 +125,18 @@ jobs:
             ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
             format --cluster=0 --replica=0 --replica-count=1 /tmp/tb/data
 
+          # The start command requires --privileged because TigerBeetle
+          # uses the io_uring system call for its I/O engine.  On GitHub
+          # Actions runners, io_uring is blocked by Docker's default
+          # seccomp and AppArmor profiles.  Even with all capabilities
+          # granted and seccomp/AppArmor disabled, io_uring remains
+          # inaccessible — only --privileged makes it work.  This is a
+          # known limitation of the GitHub Actions environment.
+          #
+          # The format command above does NOT need --privileged, so we
+          # keep it separate to limit the privileged scope.
           docker run -d --name tigerbeetle --rm \
-            --security-opt seccomp=unconfined \
-            --security-opt apparmor=unconfined \
-            --cap-add=ALL \
+            --privileged \
             -p 3000:3000 \
             -v /tmp/tb:/tmp/tb \
             ghcr.io/tigerbeetle/tigerbeetle:${{ env.TB_VERSION }} \
