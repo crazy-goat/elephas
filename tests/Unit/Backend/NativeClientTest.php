@@ -230,6 +230,66 @@ final class NativeClientTest extends TestCase
         $method->invoke($client, 255, 0, '');
     }
 
+    // ─── Polling model tests ───────────────────────────────────────────
+
+    #[Test]
+    public function pollIntervalConstantIsPositive(): void
+    {
+        $this->assertGreaterThan(0, NativeClient::POLL_INTERVAL_USECONDS);
+    }
+
+    #[Test]
+    public function pollIntervalConstantIsReasonable(): void
+    {
+        // The interval should be small enough to not add significant latency
+        // but large enough to keep CPU usage low. 1 ms (1000 µs) max.
+        $this->assertLessThanOrEqual(1000, NativeClient::POLL_INTERVAL_USECONDS);
+    }
+
+    #[Test]
+    public function waitIntervalReturnsWithinReasonableTime(): void
+    {
+        $client = $this->createClientWithoutFfi();
+        $method = new \ReflectionMethod(NativeClient::class, 'waitInterval');
+
+        $start = \microtime(true);
+        $method->invoke($client);
+        $elapsed = (\microtime(true) - $start) * 1_000_000; // microseconds
+
+        // Should sleep for at least half the declared interval
+        $minExpected = NativeClient::POLL_INTERVAL_USECONDS * 0.5;
+        $this->assertGreaterThan(
+            $minExpected,
+            $elapsed,
+            \sprintf(
+                'waitInterval() should sleep for at least %.0f µs, slept %.0f µs',
+                $minExpected,
+                $elapsed,
+            ),
+        );
+    }
+
+    #[Test]
+    public function pollForCompletionThrowsOnDeadline(): void
+    {
+        // Simulate a packet that never completes by using a very short timeout
+        $client = $this->createClientWithoutFfi();
+        $client->setTimeoutForTests(0.001); // 1 ms
+
+        // Create a minimal FFI-backed packet to poll
+        $ffi = \FFI::cdef('typedef struct { uint32_t status; } packet_t;');
+        $packet = $ffi->new('packet_t');
+        /** @phpstan-ignore-next-line FFI\CData struct defined dynamically, property not known to PHPStan */
+        $packet->status = NativeClient::PACKET_PENDING;
+
+        $method = new \ReflectionMethod(NativeClient::class, 'pollForCompletion');
+
+        $this->expectException(RequestTimeoutException::class);
+        $this->expectExceptionMessage('timed out');
+
+        $method->invoke($client, $packet);
+    }
+
     // ─── Library path detection tests ───────────────────────────────────
 
     #[Test]

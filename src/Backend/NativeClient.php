@@ -12,11 +12,55 @@ use CrazyGoat\Elephas\InitStatus;
 use CrazyGoat\Elephas\Operation;
 use CrazyGoat\Elephas\PacketStatus;
 
+/**
+ * Native FFI client for the TigerBeetle tb_client shared library.
+ *
+ * == Synchronous wait model ==
+ *
+ * tb_client is an asynchronous C library: tb_client_submit() enqueues a
+ * packet on the I/O thread and returns immediately. The I/O thread processes
+ * the packet and signals completion by invoking a callback on its own thread.
+ *
+ * Because PHP closures and objects are not thread-safe (Zend VM is not
+ * re-entrant), we cannot safely invoke a PHP callback from the tb_client I/O
+ * thread. Instead, we register a C no-op callback (see loadNoopCallback())
+ * and use a synchronous polling loop ({@see pollForCompletion()}) on the
+ * calling (PHP) thread:
+ *
+ *   1. tb_client_submit()           — enqueue the packet
+ *   2. pollForCompletion()          — spin-wait until tb_client writes the
+ *                                     packet status (busy-poll with usleep)
+ *   3. processCompletionResult()    — decode status and return data or throw
+ *
+ * == Concurrency ==
+ *
+ * The NativeClient is NOT thread-safe. Only one PHP thread/request should
+ * call submit() at a time. tb_client itself processes packets sequentially
+ * per client instance; concurrent submissions from multiple PHP threads
+ * would race on the shared packet struct and FFI memory.
+ *
+ * == CPU usage ==
+ *
+ * pollForCompletion() sleeps {@see POLL_INTERVAL_USECONDS} µs between
+ * status checks. This keeps CPU usage near zero during the wait while
+ * adding at most ~POLL_INTERVAL_USECONDS/1_000_000 s of artificial latency
+ * beyond the actual request round-trip time.
+ */
 class NativeClient
 {
     public const PACKET_PENDING = 0xFFFFFFFF;
 
     public const DEFAULT_TIMEOUT_SECONDS = 30.0;
+
+    /**
+     * Polling interval in microseconds between packet status checks.
+     *
+     * A higher value reduces CPU usage but increases the perceived latency
+     * of each request by up to this amount. 100 µs keeps CPU usage near
+     * zero while adding negligible latency for a typical TigerBeetle
+     * request (which completes in sub-millisecond to low-millisecond time).
+     */
+    public const POLL_INTERVAL_USECONDS = 100;
 
     private const HEADER = <<<'CPROG'
 typedef unsigned char tb_uint128_t[16];
@@ -291,6 +335,24 @@ CPROG;
         return $buffer;
     }
 
+    /**
+     * Poll the packet status until tb_client sets it to a non-pending value.
+     *
+     * This method implements the synchronous wait model described in the
+     * class-level documentation. It busy-polls with a short usleep between
+     * checks to keep CPU usage near zero.
+     *
+     * The polling interval is exposed as {@see POLL_INTERVAL_USECONDS} so
+     * that tests can observe or override it via subclassing.
+     *
+     * @param \FFI\CData $packet   the tb_packet_t struct to poll (passed by
+     *                             reference; tb_client writes status to it
+     *                             from its I/O thread)
+     * @return string              the response data payload
+     *
+     * @throws RequestTimeoutException  if status is still PACKET_PENDING
+     *                                  when the deadline elapses
+     */
     protected function pollForCompletion(\FFI\CData $packet): string
     {
         $deadline = \microtime(true) + $this->timeoutSeconds;
@@ -301,7 +363,7 @@ CPROG;
                 throw RequestTimeoutException::create($this->timeoutSeconds);
             }
 
-            usleep(1000);
+            $this->waitInterval();
         }
 
         /** @phpstan-ignore property.notFound */
@@ -317,6 +379,18 @@ CPROG;
                 ? \FFI::string($packet->data, $dataSize)
                 : '',
         );
+    }
+
+    /**
+     * Sleep for one polling interval.
+     *
+     * Extracted to allow subclasses (e.g. test helpers) to override the
+     * sleep duration or skip it entirely without reimplementing the full
+     * polling loop.
+     */
+    protected function waitInterval(): void
+    {
+        \usleep(self::POLL_INTERVAL_USECONDS);
     }
 
     protected function processCompletionResult(int $statusCode, int $dataSize, string $data): string
