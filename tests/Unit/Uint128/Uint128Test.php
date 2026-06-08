@@ -299,9 +299,7 @@ class Uint128Test extends TestCase
     {
         $val = Uint128::fromInt(7);
 
-        $fn = static function (string|\Stringable $value): string {
-            return (string) $value;
-        };
+        $fn = static fn(string|\Stringable $value): string => (string) $value;
 
         $this->assertSame('7', $fn($val));
     }
