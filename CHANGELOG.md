@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bin/check-coverage.php` script to validate coverage percentage against a configurable threshold in CI (#135)
 - Fully implemented `ChangeEventsFilterBatch` with `setAccountId()`/`getAccountId()` methods for filtering change events by account (#117)
 - CI workflow now executes both unit and functional PHPUnit suites, with distinct steps for each (#107)
+- Unit tests for `QueryFilter` DTO class covering constructor, getters, default values, readonly nature, and max value edge cases (#175)
 - CI provisions a version-pinned (0.17.4) `tb_client` native library before running functional tests, ensuring FFI-backed tests no longer silently skip in CI (#108)
 - `AccountBatch::isFound()` and `TransferBatch::isFound()` methods for detecting missing records in lookup results (#112)
 - Lookup behaviour (ordering, missing-record zeroed struct) documented in README and `ClientInterface` docblocks (#112)
