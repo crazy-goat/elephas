@@ -123,6 +123,66 @@ final class DocumentationTest extends TestCase
         $this->assertStringContainsString('ClientClosedException', $content);
     }
 
+    public function testReadmeHasCreateOperationResultsSection(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('Create Operation Results', $content);
+    }
+
+    public function testReadmeExplainsPositionalCorrespondence(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('positional', $content);
+    }
+
+    public function testReadmeDocumentsIsCreated(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('isCreated()', $content);
+    }
+
+    public function testReadmeDocumentsGetTimestamp(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('getTimestamp()', $content);
+    }
+
+    public function testReadmeDocumentsGetStatus(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('getStatus()', $content);
+    }
+
+    public function testReadmeDocumentsPartialFailure(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('Partial Failure', $content);
+    }
+
+    public function testReadmeDocumentsLinkedEvents(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('Linked Events', $content);
+    }
+
+    public function testReadmeDocumentsLinkedEventChainOpen(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('LINKED_EVENT_CHAIN_OPEN', $content);
+    }
+
+    public function testReadmeDocumentsLinkedEventFailed(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('LINKED_EVENT_FAILED', $content);
+    }
+
+    public function testReadmeHasResultSemanticsSummaryTable(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('Result Semantics Summary', $content);
+    }
+
     private function getContributingContent(): string
     {
         $path = $this->projectRoot . '/CONTRIBUTING.md';
