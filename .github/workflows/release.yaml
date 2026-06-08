@@ -52,11 +52,19 @@ jobs:
           ls -la "${{ matrix.asset-name }}"
           file "${{ matrix.asset-name }}"
 
+      - name: Generate SHA256 checksum
+        run: |
+          set -euo pipefail
+          sha256sum "${{ matrix.asset-name }}" > "${{ matrix.asset-name }}.sha256"
+          cat "${{ matrix.asset-name }}.sha256"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: tb_client-${{ matrix.platform }}
-          path: ${{ matrix.asset-name }}
+          path: |
+            ${{ matrix.asset-name }}
+            ${{ matrix.asset-name }}.sha256
           if-no-files-found: error
 
   release:
@@ -76,14 +84,29 @@ jobs:
           pattern: tb_client-*
           merge-multiple: true
 
+      - name: Generate combined SHA256SUMS.txt
+        run: |
+          set -euo pipefail
+          cd artifacts
+          sha256sum libtb_client-x86_64-linux-gnu.so \
+                     libtb_client-aarch64-linux-gnu.so \
+                     libtb_client-x86_64-macos.dylib \
+                     libtb_client-aarch64-macos.dylib > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             artifacts/libtb_client-x86_64-linux-gnu.so
+            artifacts/libtb_client-x86_64-linux-gnu.so.sha256
             artifacts/libtb_client-aarch64-linux-gnu.so
+            artifacts/libtb_client-aarch64-linux-gnu.so.sha256
             artifacts/libtb_client-x86_64-macos.dylib
+            artifacts/libtb_client-x86_64-macos.dylib.sha256
             artifacts/libtb_client-aarch64-macos.dylib
+            artifacts/libtb_client-aarch64-macos.dylib.sha256
+            artifacts/SHA256SUMS.txt
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

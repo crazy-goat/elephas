@@ -177,7 +177,7 @@ final class BuildTbClientScriptTest extends TestCase
         $this->assertSame(0, $exit);
         $help = implode("\n", $output);
 
-        foreach (['--check', '--clean', '--help', 'TB_VERSION', 'ZIG_VERSION', 'OUTPUT_DIR'] as $needle) {
+        foreach (['--check', '--clean', '--help', 'TB_VERSION', 'ZIG_VERSION', 'OUTPUT_DIR', 'SKIP_CHECKSUM_VERIFY'] as $needle) {
             $this->assertStringContainsString(
                 $needle,
                 $help,
