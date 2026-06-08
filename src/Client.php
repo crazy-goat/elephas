@@ -54,6 +54,10 @@ final class Client implements ClientInterface
      * native TigerBeetle client to complete before throwing
      * {@see \CrazyGoat\Elephas\Exception\RequestTimeoutException}.
      *
+     * To use a custom native library path, create a backend manually and
+     * pass it via the `$backend` parameter, or use
+     * {@see BackendFactory::create()} with a `$libPath`.
+     *
      * @param float|null       $timeoutSeconds   request completion timeout in seconds; null keeps
      *                                           the backend default (30 s). Must be > 0 if provided.
      * @param BackendInterface $backend          for testing / dependency injection; when null

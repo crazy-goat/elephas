@@ -11,15 +11,21 @@ final class BackendFactory
     /**
      * @param array<string> $replicaAddresses
      * @param float|null    $timeoutSeconds  forwarded to the backend; see {@see NativeClient} for the default
+     * @param string|null   $libPath         explicit path to the tb_client shared library, or null for
+     *                                       auto-detect (only project-local paths under resources/lib/
+     *                                       are searched).  **Security**: always specify an explicit,
+     *                                       trusted library path in production to avoid loading an
+     *                                       untrusted native library via FFI.
      */
     public static function create(
         Uint128 $clusterId,
         array $replicaAddresses,
         ?float $timeoutSeconds = null,
+        ?string $libPath = null,
     ): BackendInterface {
         if (\extension_loaded('ffi')) {
             try {
-                return new FfiBackend($clusterId, $replicaAddresses, null, null, $timeoutSeconds);
+                return new FfiBackend($clusterId, $replicaAddresses, null, $libPath, $timeoutSeconds);
             } catch (\Throwable) {
             }
         }

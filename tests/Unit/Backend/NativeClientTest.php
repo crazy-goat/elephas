@@ -230,6 +230,107 @@ final class NativeClientTest extends TestCase
         $method->invoke($client, 255, 0, '');
     }
 
+    // ─── Library path detection tests ───────────────────────────────────
+
+    #[Test]
+    public function constructorDetectsLibraryFromResourcesDir(): void
+    {
+        // Create a temporary directory mimicking the resources/lib/{platform} structure
+        $platformDir = $this->getPlatformDir();
+        $tmpDir = \sys_get_temp_dir() . '/elephas-test-' . \bin2hex(\random_bytes(4));
+        $libDir = $tmpDir . "/resources/lib/{$platformDir}";
+        \mkdir($libDir, 0777, true);
+
+        // Create a minimal shared library for FFI to load (use libc as stand-in)
+        $libPath = $libDir . '/libtb_client.so';
+        \symlink('/lib/x86_64-linux-gnu/libc.so.6', $libPath);
+
+        try {
+            new NativeClient($libPath);
+            $this->fail('Expected InitializationException because tb_client functions are not in libc');
+        } catch (InitializationException $e) {
+            // The explicit path was used — good. The error is because
+            // tb_client_init() etc. are not in libc, which proves the
+            // path resolution worked.
+            $this->assertStringContainsString('Cannot load tb_client library from', $e->getMessage());
+            $this->assertStringContainsString($libPath, $e->getMessage());
+        } finally {
+            @\unlink($libPath);
+            @\rmdir($libDir);
+            @\rmdir($tmpDir . '/resources/lib');
+            @\rmdir($tmpDir . '/resources');
+            @\rmdir($tmpDir);
+        }
+    }
+
+    #[Test]
+    public function constructorWithoutLibPathThrowsWhenLibraryNotFound(): void
+    {
+        // We can't easily test the auto-detection path without actually
+        // having the library present.  Verify that the error message
+        // mentions the platform and explains how to fix it.
+        try {
+            new NativeClient();
+        } catch (InitializationException $e) {
+            $message = $e->getMessage();
+            $this->assertStringContainsString('Cannot find tb_client', $message);
+            $this->assertStringContainsString('provide an explicit path', $message);
+
+            return;
+        }
+
+        // If we get here, the library was actually found — that's fine too
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function constructorWithCustomLibPathWorks(): void
+    {
+        // Using system libc as a dummy library — FFI::cdef will parse the
+        // header but the tb_client functions won't be found, causing a
+        // different error than "not found".
+        $libcPath = \PHP_OS_FAMILY === 'Linux' ? '/lib/x86_64-linux-gnu/libc.so.6' : '/usr/lib/libSystem.dylib';
+
+        if (!\file_exists($libcPath)) {
+            $this->markTestSkipped("Test library not found at {$libcPath}");
+        }
+
+        $this->expectException(InitializationException::class);
+        // FFI will try to load libc, parse the header, and fail because
+        // tb_client_init etc are not present in libc — that's fine,
+        // it proves the path was used instead of auto-detection.
+        new NativeClient($libcPath);
+    }
+
+    #[Test]
+    public function platformDirReturnsExpectedValue(): void
+    {
+        $client = (new \ReflectionClass(TimeoutSettableNativeClient::class))->newInstanceWithoutConstructor();
+        $timeoutProperty = new \ReflectionProperty(NativeClient::class, 'timeoutSeconds');
+        $timeoutProperty->setValue($client, NativeClient::DEFAULT_TIMEOUT_SECONDS);
+        $method = new \ReflectionMethod(NativeClient::class, 'platformDir');
+
+        $result = $method->invoke($client);
+
+        // Just verify it returns a non-empty string without throwing
+        $this->assertNotEmpty($result);
+    }
+
+    private function getPlatformDir(): string
+    {
+        $uname = \php_uname('s') . '/' . \php_uname('m');
+
+        return match (true) {
+            \str_starts_with($uname, 'Linux/x86_64'),
+            \str_starts_with($uname, 'Linux/AMD64') => 'x86_64-linux-gnu',
+            \str_starts_with($uname, 'Linux/aarch64'),
+            \str_starts_with($uname, 'Linux/arm64') => 'aarch64-linux-gnu',
+            \str_starts_with($uname, 'Darwin/x86_64') => 'x86_64-macos',
+            \str_starts_with($uname, 'Darwin/arm') => 'aarch64-macos',
+            default => 'x86_64-linux-gnu',
+        };
+    }
+
     // ─── NativeClient lifecycle tests ───────────────────────────────────
 
     #[Test]

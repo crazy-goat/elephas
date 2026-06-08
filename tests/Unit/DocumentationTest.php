@@ -183,6 +183,30 @@ final class DocumentationTest extends TestCase
         $this->assertStringContainsString('Result Semantics Summary', $content);
     }
 
+    public function testReadmeHasFfiSecuritySection(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('FFI Security', $content);
+    }
+
+    public function testReadmeHasTrustModelSubsection(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('Trust model', $content);
+    }
+
+    public function testReadmeHasLoadingPrecedenceSubsection(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('Loading precedence', $content);
+    }
+
+    public function testReadmeHasBestPracticesSubsection(): void
+    {
+        $content = $this->getReadmeContent();
+        $this->assertStringContainsString('Best practices', $content);
+    }
+
     private function getContributingContent(): string
     {
         $path = $this->projectRoot . '/CONTRIBUTING.md';

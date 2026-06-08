@@ -82,10 +82,15 @@ CPROG;
 
     /**
      * @param string|null    $libPath         path to the tb_client shared library, or null for auto-detect
+     *                                        (only project-local paths under resources/lib/ are searched).
+     *                                        **Security**: Always specify an explicit, trusted library path
+     *                                        in production. FFI loads native code directly into the PHP
+     *                                        process — an untrusted library can execute arbitrary code.
      * @param float|null     $timeoutSeconds  request completion timeout in seconds; null falls back to
      *                                        {@see self::DEFAULT_TIMEOUT_SECONDS}. Must be > 0.
      *
      * @throws \InvalidArgumentException if $timeoutSeconds is not positive
+     * @throws InitializationException   if the library cannot be found or loaded
      */
     public function __construct(?string $libPath = null, ?float $timeoutSeconds = null)
     {
@@ -115,6 +120,12 @@ CPROG;
      * Load a thread-safe no-op completion callback from a companion shared
      * library.  tb_client calls the completion callback on its I/O thread;
      * a PHP closure cannot be safely invoked from a foreign thread.
+     *
+     * The companion library (libelephas_noop.so) is loaded from the same
+     * directory as the tb_client library — it must come from the same
+     * trusted source.  If the companion library is absent, the callback
+     * falls back to glibc's free(NULL) which is a defined no-op on x86_64
+     * Linux (extra register arguments are ignored by the sysv amd64 ABI).
      */
     private function loadNoopCallback(string $tbLibPath): \FFI\CData
     {
@@ -365,6 +376,17 @@ CPROG;
         };
     }
 
+    /**
+     * Auto-detect the native library path.
+     *
+     * Only project-local paths under resources/lib/ are searched.
+     * System-global paths (/usr/local/lib, /usr/lib, etc.) are NOT
+     * included to avoid loading an untrusted or version-mismatched
+     * library into the PHP process.  Users who need a custom location
+     * must provide an explicit $libPath to the constructor.
+     *
+     * @see __construct() for security guidance on explicit library paths
+     */
     private function detectLibraryPath(): string
     {
         $platform = $this->platformDir();
@@ -372,8 +394,6 @@ CPROG;
         $paths = [
             \dirname(__DIR__, 2) . "/resources/lib/{$platform}/libtb_client.so",
             \dirname(__DIR__, 2) . "/resources/lib/{$platform}/libtb_client.dylib",
-            '/usr/local/lib/libtb_client.so',
-            '/usr/lib/libtb_client.so',
         ];
 
         foreach ($paths as $path) {
@@ -383,7 +403,12 @@ CPROG;
         }
 
         throw InitializationException::create(
-            \sprintf('Cannot find tb_client library for platform %s', $platform),
+            \sprintf(
+                'Cannot find tb_client library for platform %s. '
+                . 'Download the pre-built library from the release page or '
+                . 'provide an explicit path via $libPath.',
+                $platform,
+            ),
         );
     }
 }

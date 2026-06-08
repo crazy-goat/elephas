@@ -69,4 +69,51 @@ final class BackendFactoryTest extends TestCase
 
         $backend->close();
     }
+
+    public function testCreateWithLibPathThrowsWhenLibraryNotFound(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('No backend available');
+
+        BackendFactory::create(
+            Uint128::zero(),
+            ['127.0.0.1:3000'],
+            null,
+            '/nonexistent/path/libtb_client.so',
+        );
+    }
+
+    public function testCreateAcceptsLibPathParameter(): void
+    {
+        if (!BackendFactory::isFfiAvailable()) {
+            $this->markTestSkipped('FFI not available, cannot test backend creation');
+        }
+
+        // Using a real but wrong library path should result in a
+        // different error than "No backend available" — the backend
+        // factory will try to use FFI with the given path and fail
+        // with InitializationException instead.
+        $libcPath = \PHP_OS_FAMILY === 'Linux' ? '/lib/x86_64-linux-gnu/libc.so.6' : '/usr/lib/libSystem.dylib';
+
+        if (!\file_exists($libcPath)) {
+            $this->markTestSkipped("Test library not found at {$libcPath}");
+        }
+
+        try {
+            BackendFactory::create(
+                Uint128::zero(),
+                ['127.0.0.1:3000'],
+                null,
+                $libcPath,
+            );
+            $this->fail('Expected an exception');
+        } catch (\RuntimeException $e) {
+            // Should NOT say "No backend available" — that means the
+            // libPath was ignored and FFI detection was skipped
+            $this->assertStringNotContainsString('No backend available', $e->getMessage());
+        } catch (\Throwable) {
+            // Any throwable is fine as long as it's not the generic
+            // "No backend available" message
+        }
+    }
 }
