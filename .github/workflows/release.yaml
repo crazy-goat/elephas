@@ -18,20 +18,24 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux-amd64
+            release-dir: x86_64-linux-gnu
             ext: so
             asset-name: libtb_client-x86_64-linux-gnu.so
           - os: ubuntu-24.04-arm
             platform: linux-arm64
+            release-dir: aarch64-linux-gnu
             ext: so
             asset-name: libtb_client-aarch64-linux-gnu.so
-          - os: macos-15-intel
+          - os: macos-13
             platform: macos-amd64
+            release-dir: x86_64-macos
             ext: dylib
-            asset-name: libtb_client-x86_64-darwin.dylib
+            asset-name: libtb_client-x86_64-macos.dylib
           - os: macos-latest
             platform: macos-arm64
+            release-dir: aarch64-macos
             ext: dylib
-            asset-name: libtb_client-aarch64-darwin.dylib
+            asset-name: libtb_client-aarch64-macos.dylib
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,7 +44,7 @@ jobs:
         run: bash bin/build-tb-client.sh
 
       - name: Stage release asset
-        run: cp "resources/lib/${{ matrix.platform }}/libtb_client.${{ matrix.ext }}" "${{ matrix.asset-name }}"
+        run: cp "resources/lib/${{ matrix.release-dir }}/libtb_client.${{ matrix.ext }}" "${{ matrix.asset-name }}"
 
       - name: Verify staged asset
         run: |
@@ -78,8 +82,8 @@ jobs:
           files: |
             artifacts/libtb_client-x86_64-linux-gnu.so
             artifacts/libtb_client-aarch64-linux-gnu.so
-            artifacts/libtb_client-x86_64-darwin.dylib
-            artifacts/libtb_client-aarch64-darwin.dylib
+            artifacts/libtb_client-x86_64-macos.dylib
+            artifacts/libtb_client-aarch64-macos.dylib
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

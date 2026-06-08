@@ -31,16 +31,37 @@ A [pre-built native library](https://github.com/crazy-goat/elephas/releases) (`t
 Download the archive matching your platform from the latest release and extract it to `resources/lib/`:
 
 ```bash
-# Example for Linux x86_64 (glibc)
+# Linux x86_64 (glibc)
 mkdir -p resources/lib/x86_64-linux-gnu
 curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-x86_64-linux-gnu.so \
   -o resources/lib/x86_64-linux-gnu/libtb_client.so
+
+# Linux ARM64 (glibc) — e.g. Graviton, Raspberry Pi 4/5 with 64-bit OS
+# mkdir -p resources/lib/aarch64-linux-gnu
+# curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-aarch64-linux-gnu.so \
+#   -o resources/lib/aarch64-linux-gnu/libtb_client.so
+
+# macOS x86_64 (Intel)
+# mkdir -p resources/lib/x86_64-macos
+# curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-x86_64-macos.dylib \
+#   -o resources/lib/x86_64-macos/libtb_client.dylib
+
+# macOS ARM64 (Apple Silicon)
+# mkdir -p resources/lib/aarch64-macos
+# curl -L https://github.com/crazy-goat/elephas/releases/latest/download/libtb_client-aarch64-macos.dylib \
+#   -o resources/lib/aarch64-macos/libtb_client.dylib
 ```
 
 The library is auto-detected at these paths:
-- `resources/lib/{platform}/libtb_client.so` (or `.dylib` on macOS)
+- `resources/lib/{platform-dir}/libtb_client.so` (or `.dylib` on macOS)
 - `/usr/local/lib/libtb_client.so`
 - `/usr/lib/libtb_client.so`
+
+Where `{platform-dir}` is one of:
+- `x86_64-linux-gnu` — Linux x86_64 (glibc)
+- `aarch64-linux-gnu` — Linux ARM64 (glibc)
+- `x86_64-macos` — macOS Intel
+- `aarch64-macos` — macOS Apple Silicon
 
 > **Note:** The native library is **not** distributed via Composer. You must download it separately for your target platform.
 

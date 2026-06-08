@@ -354,7 +354,6 @@ Implementacja używająca PHP FFI → `tb_client.so`.
 
 **Pre-built library:**
 - `resources/lib/x86_64-linux-gnu/libtb_client.so`
-- `resources/lib/x86_64-linux-musl/libtb_client.so`  
 - `resources/lib/aarch64-linux-gnu/libtb_client.so`
 - `resources/lib/x86_64-macos/libtb_client.dylib`
 - `resources/lib/aarch64-macos/libtb_client.dylib`
@@ -443,8 +442,6 @@ FROM tigerbeetle-build AS builder
 resources/
 └── lib/
     ├── x86_64-linux-gnu/
-    │   └── libtb_client.so
-    ├── x86_64-linux-musl/
     │   └── libtb_client.so
     ├── aarch64-linux-gnu/
     │   └── libtb_client.so

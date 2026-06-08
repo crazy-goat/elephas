@@ -54,21 +54,36 @@ final class ReleaseWorkflowTest extends TestCase
         $matrixEntries = $this->extractMatrixEntries($content);
 
         $expectedPlatforms = [
-            'linux-amd64' => 'libtb_client-x86_64-linux-gnu.so',
-            'linux-arm64' => 'libtb_client-aarch64-linux-gnu.so',
-            'macos-amd64' => 'libtb_client-x86_64-darwin.dylib',
-            'macos-arm64' => 'libtb_client-aarch64-darwin.dylib',
+            'linux-amd64' => [
+                'asset-name' => 'libtb_client-x86_64-linux-gnu.so',
+                'release-dir' => 'x86_64-linux-gnu',
+            ],
+            'linux-arm64' => [
+                'asset-name' => 'libtb_client-aarch64-linux-gnu.so',
+                'release-dir' => 'aarch64-linux-gnu',
+            ],
+            'macos-amd64' => [
+                'asset-name' => 'libtb_client-x86_64-macos.dylib',
+                'release-dir' => 'x86_64-macos',
+            ],
+            'macos-arm64' => [
+                'asset-name' => 'libtb_client-aarch64-macos.dylib',
+                'release-dir' => 'aarch64-macos',
+            ],
         ];
 
         $actual = [];
         foreach ($matrixEntries as $entry) {
             $this->assertArrayHasKey('platform', $entry, 'each matrix entry must declare a platform');
+            $this->assertArrayHasKey('release-dir', $entry, 'each matrix entry must declare a release-dir');
             $this->assertArrayHasKey('os', $entry, 'each matrix entry must declare a runner os');
             $this->assertArrayHasKey('ext', $entry, 'each matrix entry must declare a library extension (so/dylib)');
             $this->assertArrayHasKey('asset-name', $entry, 'each matrix entry must declare the release asset name');
             $platform = $this->stringField($entry, 'platform');
-            $asset = $this->stringField($entry, 'asset-name');
-            $actual[$platform] = $asset;
+            $actual[$platform] = [
+                'asset-name' => $this->stringField($entry, 'asset-name'),
+                'release-dir' => $this->stringField($entry, 'release-dir'),
+            ];
         }
 
         $this->assertEqualsCanonicalizing(
@@ -77,11 +92,16 @@ final class ReleaseWorkflowTest extends TestCase
             'build matrix must cover all four supported target platforms',
         );
 
-        foreach ($expectedPlatforms as $platform => $asset) {
+        foreach ($expectedPlatforms as $platform => $expected) {
             $this->assertSame(
-                $asset,
-                $actual[$platform],
-                "platform {$platform} must produce asset {$asset}",
+                $expected['asset-name'],
+                $actual[$platform]['asset-name'],
+                "platform {$platform} must produce asset {$expected['asset-name']}",
+            );
+            $this->assertSame(
+                $expected['release-dir'],
+                $actual[$platform]['release-dir'],
+                "platform {$platform} must use release-dir {$expected['release-dir']}",
             );
         }
     }
@@ -110,6 +130,36 @@ final class ReleaseWorkflowTest extends TestCase
         $jobBlock = $this->extractJob($content, 'build-libs:');
 
         $this->assertStringContainsString('bash bin/build-tb-client.sh', $jobBlock, 'build-libs job must invoke bin/build-tb-client.sh');
+    }
+
+    public function testBuildLibsJobStagingCpUsesReleaseDir(): void
+    {
+        $content = $this->getContent();
+        $matrixEntries = $this->extractMatrixEntries($content);
+        $jobBlock = $this->extractJob($content, 'build-libs:');
+
+        // The cp source path must use release-dir matrix variable, not the short platform name
+        $this->assertStringContainsString(
+            'resources/lib/${{ matrix.release-dir }}',
+            $jobBlock,
+            'build-libs job must cp from resources/lib/${{ matrix.release-dir }}',
+        );
+
+        // The cp destination must use asset-name matrix variable
+        $this->assertStringContainsString(
+            '${{ matrix.asset-name }}',
+            $jobBlock,
+            'build-libs job must cp to ${{ matrix.asset-name }}',
+        );
+
+        // Each platform must define release-dir mapping
+        foreach ($matrixEntries as $entry) {
+            $platform = $entry['platform'] ?? '';
+            $releaseDir = $entry['release-dir'] ?? '';
+            $this->assertNotEmpty($releaseDir, "platform {$platform} must define release-dir");
+            $this->assertNotEmpty($entry['ext'] ?? '', "platform {$platform} must define ext");
+            $this->assertNotEmpty($entry['asset-name'] ?? '', "platform {$platform} must define asset-name");
+        }
     }
 
     public function testBuildLibsJobUploadsArtifact(): void
@@ -148,8 +198,8 @@ final class ReleaseWorkflowTest extends TestCase
         $expectedAssets = [
             'artifacts/libtb_client-x86_64-linux-gnu.so',
             'artifacts/libtb_client-aarch64-linux-gnu.so',
-            'artifacts/libtb_client-x86_64-darwin.dylib',
-            'artifacts/libtb_client-aarch64-darwin.dylib',
+            'artifacts/libtb_client-x86_64-macos.dylib',
+            'artifacts/libtb_client-aarch64-macos.dylib',
         ];
 
         foreach ($expectedAssets as $asset) {
