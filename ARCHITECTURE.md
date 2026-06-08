@@ -641,10 +641,13 @@ jobs:
 The CI workflow runs TigerBeetle inside a Docker container for functional
 tests.  The container _does not_ use `--privileged` — instead, we:
 
-1. Disable only the seccomp profile (`--security-opt seccomp=unconfined`),
+1. Enable `io_uring` at the host level via `sysctl -w kernel.io_uring_disabled=0`
+   before starting containers, so the container does not need `CAP_SYS_ADMIN`
+   to change this kernel parameter.
+2. Disable only the seccomp profile (`--security-opt seccomp=unconfined`),
    because Docker's default seccomp profile blocks the `io_uring` syscalls
    that TigerBeetle requires.
-2. Grant only the minimum Linux capabilities required by TigerBeetle:
+3. Grant only the minimum Linux capabilities required by TigerBeetle:
    - `IPC_LOCK` — allows `mlock()` for locking process memory.
    - `SYS_RAWIO` — allows `io_uring` syscalls (kernel ≥5.19).
 

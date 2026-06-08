@@ -118,6 +118,12 @@ jobs:
 
       - name: Start TigerBeetle
         run: |
+          # TigerBeetle requires io_uring.  GitHub Actions runners may have
+          # io_uring disabled via sysctl (kernel.io_uring_disabled=1).  We
+          # enable it at the host level first so the container doesn't need
+          # --privileged just to change this sysctl.
+          sudo sysctl -w kernel.io_uring_disabled=0 2>/dev/null || true
+
           # The format command only creates a data file — no special capabilities
           # are required.
           docker run --rm \
