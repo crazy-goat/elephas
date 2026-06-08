@@ -25,12 +25,22 @@ class AbstractBatchTest extends TestCase
         $this->assertSame(10, $batch->getCapacity());
     }
 
-    public function testConstructorPreAllocatesBuffer(): void
+    public function testConstructorDoesNotPreAllocateBuffer(): void
     {
         $batch = new TestBatch(10);
 
-        $ref = new \ReflectionProperty(AbstractBatch::class, 'buffer');
-        $this->assertSame(160, \strlen((string) $ref->getValue($batch)));
+        $ref = new \ReflectionProperty(AbstractBatch::class, 'buffers');
+        $this->assertSame([], $ref->getValue($batch));
+    }
+
+    public function testBufferIsLazilyAllocatedOnAdd(): void
+    {
+        $batch = new TestBatch(10);
+        $batch->add();
+
+        $this->assertSame(16, \strlen($batch->getBuffer()));
+        $batch->add();
+        $this->assertSame(32, \strlen($batch->getBuffer()));
     }
 
     public function testLengthInitiallyZero(): void

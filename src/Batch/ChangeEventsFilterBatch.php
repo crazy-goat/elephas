@@ -27,16 +27,11 @@ class ChangeEventsFilterBatch extends AbstractBatch
 
     public function setAccountId(Uint128 $id): void
     {
-        $this->requireValidPosition('write field');
-        $offset = $this->currentPosition * $this->getStructSize() + self::ACCOUNT_ID;
-        $this->buffer = \substr_replace($this->buffer, $id->toBytes(), $offset, BinaryHelper::UINT128_SIZE);
+        $this->writeUint128(self::ACCOUNT_ID, $id);
     }
 
     public function getAccountId(): Uint128
     {
-        $this->requireValidPosition('read field');
-        $offset = $this->currentPosition * $this->getStructSize() + self::ACCOUNT_ID;
-
-        return Uint128::fromBytes(\substr($this->buffer, $offset, BinaryHelper::UINT128_SIZE));
+        return $this->readUint128(self::ACCOUNT_ID);
     }
 }

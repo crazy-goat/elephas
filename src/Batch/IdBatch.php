@@ -18,16 +18,11 @@ class IdBatch extends AbstractBatch
 
     public function setId(Uint128 $id): void
     {
-        $this->requireValidPosition('write field');
-        $offset = $this->currentPosition * $this->getStructSize() + self::ID;
-        $this->buffer = \substr_replace($this->buffer, $id->toBytes(), $offset, 16);
+        $this->writeUint128(self::ID, $id);
     }
 
     public function getId(): Uint128
     {
-        $this->requireValidPosition('read field');
-        $offset = $this->currentPosition * $this->getStructSize() + self::ID;
-
-        return Uint128::fromBytes(\substr($this->buffer, $offset, 16));
+        return $this->readUint128(self::ID);
     }
 }
