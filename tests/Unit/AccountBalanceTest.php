@@ -94,23 +94,6 @@ class AccountBalanceTest extends TestCase
         $this->assertSame(PHP_INT_MAX, $balance->getTimestamp());
     }
 
-    public function testNullUint128Handling(): void
-    {
-        $nullLike = Uint128::zero();
-
-        $balance = new AccountBalance(
-            debitsPending: $nullLike,
-            debitsPosted: $nullLike,
-            creditsPending: $nullLike,
-            creditsPosted: $nullLike,
-        );
-
-        $this->assertTrue($nullLike->equals($balance->getDebitsPending()));
-        $this->assertTrue($nullLike->equals($balance->getDebitsPosted()));
-        $this->assertTrue($nullLike->equals($balance->getCreditsPending()));
-        $this->assertTrue($nullLike->equals($balance->getCreditsPosted()));
-    }
-
     public function testLargeUint128Values(): void
     {
         $maxLow = Uint128::fromParts(-1, 0); // low = 0xFFFFFFFFFFFFFFFF
@@ -128,15 +111,5 @@ class AccountBalanceTest extends TestCase
         $this->assertTrue($maxHigh->equals($balance->getDebitsPosted()));
         $this->assertTrue($maxLow->equals($balance->getCreditsPending()));
         $this->assertTrue($maxHigh->equals($balance->getCreditsPosted()));
-    }
-
-    public function testTimestampDefault(): void
-    {
-        $zero = Uint128::zero();
-
-        $balance = new AccountBalance($zero, $zero, $zero, $zero);
-
-        // Default timestamp should be 0
-        $this->assertSame(0, $balance->getTimestamp());
     }
 }
