@@ -644,13 +644,13 @@ tests.  The container _does not_ use `--privileged` — instead, we:
 1. Disable the seccomp profile (`--security-opt seccomp=unconfined`) and
    AppArmor (`--security-opt apparmor=unconfined`) because both default
    Docker profiles block the `io_uring` syscalls that TigerBeetle requires.
-2. Grant only the minimum Linux capabilities required by TigerBeetle:
-   - `IPC_LOCK` — allows `mlock()` for locking process memory.
-   - `SYS_RAWIO` — allows `io_uring` syscalls (kernel ≥5.19).
+2. Grant all capabilities (`--cap-add=ALL`) — `io_uring` requires
+   `CAP_SYS_ADMIN` on kernels <5.19, and it is hard to predict which
+   kernel the GitHub Actions runner will use.
 
-This is significantly narrower than `--privileged`, which would grant
-_all_ capabilities, disable seccomp and AppArmor, and give access to all
-host devices.
+This is significantly narrower than `--privileged`, which would also
+give access to all host devices and mount writable `/sys` and `/proc`
+paths inside the container.
 
 The `format` command (which only creates a data file) runs with no
 additional capabilities or security profiles overrides at all.
