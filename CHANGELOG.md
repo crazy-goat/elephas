@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Updated `ROADMAP.md` — moved `ROADMAP.md` and community health files (`.github/SECURITY.md`, issue/PR templates) from "Remaining" to "Completed" in the v0.4.0 milestone, reflecting their actual implementation status (#169)
+
 ### Removed
 - Removed unused `CrazyGoat\Elephas\Internal\Packet` class and its test (`PacketTest`) — the native request flow uses `tb_packet_t` directly via FFI, making the PHP-level Packet abstraction redundant (#124)
 
