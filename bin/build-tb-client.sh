@@ -2,11 +2,11 @@
 #
 # Build the tb_client native shared library for the current host platform.
 #
-# Output: resources/lib/<platform>/libtb_client.{so,dylib}
-# where <platform> matches the directory names expected by
-# CrazyGoat\Elephas\Backend\NativeClient::detectLibraryPath():
-#   - linux-amd64, linux-arm64
-#   - macos-amd64, macos-arm64
+# Output: resources/lib/<release-dir>/libtb_client.{so,dylib}
+# where <release-dir> matches the directory names expected by
+# CrazyGoat\Elephas\Backend\NativeClient::platformDir():
+#   - x86_64-linux-gnu, aarch64-linux-gnu
+#   - x86_64-macos, aarch64-macos
 #
 # Environment variables (all optional):
 #   TB_VERSION      TigerBeetle release tag to build (default: 0.17.4)
@@ -124,6 +124,20 @@ target_triple_for() {
         macos-amd64) printf 'x86_64-macos\n' ;;
         macos-arm64) printf 'aarch64-macos\n' ;;
         *) die --code 1 "no target triple mapping for platform: $platform" ;;
+    esac
+}
+
+# release_dir_for maps the internal short platform name to the triple-style
+# directory name used in resources/lib/, release assets, and documentation.
+# These names must match NativeClient::platformDir().
+release_dir_for() {
+    local platform="$1"
+    case "$platform" in
+        linux-amd64) printf 'x86_64-linux-gnu\n' ;;
+        linux-arm64) printf 'aarch64-linux-gnu\n' ;;
+        macos-amd64) printf 'x86_64-macos\n' ;;
+        macos-arm64) printf 'aarch64-macos\n' ;;
+        *) die --code 1 "no release directory mapping for platform: $platform" ;;
     esac
 }
 
@@ -311,13 +325,15 @@ install_library() {
     lib_name="$(lib_filename_for "$platform")"
     local sub_dir
     sub_dir="$(target_triple_for "$platform")"
+    local release_dir
+    release_dir="$(release_dir_for "$platform")"
     local out_root
     if [ -n "$OUTPUT_DIR" ]; then
         out_root="$OUTPUT_DIR"
     else
         out_root="$REPO_ROOT/resources/lib"
     fi
-    local out_dir="$out_root/$platform"
+    local out_dir="$out_root/$release_dir"
     local out_path="$out_dir/$lib_name"
 
     # The upstream build.zig installs libraries at
@@ -349,21 +365,23 @@ install_library() {
 }
 
 do_check() {
-    local platform triple lib_name out_root out_path
+    local platform triple lib_name out_root out_path release_dir
     platform="$(detect_host)"
     triple="$(target_triple_for "$platform")"
     lib_name="$(lib_filename_for "$platform")"
+    release_dir="$(release_dir_for "$platform")"
     if [ -n "$OUTPUT_DIR" ]; then
         out_root="$OUTPUT_DIR"
     else
         out_root="$REPO_ROOT/resources/lib"
     fi
-    out_path="$out_root/$platform/$lib_name"
+    out_path="$out_root/$release_dir/$lib_name"
     if [ -n "$TB_TARGET" ]; then
         triple="$TB_TARGET"
     fi
 
     printf 'host_platform=%s\n' "$platform"
+    printf 'release_dir=%s\n' "$release_dir"
     printf 'clients_lib_subdir=%s\n' "$triple"
     printf 'output_path=%s\n' "$out_path"
 }

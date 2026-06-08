@@ -56,8 +56,8 @@ final class ReleaseWorkflowTest extends TestCase
         $expectedPlatforms = [
             'linux-amd64' => 'libtb_client-x86_64-linux-gnu.so',
             'linux-arm64' => 'libtb_client-aarch64-linux-gnu.so',
-            'macos-amd64' => 'libtb_client-x86_64-darwin.dylib',
-            'macos-arm64' => 'libtb_client-aarch64-darwin.dylib',
+            'macos-amd64' => 'libtb_client-x86_64-macos.dylib',
+            'macos-arm64' => 'libtb_client-aarch64-macos.dylib',
         ];
 
         $actual = [];
@@ -148,8 +148,8 @@ final class ReleaseWorkflowTest extends TestCase
         $expectedAssets = [
             'artifacts/libtb_client-x86_64-linux-gnu.so',
             'artifacts/libtb_client-aarch64-linux-gnu.so',
-            'artifacts/libtb_client-x86_64-darwin.dylib',
-            'artifacts/libtb_client-aarch64-darwin.dylib',
+            'artifacts/libtb_client-x86_64-macos.dylib',
+            'artifacts/libtb_client-aarch64-macos.dylib',
         ];
 
         foreach ($expectedAssets as $asset) {

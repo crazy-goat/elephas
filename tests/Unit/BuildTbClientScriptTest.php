@@ -71,6 +71,7 @@ final class BuildTbClientScriptTest extends TestCase
         $combined = implode("\n", $output);
 
         $this->assertStringContainsString('host_platform=', $combined);
+        $this->assertStringContainsString('release_dir=', $combined);
         $this->assertStringContainsString('clients_lib_subdir=', $combined);
         $this->assertStringContainsString('output_path=', $combined);
 
@@ -81,8 +82,16 @@ final class BuildTbClientScriptTest extends TestCase
             'host_platform must be a known platform identifier',
         );
 
-        // clients_lib_subdir should match the host's expected subdir.
+        // release_dir should be the triple-style directory name matching the host.
         $host = $this->parseValue($combined, 'host_platform');
+        $releaseDir = $this->parseValue($combined, 'release_dir');
+        $this->assertSame(
+            $this->expectedReleaseDirFor($host),
+            $releaseDir,
+            'release_dir must match the expected triple-style directory name',
+        );
+
+        // clients_lib_subdir should match the host's expected subdir.
         $subdir = $this->parseValue($combined, 'clients_lib_subdir');
         $this->assertSame(
             $this->expectedSubdirFor($host),
@@ -223,6 +232,20 @@ final class BuildTbClientScriptTest extends TestCase
         return match ($platform) {
             'linux-amd64' => 'x86_64-linux-gnu.2.27',
             'linux-arm64' => 'aarch64-linux-gnu.2.27',
+            'macos-amd64' => 'x86_64-macos',
+            'macos-arm64' => 'aarch64-macos',
+            default => $this->fail("unknown platform: {$platform}"),
+        };
+    }
+
+    /**
+     * @return non-empty-string
+     */
+    private function expectedReleaseDirFor(string $platform): string
+    {
+        return match ($platform) {
+            'linux-amd64' => 'x86_64-linux-gnu',
+            'linux-arm64' => 'aarch64-linux-gnu',
             'macos-amd64' => 'x86_64-macos',
             'macos-arm64' => 'aarch64-macos',
             default => $this->fail("unknown platform: {$platform}"),

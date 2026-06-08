@@ -27,11 +27,11 @@ jobs:
           - os: macos-15-intel
             platform: macos-amd64
             ext: dylib
-            asset-name: libtb_client-x86_64-darwin.dylib
+            asset-name: libtb_client-x86_64-macos.dylib
           - os: macos-latest
             platform: macos-arm64
             ext: dylib
-            asset-name: libtb_client-aarch64-darwin.dylib
+            asset-name: libtb_client-aarch64-macos.dylib
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,8 +78,8 @@ jobs:
           files: |
             artifacts/libtb_client-x86_64-linux-gnu.so
             artifacts/libtb_client-aarch64-linux-gnu.so
-            artifacts/libtb_client-x86_64-darwin.dylib
-            artifacts/libtb_client-aarch64-darwin.dylib
+            artifacts/libtb_client-x86_64-macos.dylib
+            artifacts/libtb_client-aarch64-macos.dylib
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

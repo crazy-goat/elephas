@@ -339,20 +339,35 @@ CPROG;
         };
     }
 
-    private function detectLibraryPath(): string
+    /**
+     * Map the host OS/architecture to a triple-style platform directory name
+     * used for locating the native library under resources/lib/.
+     *
+     * These names match:
+     *   - the release asset filename prefixes (e.g. libtb_client-x86_64-linux-gnu.so)
+     *   - the directory names documented in ARCHITECTURE.md and README.md
+     *   - upstream TigerBeetle convention (x86_64-linux-gnu, x86_64-macos, etc.)
+     */
+    private function platformDir(): string
     {
         $uname = \php_uname('s') . '/' . \php_uname('m');
-        $platform = match (true) {
-            \str_starts_with($uname, 'Linux/arm'),
-            \str_starts_with($uname, 'Linux/aarch64') => 'linux-arm64',
+
+        return match (true) {
             \str_starts_with($uname, 'Linux/x86_64'),
-            \str_starts_with($uname, 'Linux/AMD64') => 'linux-amd64',
-            \str_starts_with($uname, 'Darwin/arm') => 'macos-arm64',
-            \str_starts_with($uname, 'Darwin/x86_64') => 'macos-amd64',
+            \str_starts_with($uname, 'Linux/AMD64') => 'x86_64-linux-gnu',
+            \str_starts_with($uname, 'Linux/arm'),
+            \str_starts_with($uname, 'Linux/aarch64') => 'aarch64-linux-gnu',
+            \str_starts_with($uname, 'Darwin/x86_64') => 'x86_64-macos',
+            \str_starts_with($uname, 'Darwin/arm') => 'aarch64-macos',
             default => throw InitializationException::create(
                 \sprintf('Unsupported platform: %s', $uname),
             ),
         };
+    }
+
+    private function detectLibraryPath(): string
+    {
+        $platform = $this->platformDir();
 
         $paths = [
             \dirname(__DIR__, 2) . "/resources/lib/{$platform}/libtb_client.so",
