@@ -10,6 +10,7 @@ use CrazyGoat\Elephas\Uint128\Uint128;
  * TigerBeetle transfer data structure.
  *
  * Represents a financial transfer between two accounts.
+ * Fields map to the native tb_transfer_t struct.
  */
 final readonly class Transfer
 {
@@ -19,7 +20,7 @@ final readonly class Transfer
         private Uint128 $creditAccountId,
         private Uint128 $pendingId,
         private Uint128 $userData128,
-        private int $amount = 0,
+        private Uint128 $amount,
         private int $userData64 = 0,
         private int $userData32 = 0,
         private int $timeout = 0,
@@ -45,7 +46,7 @@ final readonly class Transfer
         return $this->creditAccountId;
     }
 
-    public function getAmount(): int
+    public function getAmount(): Uint128
     {
         return $this->amount;
     }
