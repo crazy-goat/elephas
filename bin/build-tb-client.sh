@@ -279,10 +279,17 @@ verify_sha256() {
         return 0
     fi
 
-    require_cmd sha256sum
+    local sha256_cmd
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256_cmd="sha256sum"
+    elif command -v shasum >/dev/null 2>&1; then
+        sha256_cmd="shasum -a 256"
+    else
+        die --code 2 "sha256sum or shasum required for integrity verification"
+    fi
 
     local actual
-    actual="$(sha256sum "$file" | cut -d' ' -f1)"
+    actual="$($sha256_cmd "$file" | cut -d' ' -f1)"
     if [ "$actual" != "$expected" ]; then
         die --code 7 \
             "SHA256 mismatch for $(basename "$file"): expected $expected, got $actual"
