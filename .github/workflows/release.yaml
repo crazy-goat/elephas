@@ -32,7 +32,7 @@ jobs:
             release-dir: x86_64-macos
             ext: dylib
             asset-name: libtb_client-x86_64-macos.dylib
-          - os: macos-latest
+          - os: macos-15
             platform: macos-arm64
             release-dir: aarch64-macos
             ext: dylib
