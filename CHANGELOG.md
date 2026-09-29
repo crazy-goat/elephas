@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-29
+
 ### Added
 - Integrity verification for downloaded build dependencies: SHA256 checksum verification of Zig compiler archives using the official ziglang.org index.json, and git tag verification for TigerBeetle source clones (#128)
 - Release artifact checksums: each native library asset in GitHub Releases now includes a per-file `.sha256` file and a combined `SHA256SUMS.txt` for batch verification (#128)
@@ -22,17 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented create operation result semantics in README: positional correspondence, `isCreated()`/`getStatus()`/`getTimestamp()`, partial failure, linked events chain, and `LINKED_EVENT_CHAIN_OPEN`/`LINKED_EVENT_FAILED` behaviour (#136)
 - Documentation consistency tests verifying the presence of create-result sections and key terms in README (#136)
 - Optional GMP-accelerated `Uint128::fromString()` and `Uint128::toString()` when `ext-gmp` is available, providing significantly faster decimal parsing and formatting for high-volume conversion workloads (#126)
-
-### Changed
-- CI TigerBeetle containers: investigated removing `--privileged`; determined it is still required for both `format` and `start` commands due to `io_uring` restrictions in the GitHub Actions CI environment. Findings documented in ARCHITECTURE.md (#130)
-- Optional BCMath-accelerated `Uint128::fromString()` and `Uint128::toString()` when `ext-bcmath` is available, providing a secondary acceleration path when GMP is not installed (#126)
-- Transparent fallback: `Uint128` automatically selects GMP → BCMath → pure-PHP based on extension availability, with consistent results across all paths (#126)
-- Unit tests verifying cross-implementation consistency, byte-level round-trips, overflow detection, and factory method agreement across all conversion paths (#126)
-- `Account` DTO fields `debitsPending`, `debitsPosted`, `creditsPending`, `creditsPosted` changed from `int` to `Uint128` to match TigerBeetle 128-bit ranges (#118)
-- `Transfer` DTO field `amount` changed from `int` to `Uint128` to match TigerBeetle 128-bit range (#118)
-- Removed bogus fields `debitsReserved`, `creditsReserved`, `debitsAccepted`, `creditsAccepted` from `Account` DTO — these fields do not exist in the native `tb_account_t` struct (#118)
-
-### Added
 - Unit tests for `AccountBalance` DTO class covering constructor, getters, default values, readonly nature, zero values, max timestamp, and edge cases (#176)
 - `Uint128` now implements `\Stringable` interface with `__toString()` delegating to `toString()`, enabling string interpolation and `string|Stringable` type hint usage (#168)
 - `Client` lifecycle, concurrency, and `close()` behaviour documented in README, including long-running process considerations and thread-safety guidance (#137)
@@ -55,18 +46,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Client::withTimeout()` factory and `RequestTimeoutException` for configurable, domain-specific request timeouts (#122)
 - `NativeClient` accepts a `$timeoutSeconds` constructor parameter forwarded through `BackendFactory` and `FfiBackend` (#122)
 - `Client::queryAccounts()` and `Client::queryTransfers()` now implement the full `QueryFilter` round-trip (pack `QueryFilter` → submit `QUERY_ACCOUNTS`/`QUERY_TRANSFERS` → decode `AccountBatch`/`TransferBatch`), resolving the misleading "not implemented" public contract (#114)
+- Optional BCMath-accelerated `Uint128::fromString()` and `Uint128::toString()` when `ext-bcmath` is available, providing a secondary acceleration path when GMP is not installed (#126)
+- Transparent fallback: `Uint128` automatically selects GMP → BCMath → pure-PHP based on extension availability, with consistent results across all paths (#126)
+- Unit tests verifying cross-implementation consistency, byte-level round-trips, overflow detection, and factory method agreement across all conversion paths (#126)
 
 ### Changed
+- CI TigerBeetle containers: investigated removing `--privileged`; determined it is still required for both `format` and `start` commands due to `io_uring` restrictions in the GitHub Actions CI environment. Findings documented in ARCHITECTURE.md (#130)
+- `Account` DTO fields `debitsPending`, `debitsPosted`, `creditsPending`, `creditsPosted` changed from `int` to `Uint128` to match TigerBeetle 128-bit ranges (#118)
+- `Transfer` DTO field `amount` changed from `int` to `Uint128` to match TigerBeetle 128-bit range (#118)
+- Removed bogus fields `debitsReserved`, `creditsReserved`, `debitsAccepted`, `creditsAccepted` from `Account` DTO — these fields do not exist in the native `tb_account_t` struct (#118)
 - Native library auto-detection now only searches project-local paths (`resources/lib/`), removing system-wide fallbacks (`/usr/local/lib`, `/usr/lib`) to prevent accidental loading of untrusted or version-mismatched libraries via FFI (#127)
 - `NativeClient::detectLibraryPath()` no longer searches system directories; users requiring a custom path must provide an explicit `$libPath` (#127)
-
-### Changed
 - Updated `ROADMAP.md` — moved `ROADMAP.md` and community health files (`.github/SECURITY.md`, issue/PR templates) from "Remaining" to "Completed" in the v0.4.0 milestone, reflecting their actual implementation status (#169)
 - Replaced `assert()` calls with explicit exception-throwing validation at public and native boundaries so that validation cannot be silently disabled by PHP assertion settings (#121)
 - `NativeClient` FFI calls (`tb_client_init`, `tb_client_submit`, `tb_client_deinit`) extracted to overridable protected methods, enabling controlled test doubles without a real native library (#134)
 - `CreateAccountResult` and `CreateTransferResult` no longer expose a synthetic `getId()` derived from the TigerBeetle-assigned timestamp. Both classes now provide `getTimestamp(): int` reflecting the actual timestamp returned by TigerBeetle for each created or rejected event. This aligns the public API with the native TigerBeetle `tb_create_account_result_t` / `tb_create_transfer_result_t` struct contract (TB 0.17.x) where each result carries a `uint64_t timestamp` and a `uint32_t status` (#111)
 - `NativeClient` request completion no longer confuses `TB_PACKET_OK` (status 0) with an incomplete/pending packet. A sentinel status value (`0xFFFFFFFF`) is now used to track the pending state, allowing status 0 to be correctly interpreted as a successful response (#109)
 - `NativeClient::submit()` now retains a PHP reference to the FFI data buffer for the full native request lifetime, preventing a potential use-after-free when the CData backing the request payload is garbage-collected while `tb_client` still holds the raw pointer (#110)
+- CI now fails when the TigerBeetle or FFI dependencies are unavailable, instead of letting the functional tests skip silently (#131)
+- Placeholder assertions in the functional tests replaced with meaningful checks (#132)
+- Git hook installation is now opt-in and non-destructive (#129)
+- Batch construction is faster for large batches, using per-struct buffers (#125)
 
 ### Removed
 - Removed unused `CrazyGoat\Elephas\Internal\Packet` class and its test (`PacketTest`) — the native request flow uses `tb_packet_t` directly via FFI, making the PHP-level Packet abstraction redundant (#124)
@@ -78,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All batch `fromBuffer()` factories now reject malformed buffers whose size is not an exact multiple of the expected struct size, preventing partial-record deserialization (#113)
 - Batch getters and setters on `AccountBatch`, `TransferBatch`, `IdBatch`, `AccountFilterBatch`, `QueryFilterBatch`, `AccountBalanceBatch`, `CreateAccountResultBatch`, and `CreateTransferResultBatch` now fail fast with a dedicated `InvalidBatchCursorException` when called before `add()` (or on a buffer created from an empty response), instead of silently writing into or reading from the pre-allocated buffer while the logical length remains zero (#119)
 - Integer setters on `AccountBatch`, `TransferBatch`, `QueryFilterBatch`, and `AccountFilterBatch` now validate that values fit their declared unsigned width (`uint8`/`uint16`/`uint32`/`uint64`) before binary packing. Negative or oversized values now raise `IntegerOverflowException` with the offending field name and accepted range, instead of being silently reinterpreted by `pack()` (#120)
+- Native library platform paths are aligned between the code, the releases and the documentation (#115)
 
 ## [0.4.0] – Polish – 2026-06-02
 
