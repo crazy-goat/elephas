@@ -6,6 +6,7 @@ namespace CrazyGoat\Elephas\Test\Unit\Backend;
 
 use CrazyGoat\Elephas\Backend\BackendFactory;
 use CrazyGoat\Elephas\Backend\BackendInterface;
+use CrazyGoat\Elephas\Exception\InitializationException;
 use CrazyGoat\Elephas\Uint128\Uint128;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -89,10 +90,6 @@ final class BackendFactoryTest extends TestCase
             $this->markTestSkipped('FFI not available, cannot test backend creation');
         }
 
-        // Using a real but wrong library path should result in a
-        // different error than "No backend available" — the backend
-        // factory will try to use FFI with the given path and fail
-        // with InitializationException instead.
         $libcPath = $this->findAnySharedLibrary();
 
         if ($libcPath === null) {
@@ -108,12 +105,10 @@ final class BackendFactoryTest extends TestCase
             );
             $this->fail('Expected an exception');
         } catch (\RuntimeException $e) {
-            // Should NOT say "No backend available" — that means the
-            // libPath was ignored and FFI detection was skipped
-            $this->assertStringNotContainsString('No backend available', $e->getMessage());
-        } catch (\Throwable) {
-            // Any throwable is fine as long as it's not the generic
-            // "No backend available" message
+            // A real library without tb_client symbols cannot serve as a backend,
+            // and the cause must name the path, proving libPath was not ignored.
+            $this->assertInstanceOf(InitializationException::class, $e->getPrevious());
+            $this->assertStringContainsString($libcPath, $e->getPrevious()->getMessage());
         }
     }
 
