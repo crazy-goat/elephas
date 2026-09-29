@@ -59,7 +59,6 @@ class BackendFactoryTest extends TestCase
 
         $this->assertInstanceOf(FfiBackend::class, $backend);
         $backend->submit(Operation::PULSE, '');
-        $this->assertInstanceOf(FfiBackend::class, $backend);
 
         $backend->close();
 
