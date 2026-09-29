@@ -250,9 +250,7 @@ final class Id
         // Build character-to-value mapping lazily
         static $charMap = null;
 
-        if ($charMap === null) {
-            $charMap = self::buildCharMap();
-        }
+        $charMap ??= self::buildCharMap();
 
         // Decode bit by bit: 26 chars × 5 bits = 130 bits
         // First 2 bits are padding (must be 0), remaining 128 bits = value

@@ -26,12 +26,15 @@ final class BackendFactory
         if (\extension_loaded('ffi')) {
             try {
                 return new FfiBackend($clusterId, $replicaAddresses, null, $libPath, $timeoutSeconds);
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
+                $previous = $e;
             }
         }
 
         throw new \RuntimeException(
             'No backend available. FFI extension must be loaded and tb_client library must be accessible.',
+            0,
+            $previous ?? null,
         );
     }
 

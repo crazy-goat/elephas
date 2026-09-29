@@ -28,9 +28,7 @@ final readonly class Uint128 implements \Stringable
     private static function gmpAvailable(): bool
     {
         static $available = null;
-        if ($available === null) {
-            $available = \extension_loaded('gmp');
-        }
+        $available ??= \extension_loaded('gmp');
 
         return $available;
     }
@@ -41,9 +39,7 @@ final readonly class Uint128 implements \Stringable
     private static function bcmathAvailable(): bool
     {
         static $available = null;
-        if ($available === null) {
-            $available = \extension_loaded('bcmath');
-        }
+        $available ??= \extension_loaded('bcmath');
 
         return $available;
     }
