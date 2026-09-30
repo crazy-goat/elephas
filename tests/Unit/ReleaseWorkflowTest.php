@@ -187,7 +187,7 @@ final class ReleaseWorkflowTest extends TestCase
         $jobBlock = $this->extractJob($content, 'release:');
 
         $this->assertStringContainsString('softprops/action-gh-release@v2', $jobBlock, 'release job must use softprops/action-gh-release@v2');
-        $this->assertStringContainsString('generate_release_notes: true', $jobBlock, 'release job must auto-generate release notes');
+        $this->assertStringContainsString('body_path: release-notes.md', $jobBlock, 'release job must take the notes from the CHANGELOG section');
     }
 
     public function testReleaseJobListsAllExpectedAssetFiles(): void
