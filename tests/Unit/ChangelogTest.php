@@ -125,9 +125,7 @@ class ChangelogTest extends TestCase
     public function testEntriesReferenceIssues(): void
     {
         $content = $this->getContent();
-        $released = \preg_replace('/^## \[Unreleased\]\n.*?(?=^## \[)/ms', '', $content);
-        $this->assertIsString($released);
-        preg_match_all('/^- (.+?)$/m', $released, $matches);
+        preg_match_all('/^- (.+?)$/m', $content, $matches);
 
         $this->assertNotEmpty($matches[1], 'No bullet entries found');
 
