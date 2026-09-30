@@ -682,7 +682,7 @@ been corrupted during download or tampered with. Report the issue immediately.
 A native shared library (`tb_client`) communicates with TigerBeetle via FFI. The `NativeClient` wraps the C API,
 `Packet` handles callback synchronization, and high-level batch classes pack/unpack binary data.
 
-For a detailed architecture overview, see [ARCHITECTURE.md](ARCHITECTURE.md) (in Polish).
+For a detailed architecture overview, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Changelog
 

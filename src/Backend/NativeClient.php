@@ -430,7 +430,7 @@ CPROG;
      *
      * These names match:
      *   - the release asset filename prefixes (e.g. libtb_client-x86_64-linux-gnu.so)
-     *   - the directory names documented in ARCHITECTURE.md and README.md
+     *   - the directory names documented in docs/ARCHITECTURE.md and README.md
      *   - upstream TigerBeetle convention (x86_64-linux-gnu, x86_64-macos, etc.)
      */
     private function platformDir(): string
