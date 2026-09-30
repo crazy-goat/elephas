@@ -45,7 +45,7 @@ final class ReleaseWorkflowTest extends TestCase
         $content = $this->getContent();
         $releaseBlock = $this->extractJob($content, 'release:');
 
-        $this->assertStringContainsString('needs: build-libs', $releaseBlock, 'release job must depend on build-libs so it runs after the libs are built');
+        $this->assertStringContainsString('needs: [notes, build-libs]', $releaseBlock, 'release job must depend on build-libs so it runs after the libs are built');
     }
 
     public function testBuildLibsMatrixCoversFourTargetPlatforms(): void
@@ -188,6 +188,27 @@ final class ReleaseWorkflowTest extends TestCase
 
         $this->assertStringContainsString('softprops/action-gh-release@v2', $jobBlock, 'release job must use softprops/action-gh-release@v2');
         $this->assertStringContainsString('body_path: release-notes.md', $jobBlock, 'release job must take the notes from the CHANGELOG section');
+    }
+
+    public function testNotesJobExtractsChangelogSectionAndGatesBuilds(): void
+    {
+        $content = $this->getContent();
+        $notesBlock = $this->extractJob($content, 'notes:');
+
+        $this->assertStringContainsString('Extract release notes from CHANGELOG.md', $notesBlock, 'notes job must extract the CHANGELOG section');
+        $this->assertStringContainsString('CHANGELOG.md has no non-empty section', $notesBlock, 'notes job must fail when the section is missing');
+        $this->assertStringContainsString('limit = 120000', $notesBlock, 'notes must be truncated below the GitHub size limit');
+
+        $buildBlock = $this->extractJob($content, 'build-libs:');
+        $this->assertStringContainsString('needs: notes', $buildBlock, 'build-libs must wait for the notes job so a missing CHANGELOG section fails fast');
+    }
+
+    public function testReleaseUsesChangelogNotesAndSetsPrerelease(): void
+    {
+        $content = $this->getContent();
+
+        $this->assertStringContainsString('prerelease:', $content, 'release must mark tags with a hyphen as pre-releases');
+        $this->assertStringNotContainsString('generate_release_notes', $content, 'release notes must come from CHANGELOG.md, not be auto-generated');
     }
 
     public function testReleaseJobListsAllExpectedAssetFiles(): void

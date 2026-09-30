@@ -10,8 +10,54 @@ permissions:
   contents: write
 
 jobs:
+  notes:
+    name: Release notes
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract release notes from CHANGELOG.md
+        # Reads CHANGELOG.md from the tagged commit: merge the `## [X.Y.Z]` section before tagging.
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            /^## \[/ { found = (index($0, "[" v "]") > 0 || index($0, "[v" v "]") > 0); next }
+            found
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::CHANGELOG.md has no non-empty section for ${version}"
+            exit 1
+          fi
+          # GitHub rejects release notes over 125000 characters.
+          python3 - "$GITHUB_REF_NAME" <<'PY'
+          import sys
+          limit = 120000
+          tag = sys.argv[1]
+          text = open('release-notes.md', encoding='utf-8').read()
+          if len(text) > limit:
+              tail = ("\n\n_The notes were shortened because of the GitHub size limit. "
+                      f"See [CHANGELOG.md](https://github.com/crazy-goat/elephas/blob/{tag}/CHANGELOG.md) "
+                      "for the full text._\n")
+              text = text[:limit - len(tail)]
+              text = text[:text.rfind('\n')] + tail
+              open('release-notes.md', 'w', encoding='utf-8').write(text)
+              print(f"::warning::Release notes truncated to {len(text)} characters")
+          PY
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
   build-libs:
     name: Build tb_client (${{ matrix.platform }})
+    needs: notes
+    if: ${{ !cancelled() && needs.notes.result != 'failure' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -70,7 +116,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: build-libs
+    needs: [notes, build-libs]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -86,33 +132,10 @@ jobs:
           pattern: tb_client-*
           merge-multiple: true
 
-      - name: Extract release notes from CHANGELOG.md
-        run: |
-          set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          awk -v v="$version" '
-            /^## \[/ { found = (index($0, "[" v "]") > 0 || index($0, "[v" v "]") > 0); next }
-            found
-          ' CHANGELOG.md > release-notes.md
-          if ! grep -q '[^[:space:]]' release-notes.md; then
-            echo "::error::CHANGELOG.md has no non-empty section for ${version}"
-            exit 1
-          fi
-          # GitHub rejects release notes over 125000 characters.
-          python3 - "$GITHUB_REF_NAME" <<'PY'
-          import sys
-          limit = 120000
-          tag = sys.argv[1]
-          text = open('release-notes.md', encoding='utf-8').read()
-          if len(text) > limit:
-              tail = ("\n\n_The notes were shortened because of the GitHub size limit. "
-                      f"See [CHANGELOG.md](https://github.com/crazy-goat/elephas/blob/{tag}/CHANGELOG.md) "
-                      "for the full text._\n")
-              text = text[:limit - len(tail)]
-              text = text[:text.rfind('\n')] + tail
-              open('release-notes.md', 'w', encoding='utf-8').write(text)
-              print(f"::warning::Release notes truncated to {len(text)} characters")
-          PY
+      - name: Download release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
 
       - name: Generate combined SHA256SUMS.txt
         run: |
