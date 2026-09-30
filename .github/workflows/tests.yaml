@@ -22,6 +22,9 @@ jobs:
   changes:
     name: Changes
     uses: crazy-goat/.github/.github/workflows/changes.yml@main
+    with:
+      # Tests read CHANGELOG.md, CONTRIBUTING.md, README.md and .github/ISSUE_TEMPLATE/*, so they count as code.
+      docs-regex: '^(AGENTS\.md|docs/.*|LICENSE.*|\.github/pull_request_template\.md|\.gitignore)$'
 
   docs:
     name: Docs
@@ -193,17 +196,26 @@ jobs:
 
   tests:
     name: tests
-    needs: [lint, build-lib, test-matrix]
+    needs: [changes, docs, lint, build-lib, test-matrix]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check test results
         env:
+          CODE: ${{ needs.changes.outputs.code }}
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
+          echo "Code changes: $CODE"
+          echo "Results: $RESULTS"
           for r in $RESULTS; do
-            case "$r" in success|skipped) ;; *) echo "A required job ended as: $r"; exit 1 ;; esac
+            case "$r" in failure|cancelled) exit 1 ;; esac
           done
+          # Documentation-only changes skip the heavy jobs; code changes need all of them.
+          if [ "$CODE" = "true" ]; then
+            for r in $RESULTS; do
+              [ "$r" = "success" ] || exit 1
+            done
+          fi
 
   ci-ok:
     name: ci-ok
@@ -213,9 +225,17 @@ jobs:
     steps:
       - name: Check results
         env:
+          CODE: ${{ needs.changes.outputs.code }}
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          # Heavy jobs are skipped on documentation-only changes; failures and cancellations are not allowed.
+          echo "Code changes: $CODE"
+          echo "Results: $RESULTS"
           for r in $RESULTS; do
-            case "$r" in success|skipped) ;; *) echo "A required job ended as: $r"; exit 1 ;; esac
+            case "$r" in failure|cancelled) exit 1 ;; esac
           done
+          # Documentation-only changes skip the heavy jobs; code changes need all of them.
+          if [ "$CODE" = "true" ]; then
+            for r in $RESULTS; do
+              [ "$r" = "success" ] || exit 1
+            done
+          fi
