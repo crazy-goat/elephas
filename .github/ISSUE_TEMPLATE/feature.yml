@@ -1,0 +1,32 @@
+name: Feature request
+description: A new feature or an improvement
+labels: ["type:feature"]
+body:
+  - type: markdown
+    attributes:
+      value: Please write in English. Thanks for the idea!
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What problem do you want to solve? What should be added?
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where to start
+      description: Files to change and the command that runs the related tests. Maintainers fill this in for `good first issue`.
+    validations:
+      required: false
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      description: Acceptance criteria.
+      placeholder: |
+        - [ ] Behaviour implemented
+        - [ ] Tests added
+        - [ ] Docs and CHANGELOG updated
+    validations:
+      required: false

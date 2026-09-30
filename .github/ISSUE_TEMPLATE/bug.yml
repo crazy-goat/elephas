@@ -1,0 +1,46 @@
+name: Bug report
+description: Something does not work as expected
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Please write in English. Thanks for the report!
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happens, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: A minimal example is best.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where to start
+      description: Files that are probably involved and the command that runs the related tests. Maintainers fill this in for `good first issue`.
+    validations:
+      required: false
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      description: How do we know it is fixed?
+      placeholder: "- [ ] A test reproduces the bug and now passes"
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Library or tool version, and PHP / Go / OS version if relevant.
+    validations:
+      required: true
