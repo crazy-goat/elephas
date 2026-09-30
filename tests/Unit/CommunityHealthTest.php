@@ -10,6 +10,13 @@ use PHPUnit\Framework\TestCase;
 #[CoversNothing]
 final class CommunityHealthTest extends TestCase
 {
+    private const FILES = [
+        'ISSUE_TEMPLATE/bug.yml',
+        'ISSUE_TEMPLATE/feature.yml',
+        'ISSUE_TEMPLATE/config.yml',
+        'pull_request_template.md',
+    ];
+
     private string $githubDir;
 
     protected function setUp(): void
@@ -17,115 +24,66 @@ final class CommunityHealthTest extends TestCase
         $this->githubDir = \dirname(__DIR__, 2) . '/.github';
     }
 
-    public function testSecurityPolicyFileExists(): void
+    public function testRepositoryDoesNotCarryItsOwnSecurityPolicy(): void
     {
-        $this->assertFileExists($this->githubDir . '/SECURITY.md');
+        $this->assertFileDoesNotExist($this->githubDir . '/SECURITY.md');
     }
 
-    public function testSecurityPolicyHasVulnerabilityReporting(): void
+    public function testIssueConfigDisablesBlankIssuesAndLinksSecurityPolicy(): void
     {
-        $content = $this->getContent('SECURITY.md');
-        $this->assertStringContainsString('Reporting a Vulnerability', $content);
+        $content = $this->getContent('ISSUE_TEMPLATE/config.yml');
+        $this->assertStringContainsString('blank_issues_enabled: false', $content);
+        $this->assertStringContainsString('crazy-goat/.github/blob/main/SECURITY.md', $content);
     }
 
-    public function testSecurityPolicyHasSupportedVersions(): void
+    public function testBugFormHasRequiredFields(): void
     {
-        $content = $this->getContent('SECURITY.md');
-        $this->assertStringContainsString('Supported Versions', $content);
+        $content = $this->getContent('ISSUE_TEMPLATE/bug.yml');
+        $this->assertStringContainsString('name: Bug report', $content);
+        $this->assertStringContainsString('labels: ["type:bug"]', $content);
+        $this->assertStringContainsString('label: Description', $content);
+        $this->assertStringContainsString('label: Steps to reproduce', $content);
+        $this->assertStringContainsString('label: Definition of done', $content);
+        $this->assertStringContainsString('label: Version', $content);
     }
 
-    public function testSecurityPolicyHasEmail(): void
+    public function testFeatureFormHasRequiredFields(): void
     {
-        $content = $this->getContent('SECURITY.md');
-        $this->assertStringContainsString('halaspiotr@gmail.com', $content);
-    }
-
-    public function testSecurityPolicyDoNotOpenPublicIssue(): void
-    {
-        $content = $this->getContent('SECURITY.md');
-        $this->assertStringContainsString('Do NOT open a public issue', $content);
-    }
-
-    public function testBugReportTemplateFileExists(): void
-    {
-        $this->assertFileExists($this->githubDir . '/ISSUE_TEMPLATE/bug_report.md');
-    }
-
-    public function testBugReportHasRequiredSections(): void
-    {
-        $content = $this->getContent('ISSUE_TEMPLATE/bug_report.md');
-        $this->assertStringContainsString('Description', $content);
-        $this->assertStringContainsString('Steps to Reproduce', $content);
-        $this->assertStringContainsString('Expected Behavior', $content);
-        $this->assertStringContainsString('Actual Behavior', $content);
-        $this->assertStringContainsString('Environment', $content);
-    }
-
-    public function testBugReportHasYamlFrontMatter(): void
-    {
-        $content = $this->getContent('ISSUE_TEMPLATE/bug_report.md');
-        $this->assertStringStartsWith('---', $content);
-        $this->assertStringContainsString('name: Bug Report', $content);
-        $this->assertStringContainsString('labels: bug', $content);
-    }
-
-    public function testFeatureRequestTemplateFileExists(): void
-    {
-        $this->assertFileExists($this->githubDir . '/ISSUE_TEMPLATE/feature_request.md');
-    }
-
-    public function testFeatureRequestHasRequiredSections(): void
-    {
-        $content = $this->getContent('ISSUE_TEMPLATE/feature_request.md');
-        $this->assertStringContainsString('Description', $content);
-        $this->assertStringContainsString('Use Case', $content);
-        $this->assertStringContainsString('Proposed Solution', $content);
-        $this->assertStringContainsString('Alternatives Considered', $content);
-    }
-
-    public function testFeatureRequestHasYamlFrontMatter(): void
-    {
-        $content = $this->getContent('ISSUE_TEMPLATE/feature_request.md');
-        $this->assertStringStartsWith('---', $content);
-        $this->assertStringContainsString('name: Feature Request', $content);
-        $this->assertStringContainsString('labels: enhancement', $content);
-    }
-
-    public function testPullRequestTemplateFileExists(): void
-    {
-        $this->assertFileExists($this->githubDir . '/PULL_REQUEST_TEMPLATE.md');
+        $content = $this->getContent('ISSUE_TEMPLATE/feature.yml');
+        $this->assertStringContainsString('name: Feature request', $content);
+        $this->assertStringContainsString('labels: ["type:feature"]', $content);
+        $this->assertStringContainsString('label: Description', $content);
+        $this->assertStringContainsString('label: Definition of done', $content);
     }
 
     public function testPullRequestTemplateHasRequiredSections(): void
     {
-        $content = $this->getContent('PULL_REQUEST_TEMPLATE.md');
-        $this->assertStringContainsString('Description', $content);
-        $this->assertStringContainsString('Related Issues', $content);
-        $this->assertStringContainsString('Type of Change', $content);
-        $this->assertStringContainsString('Checklist', $content);
+        $content = $this->getContent('pull_request_template.md');
+        $this->assertStringContainsString('## What changed', $content);
+        $this->assertStringContainsString('Closes #', $content);
+        $this->assertStringContainsString('## How it was tested', $content);
+        $this->assertStringContainsString('## Checklist', $content);
     }
 
     public function testPullRequestTemplateHasChecklistItems(): void
     {
-        $content = $this->getContent('PULL_REQUEST_TEMPLATE.md');
-        $this->assertStringContainsString('PHPStan level 8 passes', $content);
-        $this->assertStringContainsString('Unit tests added/updated', $content);
-        $this->assertStringContainsString('CHANGELOG.md updated', $content);
+        $content = $this->getContent('pull_request_template.md');
+        $this->assertStringContainsString('`CHANGELOG.md` updated under `[Unreleased]`', $content);
+        $this->assertStringContainsString('Conventional Commit', $content);
+        $this->assertStringContainsString('written in English', $content);
     }
 
     public function testAllFilesEndWithNewline(): void
     {
-        foreach (['SECURITY.md', 'ISSUE_TEMPLATE/bug_report.md', 'ISSUE_TEMPLATE/feature_request.md', 'PULL_REQUEST_TEMPLATE.md'] as $file) {
-            $content = $this->getContent($file);
-            $this->assertStringEndsWith("\n", $content, sprintf('File %s must end with newline', $file));
+        foreach (self::FILES as $file) {
+            $this->assertStringEndsWith("\n", $this->getContent($file), \sprintf('File %s must end with newline', $file));
         }
     }
 
     public function testNoTrailingWhitespace(): void
     {
-        foreach (['SECURITY.md', 'ISSUE_TEMPLATE/bug_report.md', 'ISSUE_TEMPLATE/feature_request.md', 'PULL_REQUEST_TEMPLATE.md'] as $file) {
-            $content = $this->getContent($file);
-            $this->assertDoesNotMatchRegularExpression('/[ \t]+$/m', $content, sprintf('File %s has trailing whitespace', $file));
+        foreach (self::FILES as $file) {
+            $this->assertDoesNotMatchRegularExpression('/[ \t]+$/m', $this->getContent($file), \sprintf('File %s has trailing whitespace', $file));
         }
     }
 
