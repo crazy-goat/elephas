@@ -24,7 +24,7 @@ jobs:
     uses: crazy-goat/.github/.github/workflows/changes.yml@main
     with:
       # Tests read CHANGELOG.md, CONTRIBUTING.md, README.md and .github/ISSUE_TEMPLATE/*, so they count as code.
-      docs-regex: '^(AGENTS\.md|docs/.*|LICENSE.*|\.github/pull_request_template\.md|\.gitignore)$'
+      docs-regex: '^(AGENTS\.md|docs/.*|LICENSE.*|\.gitignore)$'
 
   docs:
     name: Docs

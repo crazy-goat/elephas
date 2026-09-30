@@ -45,7 +45,7 @@ final class ReleaseWorkflowTest extends TestCase
         $content = $this->getContent();
         $releaseBlock = $this->extractJob($content, 'release:');
 
-        $this->assertStringContainsString('needs: [notes, build-libs]', $releaseBlock, 'release job must depend on build-libs so it runs after the libs are built');
+        $this->assertStringContainsString('needs: [notes, build-libs]', $releaseBlock, 'release job must depend on [notes, build-libs] so it runs after the notes and libs are built');
     }
 
     public function testBuildLibsMatrixCoversFourTargetPlatforms(): void
