@@ -6,14 +6,31 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   TB_VERSION: 0.17.4
   ZIG_VERSION: 0.14.1
   CACHE_VERSION: v2
 
 jobs:
+  changes:
+    name: Changes
+    uses: crazy-goat/.github/.github/workflows/changes.yml@main
+
+  docs:
+    name: Docs
+    uses: crazy-goat/.github/.github/workflows/docs-check.yml@main
+
   lint:
     name: lint
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -40,6 +57,8 @@ jobs:
 
   build-lib:
     name: Build native tb_client library
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -85,7 +104,8 @@ jobs:
   test-matrix:
     name: Tests (PHP ${{ matrix.php-version }})
     runs-on: ubuntu-latest
-    needs: [build-lib]
+    needs: [changes, build-lib]
+    if: needs.changes.outputs.code == 'true'
     strategy:
       matrix:
         php-version: ['8.2', '8.3', '8.4']
@@ -178,7 +198,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check test results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          if [ "${{ needs.lint.result }}" != "success" ]; then exit 1; fi
-          if [ "${{ needs.build-lib.result }}" != "success" ]; then exit 1; fi
-          if [ "${{ needs.test-matrix.result }}" != "success" ]; then exit 1; fi
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) echo "A required job ended as: $r"; exit 1 ;; esac
+          done
+
+  ci-ok:
+    name: ci-ok
+    needs: [changes, docs, lint, build-lib, test-matrix, tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          # Heavy jobs are skipped on documentation-only changes; failures and cancellations are not allowed.
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) echo "A required job ended as: $r"; exit 1 ;; esac
+          done
