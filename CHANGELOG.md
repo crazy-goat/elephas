@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Adopted the crazy-goat standard process: `docs/workflow.md`, `docs/release-workflow.md` and `AGENTS.md`; `ARCHITECTURE.md` (now in English) and `ROADMAP.md` moved to `docs/`
+- Worktree scripts (`bin/pick-issue.sh`, `bin/worktree*.sh`); the TigerBeetle host port in `docker/docker-compose.yml` is overridable with `TIGERBEETLE_PORT`
+- CI: shared `changes` and `docs` jobs, heavy jobs skipped for documentation-only changes, aggregate `ci-ok` job, Dependabot for Composer and GitHub Actions
+- Release notes are taken from the matching `CHANGELOG.md` section (truncated below the GitHub size limit)
+- Issue and pull request templates aligned with the organisation standard; the repository `SECURITY.md` was dropped in favour of the organisation one
+
 ## [0.7.0] - 2026-09-29
 
 ### Added
