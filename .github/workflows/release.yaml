@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -26,12 +27,12 @@ jobs:
             release-dir: aarch64-linux-gnu
             ext: so
             asset-name: libtb_client-aarch64-linux-gnu.so
-          - os: macos-13
+          - os: macos-15-intel
             platform: macos-amd64
             release-dir: x86_64-macos
             ext: dylib
             asset-name: libtb_client-x86_64-macos.dylib
-          - os: macos-latest
+          - os: macos-15
             platform: macos-arm64
             release-dir: aarch64-macos
             ext: dylib
@@ -70,6 +71,7 @@ jobs:
   release:
     name: Create Release
     needs: build-libs
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
