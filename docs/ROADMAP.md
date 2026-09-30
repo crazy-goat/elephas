@@ -81,11 +81,8 @@ Documentation, license, CI/CD polish, and developer experience improvements.
 - [x] CI/CD release workflow — builds and attaches native libraries to GitHub Releases
 - [x] `CHANGELOG.md` — Keep a Changelog format
 - [x] `CONTRIBUTING.md` — coding standards, PR flow, dev setup
-- [x] `ROADMAP.md` — planned features and milestone timeline
-- [x] `.github/SECURITY.md` — security policy and vulnerability reporting
-- [x] `.github/ISSUE_TEMPLATE/bug_report.md` — bug report template
-- [x] `.github/ISSUE_TEMPLATE/feature_request.md` — feature request template
-- [x] `.github/PULL_REQUEST_TEMPLATE.md` — pull request template
+- [x] `docs/ROADMAP.md` — planned features and milestone timeline
+- [x] Security policy, issue templates and pull request template (since replaced by the organisation `SECURITY.md` and the standard `.github/ISSUE_TEMPLATE/*.yml` and `.github/pull_request_template.md`)
 
 ## v0.5.0 – Extension Backend + Query API 📋
 

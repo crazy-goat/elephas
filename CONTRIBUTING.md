@@ -126,10 +126,19 @@ This runs:
 1. `php-cs-fixer fix` — auto-format
 2. `rector process` — auto-upgrade
 
-## Branches, commits and pull requests
+## Branch Naming
 
-Branch names are `type/issue-<N>-<slug>`; commits and PR titles are
+Branches are `type/issue-<N>-<slug>` (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`).
+Details: [docs/workflow.md](docs/workflow.md).
+
+## Commit Message Format
+
 [Conventional Commits](https://www.conventionalcommits.org/) with an optional scope
-(`uint128`, `id`, `batch`, `backend`, `client`, `binary-helper`, `ci`, `docker`).
-Before opening a PR run `composer lint` and `composer test-unit`, and add a line to
-`CHANGELOG.md` under `[Unreleased]`. PRs are squash merged once `ci-ok` is green.
+(`uint128`, `id`, `batch`, `backend`, `client`, `binary-helper`, `ci`, `docker`), for example
+`fix(backend): handle connection timeout`.
+
+## Pull Request Process
+
+Run `composer lint` and `composer test-unit`, add a line to `CHANGELOG.md` under `[Unreleased]`
+and open the PR with a Conventional Commit title. PRs are squash merged once the required
+checks are green. See [docs/workflow.md](docs/workflow.md).

@@ -45,7 +45,7 @@ composer test                          # unit + functional
 bash bin/build-tb-client.sh
 ```
 
-CI (`composer validate --strict` and `composer audit`) is also part of the `lint` job.
+The `lint` job also runs `composer validate --strict` and `composer audit`.
 
 ## TigerBeetle and FFI
 
@@ -66,8 +66,8 @@ CI (`composer validate --strict` and `composer audit`) is also part of the `lint
 
 `.github/workflows/tests.yaml` runs on pull requests and on pushes to `main`. The `changes`
 job detects documentation-only changes; the `docs` job checks them fast. `lint`, `build-lib`
-and the PHP matrix run only for code changes. `tests` and `ci-ok` aggregate the results;
-the required check is `ci-ok`.
+and the PHP matrix run only for code changes. `tests` and `ci-ok` aggregate the results.
+The required check will be `ci-ok` after the ruleset switch; until then `tests` and `lint`.
 
 ## Conventions
 

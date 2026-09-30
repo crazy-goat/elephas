@@ -621,6 +621,14 @@ the native `tb_client` shared library. Because FFI runs native code directly ins
   $client = Client::withBackend($backend);
   ```
 
+### Network
+
+- TigerBeetle traffic is unencrypted by default (this matches the TigerBeetle recommendation).
+  Use TLS termination at the network layer for production deployments.
+- Never log or expose TigerBeetle cluster credentials.
+- Report vulnerabilities privately, see the
+  [organisation security policy](https://github.com/crazy-goat/.github/blob/main/SECURITY.md).
+
 ### Loading precedence
 
 When `$libPath` is not specified, only project-local paths under `resources/lib/` are searched:
