@@ -690,11 +690,12 @@ final class NativeClientTest extends TestCase
 
     /**
      * Create a NativeClient whose FFI instance can allocate uint8_t[] buffers.
-     * Uses a system library (libc) so the test does not require tb_client.
+     * Declares only a type and loads no library (works on Linux and macOS),
+     * so the test does not require tb_client.
      */
     private function createClientWithFfi(): \CrazyGoat\Elephas\Test\Unit\Backend\TimeoutSettableNativeClient
     {
-        $ffi = \FFI::cdef('typedef unsigned char uint8_t;', 'libc.so.6');
+        $ffi = \FFI::cdef('typedef unsigned char uint8_t;');
 
         $client = $this->createClientWithoutFfi();
         $ref = new \ReflectionProperty(NativeClient::class, 'ffi');
