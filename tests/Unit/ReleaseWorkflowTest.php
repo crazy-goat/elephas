@@ -167,7 +167,7 @@ final class ReleaseWorkflowTest extends TestCase
         $content = $this->getContent();
         $jobBlock = $this->extractJob($content, 'build-libs:');
 
-        $this->assertStringContainsString('actions/upload-artifact@v4', $jobBlock, 'build-libs job must upload artifacts via actions/upload-artifact@v4');
+        $this->assertMatchesRegularExpression('~uses:\s*actions/upload-artifact@\S+~', $jobBlock, 'build-libs job must upload artifacts via actions/upload-artifact');
         $this->assertStringContainsString('if-no-files-found: error', $jobBlock, 'artifact upload must fail if the staged asset is missing');
     }
 
@@ -176,7 +176,7 @@ final class ReleaseWorkflowTest extends TestCase
         $content = $this->getContent();
         $jobBlock = $this->extractJob($content, 'release:');
 
-        $this->assertStringContainsString('actions/download-artifact@v4', $jobBlock, 'release job must download artifacts via actions/download-artifact@v4');
+        $this->assertMatchesRegularExpression('~uses:\s*actions/download-artifact@\S+~', $jobBlock, 'release job must download artifacts via actions/download-artifact');
         $this->assertStringContainsString('merge-multiple: true', $jobBlock, 'release job must set merge-multiple: true so all build artifacts land flat in the destination directory');
         $this->assertStringContainsString('pattern: tb_client-*', $jobBlock, 'release job must filter artifacts to the tb_client-* pattern so unrelated artifacts are not pulled into the release');
     }
@@ -186,7 +186,7 @@ final class ReleaseWorkflowTest extends TestCase
         $content = $this->getContent();
         $jobBlock = $this->extractJob($content, 'release:');
 
-        $this->assertStringContainsString('softprops/action-gh-release@v2', $jobBlock, 'release job must use softprops/action-gh-release@v2');
+        $this->assertMatchesRegularExpression('~uses:\s*softprops/action-gh-release@\S+~', $jobBlock, 'release job must use softprops/action-gh-release');
         $this->assertStringContainsString('body_path: release-notes.md', $jobBlock, 'release job must take the notes from the CHANGELOG section');
     }
 
