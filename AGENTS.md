@@ -33,7 +33,7 @@ bin/lint.sh                            # same as composer lint
 bin/lint.sh --fix                      # rector and php-cs-fixer fix first, then check (composer lint-fix)
 
 # Unit tests
-composer test-unit                      # vendor/bin/phpunit --testsuite=unit
+composer test-unit                      # vendor/bin/phpunit --testsuite=unit --no-coverage
 vendor/bin/phpunit --testsuite=unit --coverage-clover=coverage/clover.xml
 php bin/check-coverage.php coverage/clover.xml 80   # CI threshold
 
