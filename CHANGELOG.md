@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `NativeClientTest` no longer loads `libc.so.6`, so `composer test-unit` passes on macOS (#202)
+
 ### Changed
 - `bin/lint.sh` is the single lint entry point (composer validate and audit, php-cs-fixer, phpstan, rector, shellcheck, hadolint; `--fix` applies fixes first); `composer lint`, `composer lint-fix` and the CI `lint` job call it (#197)
 - Adopted the crazy-goat standard process: `docs/workflow.md`, `docs/release-workflow.md` and `AGENTS.md`; `ARCHITECTURE.md` (now in English) and `ROADMAP.md` moved to `docs/` (#190)
