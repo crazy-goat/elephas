@@ -33,9 +33,10 @@
 
 set -euo pipefail
 
-readonly SCRIPT_NAME="$(basename "$0")"
-readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-readonly REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SCRIPT_NAME="$(basename "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+readonly SCRIPT_NAME SCRIPT_DIR REPO_ROOT
 
 TB_VERSION="${TB_VERSION:-0.17.4}"
 ZIG_VERSION="${ZIG_VERSION:-0.14.1}"
@@ -161,7 +162,9 @@ lib_filename_for() {
 # Compare two dotted version strings; returns 0 if $1 >= $2, 1 otherwise.
 version_gte() {
     local IFS=.
-    local -a v1=($1) v2=($2)
+    local -a v1 v2
+    read -ra v1 <<< "$1"
+    read -ra v2 <<< "$2"
     for ((i=0; i<${#v1[@]}; i++)); do
         if ((10#${v1[i]:-0} > 10#${v2[i]:-0})); then return 0; fi
         if ((10#${v1[i]:-0} < 10#${v2[i]:-0})); then return 1; fi

@@ -28,9 +28,9 @@ PHP 8.2+ with `ext-ffi` (`ext-gmp` and `ext-bcmath` are optional). CI runs PHP 8
 ```bash
 composer install
 
-# Lint: php-cs-fixer (dry run), phpstan level 8, rector (dry run)
-composer lint
-composer lint-fix
+# Lint: composer validate/audit, php-cs-fixer, phpstan level 8, rector, shellcheck, hadolint (check only)
+bin/lint.sh                            # same as composer lint
+bin/lint.sh --fix                      # rector and php-cs-fixer fix first, then check (composer lint-fix)
 
 # Unit tests
 composer test-unit                      # vendor/bin/phpunit --testsuite=unit
@@ -45,7 +45,7 @@ composer test                          # unit + functional
 bash bin/build-tb-client.sh
 ```
 
-The `lint` job also runs `composer validate --strict` and `composer audit`.
+The `lint` job runs only `bin/lint.sh`, which includes `composer validate --strict` and `composer audit`.
 
 ## TigerBeetle and FFI
 

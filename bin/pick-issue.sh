@@ -305,10 +305,10 @@ print_json() {
     # $1: total_issues, $2: shown, $3: scored file, $4: sorted milestones file
     local total_issues="$1" shown="$2" scored="$3" sorted="$4"
     local sep=""
-    local t n o c m x y
+    local t o c
 
     printf '{\n  "milestones": [\n'
-    while IFS="$SEP" read -r t n o c m x y; do
+    while IFS="$SEP" read -r t _ o c _; do
         printf '%s    {"title": "%s", "open_issues": %s, "closed_issues": %s}\n' \
             "$sep" "$(json_escape "$t")" "$o" "$c"
         sep=","
@@ -474,8 +474,8 @@ main() {
     fi
 
     echo "Open milestones:"
-    local t n o c m x y marker=""
-    while IFS="$SEP" read -r t n o c m x y; do
+    local t o c marker=""
+    while IFS="$SEP" read -r t _ o c _; do
         if [ "$t" = "$target_title" ]; then
             marker="  <-- picked"
         else
