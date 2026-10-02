@@ -8,13 +8,15 @@ RUN apk add --no-cache \
         linux-headers \
         gmp \
         gmp-dev \
+        libffi \
+        libffi-dev \
     && docker-php-ext-install \
         gmp \
         bcmath \
         pcntl \
         posix \
         ffi \
-    && apk del $PHPIZE_DEPS linux-headers gmp-dev
+    && apk del $PHPIZE_DEPS linux-headers gmp-dev libffi-dev
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
