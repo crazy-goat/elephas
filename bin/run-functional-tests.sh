@@ -21,8 +21,8 @@ for i in $(seq 1 30); do
         $parts = explode(":", $addr);
         $host = $parts[0];
         $port = (int)($parts[1] ?? 3000);
-        $s = @fsockopen($host, $port, $e, $s, 2);
-        exit $s ? 0 : 1;
+        $socket = @fsockopen($host, $port, $errno, $errstr, 2);
+        exit($socket !== false ? 0 : 1);
     ' 2>/dev/null; then
         echo "TigerBeetle is ready."
         break
