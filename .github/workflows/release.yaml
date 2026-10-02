@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Extract release notes from CHANGELOG.md
         # Reads CHANGELOG.md from the tagged commit: merge the `## [X.Y.Z]` section before tagging.
@@ -85,7 +85,7 @@ jobs:
             asset-name: libtb_client-aarch64-macos.dylib
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build tb_client
         run: bash bin/build-tb-client.sh
@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
