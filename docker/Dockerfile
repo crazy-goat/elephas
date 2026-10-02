@@ -25,18 +25,22 @@ WORKDIR /app
 FROM base AS tigerbeetle-build
 
 ARG TB_VERSION=0.17.4
-ARG TARGETARCH
-ARG TARGETOS
 
-RUN if [ "$TARGETOS" = "linux" ] && [ "$TARGETARCH" = "amd64" ]; then \
-        curl -Lo /tmp/tigerbeetle.zip "https://linux.tigerbeetle.com/tigerbeetle-${TB_VERSION}-x86_64-linux-gnu.zip" \
-        && unzip /tmp/tigerbeetle.zip -d /usr/local/bin \
-        && rm /tmp/tigerbeetle.zip; \
-    elif [ "$TARGETOS" = "linux" ] && [ "$TARGETARCH" = "arm64" ]; then \
-        curl -Lo /tmp/tigerbeetle.zip "https://linux.tigerbeetle.com/tigerbeetle-${TB_VERSION}-aarch64-linux-gnu.zip" \
-        && unzip /tmp/tigerbeetle.zip -d /usr/local/bin \
-        && rm /tmp/tigerbeetle.zip; \
-    fi
+# TARGETOS and TARGETARCH are injected by BuildKit only. The classic builder
+# leaves both empty, no download happens and the COPY below fails with
+# "stat usr/local/bin/tigerbeetle: file does not exist". Derive the platform
+# inside the stage instead; under a cross-platform build the RUN step executes
+# under emulation, so uname still reports the target architecture.
+# -f makes curl fail on an HTTP error instead of saving the error page.
+RUN set -eu; \
+    case "$(uname -m)" in \
+        x86_64) arch=x86_64 ;; \
+        aarch64) arch=aarch64 ;; \
+        *) echo "Unsupported architecture: $(uname -m). Expected x86_64 or aarch64." >&2; exit 1 ;; \
+    esac; \
+    curl -fLo /tmp/tigerbeetle.zip "https://linux.tigerbeetle.com/tigerbeetle-${TB_VERSION}-${arch}-linux-gnu.zip"; \
+    unzip /tmp/tigerbeetle.zip -d /usr/local/bin; \
+    rm /tmp/tigerbeetle.zip
 
 FROM base
 
