@@ -529,10 +529,12 @@ Dev environment with two containers: PHP 8.2 CLI and TigerBeetle 0.17.4.
 services:
   tigerbeetle:
     image: ghcr.io/tigerbeetle/tigerbeetle:0.17.4
+    # io_uring is blocked by the default seccomp profile (see issue #130).
+    privileged: true
     entrypoint: >
       sh -c "
-        tigerbeetle format --cluster=0 --replica=0 --replica-count=1 --development /data/0_0.tigerbeetle &&
-        tigerbeetle start --addresses=3000 --development /data/0_0.tigerbeetle
+        [ -f /data/0_0.tigerbeetle ] || /tigerbeetle format --cluster=0 --replica=0 --replica-count=1 --development /data/0_0.tigerbeetle &&
+        /tigerbeetle start --addresses=0.0.0.0:3000 --development /data/0_0.tigerbeetle
       "
     ports:
       - "${TIGERBEETLE_PORT:-3000}:3000"
@@ -650,6 +652,9 @@ Attempts to replace `--privileged` with individual capabilities
 with `--security-opt seccomp=unconfined --security-opt apparmor=unconfined`
 were unsuccessful — only `--privileged` makes `io_uring` available in
 this CI environment.
+
+The dev stack in `docker/docker-compose.yml` runs the TigerBeetle service
+with `privileged: true` for the same reason.
 
 The use of `--privileged` is documented and tracked in issue #130.
 If a future TigerBeetle version or a different CI environment removes
