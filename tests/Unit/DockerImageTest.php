@@ -7,7 +7,7 @@ namespace CrazyGoat\Elephas\Test\Unit;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-final class DockerfileTest extends TestCase
+final class DockerImageTest extends TestCase
 {
     private const DOCKERFILE = __DIR__ . '/../../docker/Dockerfile';
 
@@ -58,7 +58,7 @@ final class DockerfileTest extends TestCase
 
         $this->assertSame(0, $exit, "the download step must succeed on $uname: $output");
         $this->assertStringContainsString(
-            'https://linux.tigerbeetle.com/tigerbeetle-0.17.4-' . $expected . '.zip',
+            'https://linux.tigerbeetle.com/tigerbeetle-' . $this->getTbVersion() . '-' . $expected . '.zip',
             $output,
             'the download URL must match the architecture reported by uname',
         );
@@ -82,26 +82,27 @@ final class DockerfileTest extends TestCase
     }
 
     /**
-     * Runs the download step of the tigerbeetle-build stage in a shell where
-     * uname, curl and unzip are replaced by stubs. That checks the
+     * Runs the download step of the tigerbeetle-build stage in a shell whose
+     * PATH contains nothing but the stub directory. That checks the
      * architecture mapping and the failure path without Docker, a network
-     * connection or a real download.
+     * connection or a real download, and any other command the step may call
+     * is simply not found instead of running for real.
      *
      * @return array{int, string} the exit status and everything the stubs printed
      */
     private function runDownloadStep(string $uname): array
     {
-        $dir = \sys_get_temp_dir() . '/elephas-dockerfile-test-' . \bin2hex(\random_bytes(6));
+        $dir = \sys_get_temp_dir() . '/elephas-docker-image-test-' . \bin2hex(\random_bytes(6));
         $bin = $dir . '/bin';
         \mkdir($bin, 0o777, true);
 
         $log = $dir . '/curl.log';
-        // Every command that would touch the outside world is a stub: curl
-        // records its arguments (the URL is the only one starting with https)
-        // instead of downloading, and unzip and rm do nothing.
+        // Every command the step could call is a stub: curl records its
+        // arguments (the URL is the only one starting with https) instead of
+        // downloading, and unzip and rm do nothing.
         $stubs = [
             'uname' => "#!/bin/sh\necho $uname\n",
-            'curl' => "#!/bin/sh\nprintf '%s\\n' \"\$@\" >> $log\n",
+            'curl' => "#!/bin/sh\nprintf '%s\\n' \"\$@\" >> " . \escapeshellarg($log) . "\n",
             'unzip' => "#!/bin/sh\nexit 0\n",
             'rm' => "#!/bin/sh\nexit 0\n",
         ];
@@ -112,7 +113,7 @@ final class DockerfileTest extends TestCase
 
         // The extracted RUN body is shell source, so it is appended unquoted;
         // only the stub directory needs quoting.
-        $script = 'export PATH=' . \escapeshellarg($bin) . ':"$PATH" TB_VERSION=0.17.4' . "\n"
+        $script = 'export PATH=' . \escapeshellarg($bin) . ' TB_VERSION=' . \escapeshellarg($this->getTbVersion()) . "\n"
             . $this->getTigerBeetleDownloadStep();
         $output = [];
         $exit = 0;
@@ -152,6 +153,20 @@ final class DockerfileTest extends TestCase
         $this->assertNotSame('', $runBody, 'the tigerbeetle-build stage must contain a RUN instruction');
 
         return \trim((string) \preg_replace('/\\\\\n\s*/', ' ', $runBody));
+    }
+
+    /**
+     * Returns the default of ARG TB_VERSION, so a version bump in the
+     * Dockerfile does not have to be repeated here.
+     */
+    private function getTbVersion(): string
+    {
+        $version = \preg_match('/^ARG TB_VERSION=(\S+)$/m', $this->getContent(), $match) === 1
+            ? $match[1]
+            : '';
+        $this->assertNotSame('', $version, 'docker/Dockerfile must declare ARG TB_VERSION with a default');
+
+        return $version;
     }
 
     private function getContent(): string
