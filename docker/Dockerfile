@@ -1,5 +1,8 @@
 FROM php:8.2-cli-alpine AS base
 
+# DL3018: Alpine packages follow the php image's Alpine release, pinning them would break on base updates.
+# SC2086: $PHPIZE_DEPS is a space-separated list from the base image and must be word-split.
+# hadolint ignore=DL3018,SC2086
 RUN apk add --no-cache \
         $PHPIZE_DEPS \
         linux-headers \

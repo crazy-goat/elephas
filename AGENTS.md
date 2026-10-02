@@ -28,7 +28,7 @@ PHP 8.2+ with `ext-ffi` (`ext-gmp` and `ext-bcmath` are optional). CI runs PHP 8
 ```bash
 composer install
 
-# Lint: composer validate/audit, php-cs-fixer, phpstan level 8, rector, shellcheck (check only)
+# Lint: composer validate/audit, php-cs-fixer, phpstan level 8, rector, shellcheck, hadolint (check only)
 bin/lint.sh                            # same as composer lint
 bin/lint.sh --fix                      # rector and php-cs-fixer fix first, then check (composer lint-fix)
 

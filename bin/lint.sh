@@ -14,8 +14,8 @@ step() {
 }
 
 if [ "$FIX" = 1 ]; then
-    step "rector (fix)" vendor/bin/rector process
-    step "php-cs-fixer (fix)" vendor/bin/php-cs-fixer fix -v
+    vendor/bin/rector process
+    vendor/bin/php-cs-fixer fix -v
 fi
 
 step "composer validate" composer validate --strict
@@ -24,6 +24,7 @@ step "php-cs-fixer" vendor/bin/php-cs-fixer fix -v --dry-run --diff
 step "phpstan" vendor/bin/phpstan analyse --no-progress --memory-limit=512M
 step "rector" vendor/bin/rector process --dry-run
 step "shellcheck" bash -c 'git ls-files -z "*.sh" | xargs -0 -r shellcheck'
+step "hadolint" bash -c 'git ls-files -z "*Dockerfile*" | xargs -0 -r hadolint'
 
 if [ "${#failed[@]}" -gt 0 ]; then
     echo "Failed: ${failed[*]}" >&2
