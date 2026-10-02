@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- `bin/lint.sh` is the single lint entry point (composer validate and audit, php-cs-fixer, phpstan, rector, shellcheck; `--fix` applies fixes first); `composer lint`, `composer lint-fix` and the CI `lint` job call it
 - Adopted the crazy-goat standard process: `docs/workflow.md`, `docs/release-workflow.md` and `AGENTS.md`; `ARCHITECTURE.md` (now in English) and `ROADMAP.md` moved to `docs/` (#190)
 - Worktree scripts (`bin/pick-issue.sh`, `bin/worktree*.sh`); the TigerBeetle host port in `docker/docker-compose.yml` is overridable with `TIGERBEETLE_PORT`; `composer test-functional` (`bin/run-functional-tests.sh`) now connects to `127.0.0.1:${TIGERBEETLE_PORT:-3000}` by default unless `TIGERBEETLE_ADDRESS` is set (#190)
 - CI: shared `changes` and `docs` jobs, heavy jobs skipped for documentation-only changes, aggregate `ci-ok` job, Dependabot for Composer and GitHub Actions (#190)

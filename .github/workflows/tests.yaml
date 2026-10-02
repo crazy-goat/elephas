@@ -46,17 +46,14 @@ jobs:
           tools: composer:v2
           extensions: ffi, gmp, bcmath
 
-      - name: Validate composer.json
-        run: composer validate --strict
-
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
 
-      - name: Composer Audit
-        run: composer audit
+      - name: Check shellcheck
+        run: shellcheck --version
 
-      - name: Run code style checks
-        run: composer lint
+      - name: Lint
+        run: bin/lint.sh
 
   build-lib:
     name: Build native tb_client library
