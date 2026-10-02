@@ -11,7 +11,7 @@ Everything is written in **English**: code, comments, commits, docs, issues, PRs
 - One issue = one worktree = one branch = one pull request.
 - Work is driven by the **lowest open milestone** (`vX.Y.Z`).
 - Every open issue in a milestone has one `type:*` and one `priority:*` label.
-- Merge with **squash** only, and only when CI (`ci-ok`) is green.
+- Merge with **squash** only, and only when CI (`ci-ok`) is green on a branch that is up to date with the default branch.
 - Update `CHANGELOG.md` in every PR that changes user-visible behaviour.
 - The coder and the reviewer are **subagents** with a fresh context. They talk through
   two scratch files, `findings.md` and `review.md`, in the worktree root. Both are
@@ -50,11 +50,25 @@ score breakdown. You still make the final pick. Blocked issues
 
 ```bash
 bin/worktree.sh <issue-number>          # optional 2nd argument: feat|fix|docs|refactor|test|chore
-cd ../<repo>-worktrees/issue-<N>
+cd <worktree path printed by the script>
 ```
 
-The script fetches the default branch and creates the worktree
-`../<repo>-worktrees/issue-<N>` on branch `<type>/issue-<N>-<slug>`. It also:
+The script fetches the default branch and creates a worktree on branch
+`<type>/issue-<N>-<slug>`. You choose where it goes; the first match wins:
+
+1. `--dir <path>`: exactly `<path>` (a relative path is relative to where you are),
+2. `WORKTREES_DIR=<dir>` in the environment: `<dir>/<repo>/issue-<N>`,
+3. a `.worktrees` directory next to the clone (a workspace with several clones side by
+   side): `../.worktrees/<repo>/issue-<N>`,
+4. otherwise: `../<repo>-worktrees/issue-<N>`.
+
+`bin/worktree-done.sh` finds the worktree by its branch name, so any location works. The
+scripts are a convenience: a worktree you create yourself is fine, as long as its branch
+is named `<type>/issue-<N>-<slug>` (the cleanup looks for `/issue-<N>-`) and the rest of
+this process is followed.
+
+The main checkout stays on the default branch and is not edited; it is for reading only.
+The script also:
 
 - creates empty `findings.md` and `review.md` (both gitignored),
 - writes `.env.worktree` with a unique `COMPOSE_PROJECT_NAME` and a free host port for
@@ -124,9 +138,16 @@ When `ci-ok` is green:
 gh pr merge --squash --delete-branch
 ```
 
-If the merge is not possible (conflict, branch out of date), merge or rebase the default
-branch into the worktree branch, resolve the conflicts, run the checks, push, and go back
-to **step 5**.
+The ruleset requires the branch to be **up to date** with the default branch, so `ci-ok`
+has run on exactly the code that lands. If the default branch moved on, update the
+branch and wait for `ci-ok` again (**step 5**):
+
+```bash
+gh pr update-branch            # merges the default branch into the PR branch
+```
+
+On a conflict, merge or rebase the default branch into the worktree branch, resolve the
+conflicts, run the checks, push, and go back to **step 5**.
 
 Then check that the issue was closed (`gh issue view <N> --json state`). When the merge
 empties the milestone, go to [release-workflow.md](release-workflow.md) after step 8.
@@ -212,7 +233,7 @@ Every repo must allow several worktrees to build and test at the same time.
 ## Checklist
 
 - [ ] Issue picked with `bin/pick-issue.sh`; it has `type:*`, `priority:*` and a milestone
-- [ ] Work done in a worktree from `bin/worktree.sh`, branch `<type>/issue-<N>-<slug>`
+- [ ] Work done in a worktree (not the main checkout), branch `<type>/issue-<N>-<slug>`
 - [ ] Tests added, all checks pass in the worktree
 - [ ] `CHANGELOG.md` and docs updated
 - [ ] Committed but not pushed before the review accepted
