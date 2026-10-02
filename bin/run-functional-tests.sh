@@ -34,4 +34,4 @@ for i in $(seq 1 30); do
     sleep 1
 done
 
-vendor/bin/phpunit --testsuite=functional "$@"
+vendor/bin/phpunit --testsuite=functional --no-coverage "$@"
