@@ -2,6 +2,7 @@
 set -euo pipefail
 
 COMPOSE_FILE="docker/docker-compose.yml"
+export TIGERBEETLE_ADDRESS="${TIGERBEETLE_ADDRESS:-127.0.0.1:${TIGERBEETLE_PORT:-3000}}"
 
 cleanup() {
     echo "Stopping Docker services..."

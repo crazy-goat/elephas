@@ -1,43 +1,43 @@
-# Elephas – Architektura
+# Elephas – Architecture
 
-> PHP client dla TigerBeetle (v0.17.x)  
+> PHP client for TigerBeetle (v0.17.x)  
 > Namespace: `CrazyGoat\Elephas`  
-> Wymaga PHP ^8.2
+> Requires PHP ^8.2
 
 ---
 
-## Spis treści
+## Table of contents
 
-1. [Założenia](#1-założenia)
-2. [Struktura repozytorium](#2-struktura-repozytorium)
-3. [Uint128 – 128-bitowe liczby](#3-uint128--128-bitowe-liczby)
+1. [Assumptions](#1-assumptions)
+2. [Repository structure](#2-repository-structure)
+3. [Uint128 – 128-bit numbers](#3-uint128--128-bit-numbers)
 4. [Id – generator ULID](#4-id--generator-ulid)
 5. [Enums](#5-enums)
-6. [Batch classes (wzór Java)](#6-batch-classes-wzór-java)
-7. [Backend – warstwa transportu](#7-backend--warstwa-transportu)
-8. [Client – główne API](#8-client--główne-api)
+6. [Batch classes (Java pattern)](#6-batch-classes-java-pattern)
+7. [Backend – transport layer](#7-backend--transport-layer)
+8. [Client – main API](#8-client--main-api)
 9. [Exceptions](#9-exceptions)
 10. [Pre-built native library](#10-pre-built-native-library)
-11. [Konfiguracja narzędzi](#11-konfiguracja-narzędzi)
+11. [Tooling configuration](#11-tooling-configuration)
 12. [Docker](#12-docker)
-13. [Testy](#13-testy)
+13. [Tests](#13-tests)
 14. [CI/CD](#14-cicd)
 
 ---
 
-## 1. Założenia
+## 1. Assumptions
 
 - **PHP 8.2+** z `ext-ffi`, `ext-gmp` (suggest), `ext-bcmath` (suggest)
-- **TigerBeetle 0.17.x** – komunikacja przez natywną bibliotekę `tb_client`
-- **Wymienny backend**: FFI → Extension → Native PHP (kolejność priorytetu)
-- **Batch API** jak Java: mutable, z `add()` i setterami
-- **128-bit**: prosty obiekt `Uint128` z `toInt()`, `toFloat()`, `toString()`
-- **ULID** dla ID kont/transferów
-- **Brak async** – synchroniczne blocking API
+- **TigerBeetle 0.17.x** – communication through the native `tb_client` library
+- **Swappable backend**: FFI → Extension → Native PHP (priority order)
+- **Batch API** like Java: mutable, with `add()` and setters
+- **128-bit**: a simple `Uint128` object with `toInt()`, `toFloat()`, `toString()`
+- **ULID** for account and transfer IDs
+- **No async** – synchronous, blocking API
 
 ---
 
-## 2. Struktura repozytorium
+## 2. Repository structure
 
 ```
 elephas/
@@ -58,16 +58,16 @@ elephas/
 ├── var/                          # cache (gitignored)
 │
 ├── src/
-│   ├── Client.php                # główne API
-│   ├── ClientInterface.php       # kontrakt klienta
+│   ├── Client.php                # main API
+│   ├── ClientInterface.php       # client contract
 │   │
 │   ├── Uint128/
 │   │   └── Uint128.php           # 128-bit number
 │   │
-│   ├── Id.php                    # generator ULID
+│   ├── Id.php                    # ULID generator
 │   │
-│   ├── Operation.php             # enum operacji
-│   ├── PacketStatus.php          # enum statusów pakietu
+│   ├── Operation.php             # operation enum
+│   ├── PacketStatus.php          # packet status enum
 │   ├── InitStatus.php            # enum init status
 │   ├── ClientStatus.php          # enum client status
 │   │
@@ -87,7 +87,7 @@ elephas/
 │   ├── QueryFilter.php           # data class
 │   │
 │   ├── Batch/
-│   │   ├── AbstractBatch.php     # bazowa klasa batcha
+│   │   ├── AbstractBatch.php     # base batch class
 │   │   ├── AccountBatch.php
 │   │   ├── TransferBatch.php
 │   │   ├── IdBatch.php
@@ -99,10 +99,10 @@ elephas/
 │   │   └── ChangeEventsFilterBatch.php
 │   │
 │   ├── Backend/
-│   │   ├── BackendInterface.php  # kontrakt transportu
-│   │   ├── AbstractBackend.php   # wspólna logika
+│   │   ├── BackendInterface.php  # transport contract
+│   │   ├── AbstractBackend.php   # shared logic
 │   │   ├── FfiBackend.php        # PHP FFI → tb_client.so
-│   │   ├── NativeClient.php      # FFI binding do tb_client
+│   │   ├── NativeClient.php      # FFI binding for tb_client
 │   │   └── BackendFactory.php    # auto-detect backend
 │   │
 │   ├── Exception/
@@ -116,8 +116,8 @@ elephas/
 │   │   └── RequestException.php
 │   │
 │   └── Internal/
-│       ├── Packet.php            # wrapper na C packet
-│       └── BinaryHelper.php      # funkcje binary pack/unpack
+│       ├── Packet.php            # wrapper for the C packet
+│       └── BinaryHelper.php      # binary pack/unpack helpers
 │
 ├── tests/
 │   ├── Unit/
@@ -141,15 +141,15 @@ elephas/
 
 ---
 
-## 3. Uint128 – 128-bitowe liczby
+## 3. Uint128 – 128-bit numbers
 
 **Plik:** `src/Uint128/Uint128.php`
 
-Klasa reprezentująca **unsigned 128-bit integer**. Wewnętrznie przechowuje dwie 64-bitowe części (low/high) jako PHP `int` (signed 64-bit).
+A class representing an **unsigned 128-bit integer**. Internally it stores two 64-bit parts (low/high) as PHP `int` (signed 64-bit).
 
 ```php
 class Uint128 {
-    // Konstruktor prywatny – factory methods
+    // Private constructor – factory methods
     private function __construct(
         private readonly int $low,   // LSB (unsigned 64-bit)
         private readonly int $high,  // MSB (unsigned 64-bit)
@@ -157,43 +157,43 @@ class Uint128 {
     
     // === Factory methods ===
     public static function zero(): self;
-    public static function fromInt(int $value): self;          // value rzutowane na uint64
-    public static function fromString(string $decimal): self;  // parsowanie decimal string
+    public static function fromInt(int $value): self;          // value cast to uint64
+    public static function fromString(string $decimal): self;  // decimal string parsing
     public static function fromParts(int $low, int $high): self;
-    public static function fromBytes(string $bytes): self;     // 16 bajtów LE
+    public static function fromBytes(string $bytes): self;     // 16 bytes LE
     public static function fromHex(string $hex): self;         // hex string
     
-    // === Konwersje ===
-    public function toInt(): int;     // OverflowException jeśli > PHP_INT_MAX
-    public function toFloat(): float; // OverflowException jeśli poza zakresem double
-    public function toString(): string; // zawsze działa, decimal string
+    // === Conversions ===
+    public function toInt(): int;     // OverflowException if > PHP_INT_MAX
+    public function toFloat(): float; // OverflowException if outside the double range
+    public function toString(): string; // always works, decimal string
     public function toHex(): string;
-    public function toBytes(): string;  // 16 bajtów little-endian
+    public function toBytes(): string;  // 16 bytes little-endian
     public function toArray(): array{int low, int high};
     
-    // === Arytmetyka ===
+    // === Arithmetic ===
     public function isZero(): bool;
 }
 ```
 
-### Zachowanie konwersji
+### Conversion behavior
 
-| Metoda | Zakres | Zachowanie |
+| Method | Range | Behavior |
 |--------|--------|------------|
-| `toInt()` | 0 … `PHP_INT_MAX` (0x7FFF…) | Zwraca `int` |
-| `toInt()` | > `PHP_INT_MAX` | Rzuca `IntegerOverflowException` |
-| `toFloat()` | 0 … ~1e308 | Zwraca `float` (utrata precyzji dla > 2^53) |
-| `toFloat()` | > `PHP_FLOAT_MAX` | Rzuca `IntegerOverflowException` |
-| `toString()` | 0 … 2^128-1 | Zawsze działa, zwraca decimal string |
+| `toInt()` | 0 … `PHP_INT_MAX` (0x7FFF…) | Returns `int` |
+| `toInt()` | > `PHP_INT_MAX` | Throws `IntegerOverflowException` |
+| `toFloat()` | 0 … ~1e308 | Returns `float` (precision loss for > 2^53) |
+| `toFloat()` | > `PHP_FLOAT_MAX` | Throws `IntegerOverflowException` |
+| `toString()` | 0 … 2^128-1 | Always works, returns a decimal string |
 
-### Reprezentacja binarna (little-endian)
+### Binary representation (little-endian)
 
 ```
-Bajty:  [0..7]   = low (LSB)
+Bytes:  [0..7]   = low (LSB)
         [8..15]  = high (MSB)
 ```
 
-Zgodność z `tb_uint128_t` w C (`__uint128_t` → little-endian na x86_64).
+Compatible with `tb_uint128_t` in C (`__uint128_t` → little-endian on x86_64).
 
 ---
 
@@ -208,12 +208,12 @@ ID w TigerBeetle to **ULID** – 48-bit timestamp + 80-bit random.
 | 48 bit UNIX ms     | crypto random   |
 ```
 
-Implementacja wzorowana na Java/Golang:
-- Ostatni timestamp przechowywany w statycznej zmiennej
-- Jeśli current timestamp <= lastTimestamp, inkrementujemy random (u80), nie timestamp
-- Przy zmianie timestampu generujemy nowy random
-- Safe dla wielowątkowości (static lock/mutex)
-- Monotoniczność przy interpretacji jako little-endian
+The implementation follows the Java/Go clients:
+- The last timestamp is kept in a static variable
+- If the current timestamp <= lastTimestamp, we increment the random part (u80), not the timestamp
+- When the timestamp changes, we generate a new random part
+- Safe for multithreading (static lock/mutex)
+- Monotonic when interpreted as little-endian
 
 ```php
 class Id {
@@ -225,9 +225,9 @@ class Id {
 
 ## 5. Enums
 
-Wszystkie enums mapują się 1:1 z `tb_client.h`.
+All enums map 1:1 to `tb_client.h`.
 
-| Enum PHP | Odpowiednik C | Zakres |
+| PHP enum | C equivalent | Range |
 |----------|---------------|--------|
 | `Operation` | `TB_OPERATION` | `PULSE=128`, `CREATE_ACCOUNTS=146`, … |
 | `PacketStatus` | `TB_PACKET_STATUS` | `OK=0`, `TOO_MUCH_DATA=1`, … |
@@ -240,8 +240,8 @@ Wszystkie enums mapują się 1:1 z `tb_client.h`.
 | `CreateAccountStatus` | `TB_CREATE_ACCOUNT_STATUS` | `CREATED=0xFFFFFFFF`, … |
 | `CreateTransferStatus` | `TB_CREATE_TRANSFER_STATUS` | `CREATED=0xFFFFFFFF`, … |
 
-**Flags** to `int` z bitwise OR (nie enum, bo mogą być łączone).  
-Używamy `class` z const int, np.:
+**Flags** are `int` values combined with bitwise OR (not enums, because they can be combined).  
+We use a `class` with const ints, e.g.:
 
 ```php
 class AccountFlags {
@@ -251,15 +251,15 @@ class AccountFlags {
 }
 ```
 
-**Statusy** to `int` (numeryczne kody błędów z TigerBeetle).
+**Statuses** are `int` (numeric error codes from TigerBeetle).
 
 ---
 
-## 6. Batch classes (wzór Java)
+## 6. Batch classes (Java pattern)
 
-Batch classes są **mutable**. Działają na surowym buforze binarnym.
+Batch classes are **mutable**. They work on a raw binary buffer.
 
-### Hierarchia
+### Hierarchy
 
 ```
 AbstractBatch (abstract)
@@ -280,13 +280,13 @@ AbstractBatch (abstract)
 abstract class AbstractBatch implements Countable {
     public function __construct(int $capacity);
     
-    // Nawigacja
+    // Navigation
     public function add(): void;
     public function next(): bool;
     public function prev(): bool;
     public function rewind(): void;
     
-    // Stan
+    // State
     public function getLength(): int;
     public function getCapacity(): int;
     public function isValidPosition(): bool;
@@ -294,7 +294,7 @@ abstract class AbstractBatch implements Countable {
 }
 ```
 
-### Przykład AccountBatch
+### AccountBatch example
 
 ```php
 class AccountBatch extends AbstractBatch {
@@ -302,13 +302,13 @@ class AccountBatch extends AbstractBatch {
     public function getId(): Uint128;
     public function setDebitsPending(Uint128 $value): void;
     public function setDebitsPosted(Uint128 $value): void;
-    // ... wszystkie settery/gettery dla pól Account
+    // ... all setters/getters for the Account fields
 }
 ```
 
-### Rozmiary struktur (128-bit → 16 bajtów)
+### Structure sizes (128-bit → 16 bytes)
 
-| Struktura | Rozmiar (bajty) |
+| Structure | Size (bytes) |
 |-----------|----------------|
 | `Account` | 128 |
 | `Transfer` | 128 |
@@ -321,7 +321,7 @@ class AccountBatch extends AbstractBatch {
 
 ---
 
-## 7. Backend – warstwa transportu
+## 7. Backend – transport layer
 
 ### BackendInterface
 
@@ -329,8 +329,8 @@ class AccountBatch extends AbstractBatch {
 interface BackendInterface {
     public function submit(
         Operation $operation,
-        string $data,         // binarny batch do wysłania
-    ): string;                // binarny batch result
+        string $data,         // binary batch to send
+    ): string;                // binary batch result
     
     public function close(): void;
 }
@@ -338,19 +338,19 @@ interface BackendInterface {
 
 ### FfiBackend
 
-Implementacja używająca PHP FFI → `tb_client.so`.
+Implementation using PHP FFI → `tb_client.so`.
 
-**Przepływ:**
-1. `tb_client_init()` – tworzy klienta C
-2. `tb_client_submit()` – wysyła packet
-3. Callback (C → PHP) – odbiera wynik
-4. Wątek C blokuje, PHP czeka na Event
+**Flow:**
+1. `tb_client_init()` – creates the C client
+2. `tb_client_submit()` – sends the packet
+3. Callback (C → PHP) – receives the result
+4. The C thread blocks, PHP waits for an Event
 
-**Synchronizacja:**
-- Ponieważ `tb_client_submit()` jest async (callback w innym wątku C), używamy:
-  - `\Fiber` – do suspend/resume (PHP 8.1+)
-  - Lub `\parallel\Sync` – jeśli dostępne
-  - Alternatywnie: busy-wait na zmiennej shared memory
+**Synchronization:**
+- Because `tb_client_submit()` is async (the callback runs in another C thread), we use:
+  - `\Fiber` – for suspend/resume (PHP 8.1+)
+  - Or `\parallel\Sync` – if available
+  - Alternatively: busy-wait on a shared memory variable
 
 **Pre-built library:**
 - `resources/lib/x86_64-linux-gnu/libtb_client.so`
@@ -371,41 +371,41 @@ class BackendFactory {
 }
 ```
 
-Kolejność detekcji:
-1. `ext-ffi` + `tb_client.so` istnieje → `FfiBackend`
+Detection order:
+1. `ext-ffi` + `tb_client.so` exists → `FfiBackend`
 2. `ext-elephas` → `ExtensionBackend` (future)
-3. Rzuca wyjątkiem jeśli żaden backend niedostępny
+3. Throws an exception if no backend is available
 
 **Native library loading precedence:**
 
-Gdy `$libPath` nie jest określony, `NativeClient::detectLibraryPath()` przeszukuje tylko
-ścieżki lokalne projektu w następującej kolejności:
+When `$libPath` is not given, `NativeClient::detectLibraryPath()` searches only the
+project-local paths, in this order:
 
 1. `resources/lib/{platform}/libtb_client.so`
 2. `resources/lib/{platform}/libtb_client.dylib`
 
-Systemowe ścieżki globalne (`/usr/local/lib`, `/usr/lib`, itp.) **nie są** przeszukiwane
-automatycznie — zostałoby to uznane za zagrożenie bezpieczeństwa, ponieważ FFI ładuje
-kod natywny bezpośrednio do procesu PHP (patrz sekcja bezpieczeństwa poniżej).
+System-wide paths (`/usr/local/lib`, `/usr/lib`, etc.) are **not** searched
+automatically. This would be a security risk, because FFI loads native code
+directly into the PHP process (see the security notes below).
 
-**Bezpieczeństwo FFI (🔒):**
+**FFI security (🔒):**
 
-Ponieważ PHP FFI wykonuje kod natywny w procesie PHP, biblioteka `tb_client` (oraz
-towarzysząca `libelephas_noop.so`) **musi** pochodzić z zaufanego źródła.
-- W środowisku produkcyjnym zawsze używaj **jawnej, zaufanej ścieżki** do biblioteki
-  poprzez `$libPath` w `BackendFactory::create()`.
-- Pobieraj pre-built biblioteki tylko z oficjalnych
-  [release assets](https://github.com/crazy-goat/elephas/releases) projektu.
-- Nie ładuj bibliotek z niezaufanych lokalizacji — złośliwa biblioteka może uzyskać
-  pełną kontrolę nad procesem PHP.
-- `loadNoopCallback()` ładuje `libelephas_noop.so` z tego samego katalogu co
-  `tb_client` — obie biblioteki muszą pochodzić z tego samego zaufanego źródła.
-  W razie braku pliku `libelephas_noop.so` używane jest bezpieczne fallback
-  `free(NULL)` z glibc (no-op przy dodatkowych argumentach rejestrowych na x86_64).
+Because PHP FFI runs native code inside the PHP process, the `tb_client` library (and
+the accompanying `libelephas_noop.so`) **must** come from a trusted source.
+- In production always use an **explicit, trusted path** to the library
+  through `$libPath` in `BackendFactory::create()`.
+- Download pre-built libraries only from the project's official
+  [release assets](https://github.com/crazy-goat/elephas/releases).
+- Do not load libraries from untrusted locations: a malicious library can take
+  full control of the PHP process.
+- `loadNoopCallback()` loads `libelephas_noop.so` from the same directory as
+  `tb_client`, so both libraries must come from the same trusted source.
+  If `libelephas_noop.so` is missing, a safe fallback is used: glibc `free(NULL)`
+  (a no-op with additional register arguments on x86_64).
 
 ---
 
-## 8. Client – główne API
+## 8. Client – main API
 
 ```php
 class Client {
@@ -433,11 +433,11 @@ class Client {
 }
 ```
 
-Każda metoda:
-1. Pobiera wewnętrzny bufer z batcha (`toBytes()`)
-2. Wywołuje `$this->backend->submit(Operation::CREATE_ACCOUNTS, $data)`
-3. Parsuje wynik binarny do result batcha
-4. Zwraca result batch
+Every method:
+1. Takes the internal buffer from the batch (`toBytes()`)
+2. Calls `$this->backend->submit(Operation::CREATE_ACCOUNTS, $data)`
+3. Parses the binary result into a result batch
+4. Returns the result batch
 
 ---
 
@@ -445,28 +445,28 @@ Każda metoda:
 
 ```
 ElephasExceptionInterface (marker)
-├── InitializationException    – błąd tb_client_init
-├── ClientClosedException      – client zamknięty
-├── ClientEvictedException     – sesja evicted
-├── ClientReleaseException     – zła wersja klienta
-├── TooMuchDataException       – za dużo danych w batchu
-├── IntegerOverflowException   – wartość poza zakresem int/float
-└── RequestException           – ogólny błąd requestu
+├── InitializationException    – `tb_client_init` failed
+├── ClientClosedException      – client is closed
+├── ClientEvictedException     – session evicted
+├── ClientReleaseException     – wrong client version
+├── TooMuchDataException       – too much data in the batch
+├── IntegerOverflowException   – value outside the int/float range
+└── RequestException           – generic request error
 ```
 
 ---
 
 ## 10. Pre-built native library
 
-**Proces:** W CI budujemy `tb_client.so` dla wszystkich platform i dołączamy jako assets do release.
+**Process:** In CI we build `tb_client.so` for all platforms and attach it as release assets.
 
 ```yaml
 # docker/Dockerfile.build
 FROM tigerbeetle-build AS builder
-# Buduje tb_client.so dla danej platformy
+# Builds tb_client.so for a given platform
 ```
 
-**Struktura assets:**
+**Assets layout:**
 ```
 resources/
 └── lib/
@@ -482,7 +482,7 @@ resources/
 
 ---
 
-## 11. Konfiguracja narzędzi
+## 11. Tooling configuration
 
 ### composer.json
 
@@ -515,7 +515,7 @@ resources/
 ### PHPUnit (phpunit.xml.dist)
 
 - PHPUnit 11.x
-- Coverage driver: `pcov` lub `xdebug`
+- Coverage driver: `pcov` or `xdebug`
 
 ---
 
@@ -535,7 +535,7 @@ services:
         tigerbeetle start --addresses=3000 --development /data/0_0.tigerbeetle
       "
     ports:
-      - "3000:3000"
+      - "${TIGERBEETLE_PORT:-3000}:3000"
     volumes:
       - tb_data:/data
 
@@ -585,26 +585,26 @@ docker/validate.sh
 
 ---
 
-## 13. Testy
+## 13. Tests
 
 ### Unit
 
-| Test | Co testuje |
+| Test | What it tests |
 |------|------------|
-| `Uint128Test` | Factory methods, konwersje, overflow exceptions |
-| `IdTest` | Generacja ULID, monotoniczność, unikalność |
-| `AccountBatchTest` | Batch API, add/set/get, binary reprezentacja |
-| `TransferBatchTest` | Batch API, add/set/get, binary reprezentacja |
-| `BinaryHelperTest` | Pack/unpack zgodność z C struct |
+| `Uint128Test` | Factory methods, conversions, overflow exceptions |
+| `IdTest` | ULID generation, monotonicity, uniqueness |
+| `AccountBatchTest` | Batch API, add/set/get, binary representation |
+| `TransferBatchTest` | Batch API, add/set/get, binary representation |
+| `BinaryHelperTest` | Pack/unpack compatibility with the C struct |
 
 ### Functional
 
-| Test | Co testuje |
+| Test | What it tests |
 |------|------------|
 | `ClientTest` | Init, createAccounts, lookupAccounts, close |
 | `TransferTest` | createTransfers, lookupTransfers, two-phase |
 
-Functional tests wymagają running TigerBeetle (docker-compose).
+Functional tests require a running TigerBeetle (docker-compose).
 
 ---
 
@@ -631,9 +631,9 @@ jobs:
 ```yaml
 jobs:
   release:
-    - Build native libraries dla wszystkich platform
+    - Build native libraries for all platforms
     - Create GitHub Release with assets
-    - Publish to Packagist (opcjonalnie)
+    - Publish to Packagist (optional)
 ```
 
 ### Container security

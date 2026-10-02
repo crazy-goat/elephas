@@ -7,3 +7,6 @@
 /package-lock.json
 /resources/lib/
 /coverage/
+/findings.md
+/review.md
+/.env.worktree

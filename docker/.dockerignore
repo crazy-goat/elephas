@@ -6,7 +6,6 @@ var/
 .case/
 node_modules/
 package-lock.json
-ARCHITECTURE.md
 README.md
 composer.lock
 phpstan.neon.dist

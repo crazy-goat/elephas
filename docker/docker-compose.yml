@@ -7,7 +7,7 @@ services:
         tigerbeetle start --addresses=3000 --development /data/0_0.tigerbeetle
       "
     ports:
-      - "3000:3000"
+      - "${TIGERBEETLE_PORT:-3000}:3000"
     volumes:
       - tb_data:/data
 
