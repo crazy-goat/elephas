@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `docker/Dockerfile` derives the platform inside the `tigerbeetle-build` stage with `uname -m` instead of the `TARGETOS`/`TARGETARCH` arguments, which only BuildKit injects, and fails with a clear message on an unsupported architecture; `docker compose build` no longer fails with `COPY failed: stat usr/local/bin/tigerbeetle: file does not exist` on the classic builder, and `curl` now uses `-f` so an HTTP error page is not saved as the binary (#211)
 - `docker/Dockerfile` installs `libffi-dev` for the build (removed again afterwards) and keeps `libffi` at runtime, so `docker-php-ext-install ffi` no longer fails on `php:8.2-cli-alpine`; in `docker/docker-compose.yml` the TigerBeetle service now runs `/tigerbeetle` by its full path, binds `0.0.0.0:3000` so the published port and the `elephas` container can reach it, and runs privileged for `io_uring`; `bin/run-functional-tests.sh` readiness probe no longer fails with a PHP parse error, so `composer test-functional` no longer always times out waiting for TigerBeetle (#208)
 - `composer test-functional` runs with `--no-coverage`, so it no longer exits 1 when Xdebug is loaded without coverage mode (#206)
 - `composer test-unit` runs with `--no-coverage`, so it no longer exits 1 when Xdebug is loaded without coverage mode; CI still collects coverage with its own command (#204)
