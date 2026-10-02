@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- `composer test-unit` runs with `--no-coverage`, so it no longer exits 1 when Xdebug is loaded without coverage mode; CI still collects coverage with its own command (#204)
+
+### Fixed
 - `NativeClientTest` no longer loads `libc.so.6`, so `composer test-unit` passes on macOS (#202)
 
 ### Changed
