@@ -83,7 +83,7 @@ jobs:
 
       - name: Restore cached build artifacts
         id: cache-restore
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             resources/lib
@@ -144,7 +144,7 @@ jobs:
 
       - name: Restore native tb_client library from cache
         id: cache-restore
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             resources/lib
