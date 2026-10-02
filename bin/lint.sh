@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run all static analysis, linters and formatter checks. --fix applies fixes first.
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 FIX=0
 [ "${1:-}" = "--fix" ] && FIX=1
